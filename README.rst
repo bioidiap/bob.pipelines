@@ -24,7 +24,7 @@ This is **STILL EXPERIMENTAL** and the goal is to provide better option than `bo
 
 The goal is to have tool with the following skeleton::
 
-  $ bob pipelines run <EXECUTION-CONFIG> <DATABASE-CONFIG> [<PIPELINES>] [OPTIONS] 
+  $ bob pipelines run <EXECUTION-CONFIG> <DATABASE-CONFIG> <EXPERIMENT-CONFIG> [<PIPELINES>] [OPTIONS] 
 
 
 Installation
