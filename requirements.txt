@@ -2,4 +2,3 @@ setuptools
 numpy
 bob.extension
 dask
-dask-jobqueue

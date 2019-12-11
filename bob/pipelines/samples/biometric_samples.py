@@ -172,6 +172,56 @@ def create_biometric_probe_samples(
     return probes_list
 
 
+def cache_bobbio_samples(output_path, output_extension):
+    """
+    Decorator meant to be used to cache biometric samples
+
+    **Parameters**
+
+      output_path:
+
+      output_extension:
+    """
+
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+
+            #Loading from cache
+            
+
+
+
+            biometric_samples = func(*args, **kwargs)
+
+ 
+            # Caching
+            for bs in biometric_samples:
+
+                for o in bs.data:
+
+                    # Setting the current location of the biofile
+                    o.current_directory = output_path
+                    o.current_extension = output_extension
+
+                    # Saving
+                    file_name = o.make_path(o.current_directory, o.current_extension)
+                    
+                    # If it is already cached, don't do anything
+                    if os.path.exists(file_name):
+                        continue
+
+                    # Save
+                    bob.io.base.create_directories_safe(os.path.dirname(file_name))
+                    write_bobbiodata(o.sample, file_name)
+                    #o.sample = None
+
+
+            return biometric_samples
+             
+        return wrapper
+    return decorator
+
+
 def read_biofiles(objects, loader, split_by_client=False, allow_missing_files=False):
     """read_features(file_names, extractor, split_by_client = False) -> extracted
 

@@ -3,14 +3,19 @@
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
 
-from bob.pipelines.samples.biometric_samples import create_training_samples, create_biometric_reference_samples, create_biometric_probe_samples
+from bob.pipelines.samples.biometric_samples import (
+    create_training_samples,
+    create_biometric_reference_samples,
+    create_biometric_probe_samples,
+)
 from bob.pipelines.samples.samples import Sample
 
 import bob.db.atnt
 import bob.db.base
 
+
 def test_training_samples():
-   
+
     database = bob.db.atnt.Database()
 
     samples = create_training_samples(database)
@@ -20,7 +25,7 @@ def test_training_samples():
 
 
 def test_biometric_reference_samples():
-   
+
     database = bob.db.atnt.Database()
 
     samples = create_biometric_reference_samples(database)
@@ -30,18 +35,13 @@ def test_biometric_reference_samples():
 
 
 def test_biometric_probe_samples():
-   
+
     database = bob.db.atnt.Database()
 
     biometric_references = create_biometric_reference_samples(database)
-    probe_samples        = create_biometric_probe_samples(database, biometric_references)
+    probe_samples = create_biometric_probe_samples(database, biometric_references)
 
     assert len(probe_samples) > 0
     assert isinstance(probe_samples[0].data[0], bob.db.base.File)
     assert len(probe_samples[0].biometric_references) > 0
     assert isinstance(probe_samples[0].biometric_references[0], Sample)
-
-    pass
-
-
-
