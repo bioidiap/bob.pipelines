@@ -38,7 +38,18 @@ setup(
     install_requires=install_requires,
 
     entry_points={
-      # add entry points (scripts, bob resources here, if any)
+
+       'bob.cli': [
+        'pipelines = bob.pipelines.script.pipelines:pipelines',
+        ],
+
+      # run pipelines
+      'bob.pipelines.cli':[
+        'run = bob.pipelines.script.run:run',
+     ],
+
+
+        
       },
 
     # check classifiers, add and remove as you see fit

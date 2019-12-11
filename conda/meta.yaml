@@ -27,8 +27,6 @@ requirements:
     - setuptools {{ setuptools }}
     - bob.extension
     - dask
-    - pip
-      - dask-jobqueue
 
   run:
     - python
@@ -49,6 +47,7 @@ test:
     - coverage
     - sphinx
     - sphinx_rtd_theme
+    - bob.db.atnt
 
 about:
   summary: bob.pipelines
