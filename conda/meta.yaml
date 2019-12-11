@@ -1,0 +1,57 @@
+{% set name = 'bob.pipelines' %}
+{% set project_dir = environ.get('RECIPE_DIR') + '/..' %}
+
+package:
+  name: {{ name }}
+  version: {{ environ.get('BOB_PACKAGE_VERSION', '0.0.1') }}
+
+build:
+  number: {{ environ.get('BOB_BUILD_NUMBER', 0) }}
+  ruin_exports:
+    - {{ pin_subpackage(name) }}
+  script:
+    - cd {{ project_dir }}
+    {% if environ.get('BUILD_EGG') %}
+    - python setup.py sdist --formats=zip
+    {% endif %}
+    - python setup.py install --single-version-externally-managed --record record.txt
+    # installs the documentation source, readme to share/doc so it is available
+    # during test time
+    - install -d "${PREFIX}/share/doc/{{ name }}"
+    - cp -R README.rst requirements.txt doc "${PREFIX}/share/doc/{{ name }}/"
+
+requirements:
+  # place your build dependencies before the 'host' section
+  host:
+    - python {{ python }}
+    - setuptools {{ setuptools }}
+    - bob.extension
+    - dask
+    - dask-jobqueue
+
+  run:
+    - python
+    - setuptools
+
+test:
+  imports:
+    - {{ name }}
+  commands:
+    - nosetests --with-coverage --cover-package={{ name }} -sv {{ name }}
+    - sphinx-build -aEW {{ project_dir }}/doc {{ project_dir }}/sphinx
+    - sphinx-build -aEb doctest {{ project_dir }}/doc sphinx
+    - conda inspect linkages -p $PREFIX {{ name }}  # [not win]
+    - conda inspect objects -p $PREFIX {{ name }}  # [osx]
+  requires:
+    - bob-devel {{ bob_devel }}.*
+    - nose
+    - coverage
+    - sphinx
+    - sphinx_rtd_theme
+
+about:
+  summary: bob.pipelines
+  home: https://www.idiap.ch/software/bob/
+  license: BSD 3-Clause
+  license_family: BSD
+  license_file: ../LICENSE
