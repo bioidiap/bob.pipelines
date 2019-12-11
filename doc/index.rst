@@ -18,7 +18,6 @@ Users Guide
 .. toctree::
    :maxdepth: 2
 
-   api
 
 .. todolist::
 
