@@ -27,7 +27,8 @@ requirements:
     - setuptools {{ setuptools }}
     - bob.extension
     - dask
-    - dask-jobqueue
+    - pip
+      - dask-jobqueue
 
   run:
     - python
