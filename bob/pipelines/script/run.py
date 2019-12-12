@@ -20,8 +20,9 @@ EPILOG = '''\b
 @click.command(context_settings={'ignore_unknown_options': True,
                                  'allow_extra_args': True})
 @verbosity_option(cls=ResourceOption)
+@click.option('--use-dask-delay', is_flag=True)
 @click.pass_context
-def run(ctx, **kwargs):
+def run(ctx, use_dask_delay, **kwargs):
     """Run a pipeline
 
     FROM THE TIME BEING NOT PASSING ANY PARAMETER
@@ -46,6 +47,8 @@ def run(ctx, **kwargs):
     from bob.pipelines.distributed.sge import sge_iobig_client
 
     client = debug_client(1)
+    #client = sge_iobig_client(10)
+
 
 
     #2. DEFINING THE EXPERIMENT SETUP
@@ -78,14 +81,24 @@ def run(ctx, **kwargs):
     probe_samples = create_biometric_probe_samples(database, biometric_reference_samples)
     
     # 4. RUNNING THE PIPELINE
-    from bob.pipelines.bob_bio.simple_pipeline import pipeline
+    from bob.pipelines.bob_bio.simple_pipeline import pipeline, pipeline_DELAY
 
-    pipeline(training_samples,
-            biometric_reference_samples,
-            probe_samples,
-            preprocessor,
-            extractor,
-            client
+
+    if use_dask_delay:
+        pipeline_DELAY(training_samples,
+                biometric_reference_samples,
+                probe_samples,
+                preprocessor,
+                extractor,
+                client
+                )
+    else:
+        pipeline(training_samples,
+                biometric_reference_samples,
+                probe_samples,
+                preprocessor,
+                extractor,
+                client
             )
 
     pass

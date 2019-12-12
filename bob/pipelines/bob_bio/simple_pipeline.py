@@ -150,3 +150,124 @@ def pipeline(training_samples,
         t_o.result()
         e_o.result()
         p_o.result()
+
+
+
+
+
+def pipeline_DELAY(training_samples,
+             biometric_reference_samples,
+             probe_samples,
+             preprocessor,
+             extractor,
+             client,
+             experiment_path="my_experiment"):
+    """
+    Create a simple pipeline for BIOMETRIC experiments.
+
+    This contains the following steps:
+
+      1. Preprocessing
+      2. Extraction
+      3. Train background model
+      4. Project
+      5. Create biometric references
+      6. Scoring
+
+    For the time being it's assumed that a training and development set.
+    Follow a schematic of the pipeline
+
+
+    training_data --> 1. preproc - 2. extract 3. train background ---
+                                                                    |
+    enroll data -->   1. preproc - 2. extract                       |-- 4. project - 5. create biometric references                                           |                | 
+                                                                    i|                |
+    probe data --> 1. preproc - 2. extract                          |-- 4. project - 6. compute scores
+
+    
+    """
+
+    import dask.delayed
+
+
+    ## SPLITING THE TASK IN N NODES
+    n_nodes = len(client.cluster.workers)
+    training_split = split_data(training_samples, n_nodes)
+    biometric_reference_split = split_data(biometric_reference_samples, n_nodes)
+    probe_split = split_data(probe_samples, n_nodes)
+
+
+
+    # 1. PREPROCESSING
+
+    preproc_training_futures = []
+    preproc_enroll_futures = []
+    preproc_probe_futures = []
+
+    # DECORATING FOR CACHING
+    output_path = os.path.join(experiment_path, "./preprocessed")
+    #decorated_preprocess = cache_bobbio_samples(output_path, ".hdf5")(process_bobbio_samples)
+ 
+    decorated_preprocess = process_bobbio_samples # I'VE CHOSEN NOT TO CACHE THIS ONE
+    
+    for t_o, e_o, p_o in zip(training_split, biometric_reference_split, probe_split):
+        preproc_training_futures.append(
+
+                dask.delayed(decorated_preprocess)
+                            (biometric_samples=t_o,
+                            processor=preprocessor)
+                )
+                
+                
+    
+        preproc_enroll_futures.append(
+                dask.delayed(decorated_preprocess)
+                             (biometric_samples=e_o,
+                              processor=preprocessor
+                             )
+                )
+
+        
+          
+        preproc_probe_futures.append(
+                dask.delayed(decorated_preprocess)
+                            (biometric_samples=p_o,
+                             processor=preprocessor)
+                )
+   
+    # 2. EXTRACTION
+
+    extractor_training_futures = []
+    extractor_enroll_futures = []
+    extractor_probe_futures = []
+
+    # DECORATING FOR CACHING
+
+    output_path = os.path.join(experiment_path, "./extracted")
+    decorated_extractor = cache_bobbio_samples(output_path, ".hdf5")(process_bobbio_samples)
+ 
+    for t_o, e_o, p_o in zip(preproc_training_futures, preproc_enroll_futures, preproc_probe_futures):
+        extractor_training_futures.append(
+                dask.delayed(decorated_extractor)
+                            ( biometric_samples=t_o,
+                              processor=extractor)
+                )
+
+        extractor_enroll_futures.append(
+                dask.delayed(decorated_extractor)
+                             (biometric_samples=e_o,
+                              processor=extractor)
+                )
+
+        extractor_probe_futures.append(
+                dask.delayed(decorated_extractor)
+                             (biometric_samples=p_o,
+                              processor=extractor)
+                )
+
+    # Dumping futures
+    for t_o, e_o, p_o in zip(extractor_training_futures, extractor_enroll_futures, extractor_probe_futures):
+        t_o.compute(scheduler=client)
+        e_o.compute(scheduler=client)
+        p_o.compute(scheduler=client)
+
