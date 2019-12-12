@@ -2,7 +2,8 @@
 # vim: set fileencoding=utf-8 :
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
-
+import bob.io.base
+import os
 from .samples import Sample
 
 
@@ -63,7 +64,7 @@ def create_training_samples(database, group="dev", protocol="Default"):
         # TODO: Implement the following 3 properties in bob.db.base
         o.current_directory = database.original_directory
         o.current_extension = database.original_extension
-        o.sample = None
+        o.sample = o.load()
 
         biometric_sample = Sample(o.client_id, [o])
         biometric_samples.append(biometric_sample)
@@ -106,7 +107,7 @@ def create_biometric_reference_samples(database, group="dev", protocol="Default"
             # TODO: Implement the following 3 properties in bob.db.base
             o.current_directory = database.original_directory
             o.current_extension = database.original_extension
-            o.sample = None
+            o.sample = o.load()
 
         biometric_reference = Sample(m, objects)
         biometric_references.append(biometric_reference)
@@ -160,7 +161,7 @@ def create_biometric_probe_samples(
 
                 o.current_directory = database.original_directory
                 o.current_extension = database.original_extension
-                o.sample = None
+                o.sample = o.load()
 
                 probes[o.id] = ProbeSample(o.client_id, [o], [])
 
@@ -183,18 +184,34 @@ def cache_bobbio_samples(output_path, output_extension):
       output_extension:
     """
 
+    #TODO: Generic read/write bob processors
+    # This has to be replaced using the same solution implemented in
+    # bob.bio.base.tools or with joblib
+    def read_bobbiodata(file_name):
+        return bob.io.base.load(file_name)
+
+    def write_bobbiodata(data, file_name):
+        bob.io.base.save(data, file_name)
+
+
     def decorator(func):
         def wrapper(*args, **kwargs):
 
-            #Loading from cache
-            
+            #LOADING FROM CACHE
 
+            # TODO: I Know this is not the best way to work this out
+            if "biometric_samples" not in kwargs:
+                raise ValueError("`biometric_samples` keyword argument is missing")
 
+            biometric_samples = kwargs["biometric_samples"]
+            for bs in biometric_samples:
+                for o in bs.data:
+                    o.sample = read_bobbiodata(o.make_path())
+                    pass
 
             biometric_samples = func(*args, **kwargs)
 
- 
-            # Caching
+            # CACHING BACK
             for bs in biometric_samples:
 
                 for o in bs.data:
@@ -213,7 +230,9 @@ def cache_bobbio_samples(output_path, output_extension):
                     # Save
                     bob.io.base.create_directories_safe(os.path.dirname(file_name))
                     write_bobbiodata(o.sample, file_name)
-                    #o.sample = None
+
+                    # If you use the cache we clean it after
+                    o.sample = None 
 
 
             return biometric_samples

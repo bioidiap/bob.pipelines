@@ -38,6 +38,7 @@ def pipeline(training_samples,
              biometric_reference_samples,
              probe_samples,
              preprocessor,
+             extractor,
              client,
              experiment_path="my_experiment"):
     """
@@ -59,13 +60,12 @@ def pipeline(training_samples,
     training_data --> 1. preproc - 2. extract 3. train background ---
                                                                     |
     enroll data -->   1. preproc - 2. extract                       |-- 4. project - 5. create biometric references                                           |                | 
-                                                                    |                |
+                                                                    i|                |
     probe data --> 1. preproc - 2. extract                          |-- 4. project - 6. compute scores
 
     
     """
 
-    import ipdb; ipdb.set_trace()
 
     ## SPLITING THE TASK IN N NODES
     n_nodes = len(client.cluster.workers)
@@ -75,17 +75,16 @@ def pipeline(training_samples,
 
 
 
+    # 1. PREPROCESSING
+
     preproc_training_futures = []
     preproc_enroll_futures = []
     preproc_probe_futures = []
 
-
-    # DECORATING INPUT AND OUTPUT
+    # DECORATING FOR CACHING
     output_path = os.path.join(experiment_path, "./preprocessed")
-    decorated_preprocess = cache_bobbio_samples(output_path, ".hdf5")(process_bobbio_samples)
-    #decorated_preprocess = process_bobbio_samples
-
-    #import ipdb; ipdb.set_trace()
+    #decorated_preprocess = cache_bobbio_samples(output_path, ".hdf5")(process_bobbio_samples)
+    decorated_preprocess = process_bobbio_samples # I'VE CHOSEN NOT TO CACHE THIS ONE
 
     for t_o, e_o, p_o in zip(training_split, biometric_reference_split, probe_split):
         preproc_training_futures.append(
@@ -95,7 +94,7 @@ def pipeline(training_samples,
                              )
                 )
 
-"""
+    
         preproc_enroll_futures.append(
                 client.submit(decorated_preprocess,
                               biometric_samples=e_o,
@@ -110,5 +109,44 @@ def pipeline(training_samples,
                               biometric_samples=p_o,
                               processor=preprocessor
                              )
-    )
-"""
+                )
+    
+
+    # 2. EXTRACTION
+
+    extractor_training_futures = []
+    extractor_enroll_futures = []
+    extractor_probe_futures = []
+
+    # DECORATING FOR CACHING
+
+    output_path = os.path.join(experiment_path, "./extracted")
+    decorated_extractor = cache_bobbio_samples(output_path, ".hdf5")(process_bobbio_samples)
+ 
+    for t_o, e_o, p_o in zip(preproc_training_futures, preproc_enroll_futures, preproc_probe_futures):
+        extractor_training_futures.append(
+                client.submit(decorated_extractor,
+                              biometric_samples=t_o,
+                              processor=extractor
+                             )
+                )
+
+        extractor_enroll_futures.append(
+                client.submit(decorated_extractor,
+                              biometric_samples=e_o,
+                              processor=extractor
+                             )
+                )
+
+        extractor_probe_futures.append(
+                client.submit(decorated_extractor,
+                              biometric_samples=p_o,
+                              processor=extractor
+                             )
+                )
+
+    # Dumping futures
+    for t_o, e_o, p_o in zip(extractor_training_futures, extractor_enroll_futures, extractor_probe_futures):
+        t_o.result()
+        e_o.result()
+        p_o.result()

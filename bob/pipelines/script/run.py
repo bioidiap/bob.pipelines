@@ -33,38 +33,58 @@ def run(ctx, **kwargs):
 
     """
 
-    #1. DEFINING THE SCHEDU
+
+    # TODO: THIS WILL BE THE MAIN EXECUTOR
+    # FOR TEST PURPOSES EVERYTHING IS HARD CODED IN THIS SCRIPT.
+    # THE GOAL IS JUST TO GRASP ALL THE NECESSARY TASKS AND POSSIBLE WORK
+    # AROUNDS THAT WE WILL NEED TO DO TO FINISH THIS TASK
+
+
+    #1. DEFINING THE CLIENT FOR EXECUTION
+    #   THIS COULD BE IN A CONFIG FILE
     from bob.pipelines.distributed.local import debug_client
     from bob.pipelines.distributed.sge import sge_iobig_client
 
     client = debug_client(1)
 
 
-    #2. Defining the bob.db database
+    #2. DEFINING THE EXPERIMENT SETUP
+
+    # 2.1 DATABASE
     import bob.db.atnt
     database = bob.db.atnt.Database()
 
 
-    #3 defining all the necessary tools to run the pipeline
+    # 2.1 SIGNAL PROCESSING AND ML TOOLS
     import numpy
+
+    # 2.1.1 preprocessor
     import bob.bio.face
     preprocessor = bob.bio.face.preprocessor.Base(color_channel="gray",
                                                   dtype = numpy.float64)
 
-    #4 getting samples
+    # 2.1.2 extractor
+    import bob.bio.base
+    extractor = bob.bio.base.extractor.Linearize()
+
+    # 2.1......
+
+
+    # 3. FETCHING SAMPLES
     from bob.pipelines.samples.biometric_samples import create_training_samples, create_biometric_reference_samples, create_biometric_probe_samples
 
     training_samples = create_training_samples(database)
     biometric_reference_samples = create_biometric_reference_samples(database)
     probe_samples = create_biometric_probe_samples(database, biometric_reference_samples)
     
-    # 5 fetching the pipeline
+    # 4. RUNNING THE PIPELINE
     from bob.pipelines.bob_bio.simple_pipeline import pipeline
 
     pipeline(training_samples,
             biometric_reference_samples,
             probe_samples,
             preprocessor,
+            extractor,
             client
             )
 
