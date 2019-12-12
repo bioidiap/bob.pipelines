@@ -26,6 +26,8 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - bob.extension
+    - bob.db.base
+    - bob.bio.base
     - dask
 
   run:
