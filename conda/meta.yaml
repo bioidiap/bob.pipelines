@@ -28,6 +28,7 @@ requirements:
     - bob.extension
     - bob.db.base
     - bob.bio.base
+    - bob.bio.face
     - dask
 
   run:
