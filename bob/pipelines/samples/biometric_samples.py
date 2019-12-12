@@ -5,7 +5,7 @@
 import bob.io.base
 import os
 from .samples import Sample
-
+import numpy
 
 class ProbeSample(Sample):
     """
@@ -241,6 +241,49 @@ def cache_bobbio_samples(output_path, output_extension):
     return decorator
 
 
+def cache_bobbio_algorithms(output_file):
+    """
+    Decorator meant to be used to cache biometric samples
+
+    **Parameters**
+
+      output_file:
+
+    """
+
+    #TODO: Generic read/write bob processors
+    # This has to be replaced using the same solution implemented in
+    # bob.bio.base.tools or with joblib
+    def read_bobbiodata(file_name):
+        return bob.io.base.load(file_name)
+
+
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+
+            #LOADING FROM CACHE
+
+            # TODO: I Know this is not the best way to work this out
+            if "biometric_samples" not in kwargs:
+                raise ValueError("`biometric_samples` keyword argument is missing")
+
+            biometric_samples = kwargs["biometric_samples"]
+            for bs in biometric_samples:
+                for o in bs.data:
+                    o.sample = read_bobbiodata(o.make_path())
+                    pass
+
+            func(*args, **kwargs)
+
+        
+            #TODO: Issue bob.bio.base#106
+
+        return wrapper
+    return decorator
+
+
+
+
 def read_biofiles(objects, loader, split_by_client=False, allow_missing_files=False):
     """read_features(file_names, extractor, split_by_client = False) -> extracted
 
@@ -283,6 +326,6 @@ def read_biofiles(objects, loader, split_by_client=False, allow_missing_files=Fa
                 if s.sample is None
                 else s.sample
                 for o in objects
-                for s in o.samples
+                for s in o.data
             ]
         )

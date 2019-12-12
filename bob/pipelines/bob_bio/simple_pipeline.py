@@ -10,8 +10,8 @@ for bob.bio experiments
 """
 
 import os
-from .simple_blocks import process_bobbio_samples
-from bob.pipelines.samples.biometric_samples import cache_bobbio_samples
+from .simple_blocks import process_bobbio_samples, train_bobbio_algorithm
+from bob.pipelines.samples.biometric_samples import cache_bobbio_samples, cache_bobbio_algorithms
 
 
 def split_data(input_data, n_groups):
@@ -38,6 +38,7 @@ def pipeline(
     probe_samples,
     preprocessor,
     extractor,
+    algorithm,
     client,
     experiment_path="my_experiment",
 ):
@@ -151,6 +152,7 @@ def pipeline_DELAY(
     probe_samples,
     preprocessor,
     extractor,
+    algorithm,
     client,
     experiment_path="my_experiment",
 ):
@@ -234,9 +236,9 @@ def pipeline_DELAY(
 
     # 2. EXTRACTION
 
-    extractor_training_futures = []
-    extractor_enroll_futures = []
-    extractor_probe_futures = []
+    extracted_training_futures = []
+    extracted_enroll_futures = []
+    extracted_probe_futures = []
 
     # DECORATING FOR CACHING
 
@@ -248,28 +250,54 @@ def pipeline_DELAY(
     for t_o, e_o, p_o in zip(
         preproc_training_futures, preproc_enroll_futures, preproc_probe_futures
     ):
-        extractor_training_futures.append(
+        extracted_training_futures.append(
             dask.delayed(decorated_extractor)(
                 biometric_samples=t_o, processor=extractor
             )
         )
 
-        extractor_enroll_futures.append(
+        extracted_enroll_futures.append(
             dask.delayed(decorated_extractor)(
                 biometric_samples=e_o, processor=extractor
             )
         )
 
-        extractor_probe_futures.append(
+        extracted_probe_futures.append(
             dask.delayed(decorated_extractor)(
                 biometric_samples=p_o, processor=extractor
             )
         )
 
+
+    # TRAINING
+
+    output_model = os.path.join(experiment_path, "Project.hdf5")
+
+
+    #concatenating delayed for training
+    extracted_training_concat = dask.bag.concat(extracted_training_futures)
+
+    #background_model_future = cache_bobbio_algorithms(output_model)
+
+    background_model_future = dask.delayed(train_bobbio_algorithm)(
+                                          extracted_training_concat, algorithm, output_model
+                                          )
+
+    background_model_future.compute(scheduler=client)
+
+
+
+    # PROJECT
+
+
+
+    #background_model.result()
+        
+        
     # Dumping futures
-    for t_o, e_o, p_o in zip(
-        extractor_training_futures, extractor_enroll_futures, extractor_probe_futures
-    ):
-        t_o.compute(scheduler=client)
-        e_o.compute(scheduler=client)
-        p_o.compute(scheduler=client)
+    #for t_o, e_o, p_o in zip(
+    #    extractor_training_futures, extractor_enroll_futures, extractor_probe_futures
+    #):
+    #    t_o.compute(scheduler=client)
+    #    e_o.compute(scheduler=client)
+    #    p_o.compute(scheduler=client)

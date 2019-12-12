@@ -48,7 +48,7 @@ def run(ctx, use_dask_delay, **kwargs):
 
     client = debug_client(1)
     #client = sge_iobig_client(10)
-
+    #import ipdb; ipdb.set_trace()
 
 
     #2. DEFINING THE EXPERIMENT SETUP
@@ -70,7 +70,12 @@ def run(ctx, use_dask_delay, **kwargs):
     import bob.bio.base
     extractor = bob.bio.base.extractor.Linearize()
 
-    # 2.1......
+    # 2.1.3 Algorithm
+    from bob.bio.base.algorithm import PCA
+    algorithm = PCA(0.99)
+
+    # 2.1.........
+
 
 
     # 3. FETCHING SAMPLES
@@ -90,6 +95,7 @@ def run(ctx, use_dask_delay, **kwargs):
                 probe_samples,
                 preprocessor,
                 extractor,
+                algorithm,
                 client
                 )
     else:
@@ -97,8 +103,11 @@ def run(ctx, use_dask_delay, **kwargs):
                 biometric_reference_samples,
                 probe_samples,
                 preprocessor,
+                algorithm,
                 extractor,
                 client
             )
+    #import ipdb; ipdb.set_trace()
+    client.shutdown()
 
     pass
