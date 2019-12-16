@@ -21,15 +21,16 @@ EPILOG = '''\b
                                  'allow_extra_args': True})
 @verbosity_option(cls=ResourceOption)
 @click.option('--use-dask-delay', is_flag=True)
+@click.option('--use-andre', is_flag=True)
 @click.pass_context
-def run(ctx, use_dask_delay, **kwargs):
+def run(ctx, use_dask_delay, use_andre, **kwargs):
     """Run a pipeline
 
     FROM THE TIME BEING NOT PASSING ANY PARAMETER
 
     \b
 
-    bob pipelines run 
+    bob pipelines run
 
 
     """
@@ -84,10 +85,9 @@ def run(ctx, use_dask_delay, **kwargs):
     training_samples = create_training_samples(database)
     biometric_reference_samples = create_biometric_reference_samples(database)
     probe_samples = create_biometric_probe_samples(database, biometric_reference_samples)
-    
-    # 4. RUNNING THE PIPELINE
-    from bob.pipelines.bob_bio.simple_pipeline import pipeline, pipeline_DELAY
 
+    # 4. RUNNING THE PIPELINE
+    from bob.pipelines.bob_bio.simple_pipeline import pipeline, pipeline_DELAY, pipeline_ANDRE
 
     if use_dask_delay:
         pipeline_DELAY(training_samples,
@@ -98,6 +98,16 @@ def run(ctx, use_dask_delay, **kwargs):
                 algorithm,
                 client
                 )
+    elif use_andre:
+        pipeline_ANDRE(database.objects(protocol="Default", groups="world"),
+                [(k, database.objects(protocol="Default", groups="dev",
+                    purposes="enroll", model_ids=(k,))) for k in
+                    database.model_ids(groups="dev")],
+                preprocessor,
+                extractor,
+                algorithm,
+                client
+            )
     else:
         pipeline(training_samples,
                 biometric_reference_samples,
@@ -107,7 +117,4 @@ def run(ctx, use_dask_delay, **kwargs):
                 extractor,
                 client
             )
-    #import ipdb; ipdb.set_trace()
     client.shutdown()
-
-    pass
