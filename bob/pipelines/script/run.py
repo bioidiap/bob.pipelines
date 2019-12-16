@@ -99,15 +99,20 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
                 client
                 )
     elif use_andre:
-        pipeline_ANDRE(database.objects(protocol="Default", groups="world"),
+        delayeds = pipeline_ANDRE(
+                database.objects(protocol="Default", groups="world"),
                 [(k, database.objects(protocol="Default", groups="dev",
                     purposes="enroll", model_ids=(k,))) for k in
                     database.model_ids(groups="dev")],
+                ## N.B.: Demangling probe_samples to KISS
+                [(k.sample_id, k.data, [z.sample_id for z in
+                    k.biometric_references]) for k in probe_samples],
                 preprocessor,
                 extractor,
                 algorithm,
-                client
+                npartitions=len(client.cluster.workers),
             )
+        scores = delayeds.compute(scheduler=client)
     else:
         pipeline(training_samples,
                 biometric_reference_samples,
