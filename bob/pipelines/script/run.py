@@ -55,8 +55,12 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
     #2. DEFINING THE EXPERIMENT SETUP
 
     # 2.1 DATABASE
+    protocol = "Default"
+    
     import bob.db.atnt
+    #import bob.db.mobio
     database = bob.db.atnt.Database()
+    #database = bob.db.mobio.Database(original_directory="/idiap/resource/database/mobio/IMAGES_PNG", annotation_directory="/idiap/resource/database/mobio/IMAGE_ANNOTATIONS")
 
 
     # 2.1 SIGNAL PROCESSING AND ML TOOLS
@@ -80,17 +84,19 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
 
 
     # 3. FETCHING SAMPLES
+    
     from bob.pipelines.samples.biometric_samples import create_training_samples, create_biometric_reference_samples, create_biometric_probe_samples
 
-    training_samples = create_training_samples(database)
-    biometric_reference_samples = create_biometric_reference_samples(database)
-    probe_samples = create_biometric_probe_samples(database, biometric_reference_samples)
+    training_samples = create_training_samples(database, protocol=protocol)
+    biometric_reference_samples = create_biometric_reference_samples(database, protocol=protocol)
+    probe_samples = create_biometric_probe_samples(database, biometric_reference_samples, protocol=protocol)
 
     # 4. RUNNING THE PIPELINE
     from bob.pipelines.bob_bio.simple_pipeline import pipeline, pipeline_DELAY, pipeline_ANDRE
 
     if use_dask_delay:
-        pipeline_DELAY(training_samples,
+
+       pipeline_DELAY(training_samples,
                 biometric_reference_samples,
                 probe_samples,
                 preprocessor,
@@ -99,6 +105,7 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
                 client
                 )
     elif use_andre:
+
         delayeds = pipeline_ANDRE(
                 database.objects(protocol="Default", groups="world"),
                 [(k, database.objects(protocol="Default", groups="dev",
@@ -111,8 +118,28 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
                 extractor,
                 algorithm,
                 npartitions=len(client.cluster.workers),
+                experiment_path = "my_experiment"
             )
+
+        """
+        delayeds = pipeline_ANDRE(                
+                database.objects(protocol=protocol, groups="world"),
+                [(k, database.objects(protocol=protocol, groups="dev",
+                    purposes="enroll", model_ids=(k,))) for k in
+                    database.model_ids(groups="dev")],
+                ## N.B.: Demangling probe_samples to KISS
+                [(k.sample_id, k.data, [z.sample_id for z in
+                    k.biometric_references]) for k in probe_samples],
+                preprocessor,
+                extractor,
+                algorithm,
+                npartitions=len(client.cluster.workers),
+                experiment_path = "my_mobio"
+            )
+        """
+
         scores = delayeds.compute(scheduler=client)
+        pass
     else:
         pipeline(training_samples,
                 biometric_reference_samples,
@@ -122,4 +149,5 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
                 extractor,
                 client
             )
+
     client.shutdown()

@@ -384,6 +384,7 @@ def pipeline_ANDRE(
     ## 1. TRAINING BACKGROUND MODEL:
     ##    a. Preprocess and Extract all samples
     ##    b. Feed all samples to the trainer
+    npartititions = 1
     db = dask.bag.from_sequence(training_samples, npartitions=npartitions)
     db = db.map_partitions(lambda x: [k.load() for k in x])
     db = db.map_partitions(lambda x: [preprocessor(k) for k in x])
@@ -468,7 +469,10 @@ def pipeline_ANDRE(
     ## model and then associate them here.
     ## TODO: Did not find a way to pass a "bag" as a parameter to the
     ## ``.map()`` function of **another** bag
+    #import ipdb; ipdb.set_trace()
+    all_models = dask.delayed(list)(models)
     scores = db.map(_score, background_model, background_model_path,
-            list(models))
+            all_models)
+
 
     return scores
