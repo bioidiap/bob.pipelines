@@ -20,10 +20,8 @@ EPILOG = '''\b
 @click.command(context_settings={'ignore_unknown_options': True,
                                  'allow_extra_args': True})
 @verbosity_option(cls=ResourceOption)
-@click.option('--use-dask-delay', is_flag=True)
-@click.option('--use-andre', is_flag=True)
 @click.pass_context
-def run(ctx, use_dask_delay, use_andre, **kwargs):
+def run(ctx, **kwargs):
     """Run a pipeline
 
     FROM THE TIME BEING NOT PASSING ANY PARAMETER
@@ -49,8 +47,6 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
 
     client = debug_client(1)
     #client = sge_iobig_client(10)
-    #import ipdb; ipdb.set_trace()
-
 
     #2. DEFINING THE EXPERIMENT SETUP
 
@@ -87,67 +83,51 @@ def run(ctx, use_dask_delay, use_andre, **kwargs):
     
     from bob.pipelines.samples.biometric_samples import create_training_samples, create_biometric_reference_samples, create_biometric_probe_samples
 
-    training_samples = create_training_samples(database, protocol=protocol)
+    # TODO: WE SHOULD WORK THIS OUT
+
+    #training_samples = create_training_samples(database, protocol=protocol)
+
+    ### 
     biometric_reference_samples = create_biometric_reference_samples(database, protocol=protocol)
     probe_samples = create_biometric_probe_samples(database, biometric_reference_samples, protocol=protocol)
 
     # 4. RUNNING THE PIPELINE
-    from bob.pipelines.bob_bio.simple_pipeline import pipeline, pipeline_DELAY, pipeline_ANDRE
+    from bob.pipelines.bob_bio.simple_pipeline import pipeline
 
-    if use_dask_delay:
+    #"""
+    delayeds = pipeline(
+            database.objects(protocol="Default", groups="world"),
+            [(k, database.objects(protocol="Default", groups="dev",
+                purposes="enroll", model_ids=(k,))) for k in
+                database.model_ids(groups="dev")],
+            ## N.B.: Demangling probe_samples to KISS
+            [(k.sample_id, k.data, [z.sample_id for z in
+                k.biometric_references]) for k in probe_samples],
+            preprocessor,
+            extractor,
+            algorithm,
+            npartitions=len(client.cluster.workers),
+            experiment_path = "my_experiment"
+        )
+    #"""
 
-       pipeline_DELAY(training_samples,
-                biometric_reference_samples,
-                probe_samples,
-                preprocessor,
-                extractor,
-                algorithm,
-                client
-                )
-    elif use_andre:
+    """
 
-        delayeds = pipeline_ANDRE(
-                database.objects(protocol="Default", groups="world"),
-                [(k, database.objects(protocol="Default", groups="dev",
-                    purposes="enroll", model_ids=(k,))) for k in
-                    database.model_ids(groups="dev")],
-                ## N.B.: Demangling probe_samples to KISS
-                [(k.sample_id, k.data, [z.sample_id for z in
-                    k.biometric_references]) for k in probe_samples],
-                preprocessor,
-                extractor,
-                algorithm,
-                npartitions=len(client.cluster.workers),
-                experiment_path = "my_experiment"
-            )
+    delayeds = pipeline(                
+            database.objects(protocol=protocol, groups="world"),
+            [(k, database.objects(protocol=protocol, groups="dev",
+                purposes="enroll", model_ids=(k,))) for k in
+                database.model_ids(groups="dev")],
+            ## N.B.: Demangling probe_samples to KISS
+            [(k.sample_id, k.data, [z.sample_id for z in
+                k.biometric_references]) for k in probe_samples],
+            preprocessor,
+            extractor,
+            algorithm,
+            npartitions=len(client.cluster.workers),
+            experiment_path = "my_mobio"
+        )
+    """
 
-        """
-        delayeds = pipeline_ANDRE(                
-                database.objects(protocol=protocol, groups="world"),
-                [(k, database.objects(protocol=protocol, groups="dev",
-                    purposes="enroll", model_ids=(k,))) for k in
-                    database.model_ids(groups="dev")],
-                ## N.B.: Demangling probe_samples to KISS
-                [(k.sample_id, k.data, [z.sample_id for z in
-                    k.biometric_references]) for k in probe_samples],
-                preprocessor,
-                extractor,
-                algorithm,
-                npartitions=len(client.cluster.workers),
-                experiment_path = "my_mobio"
-            )
-        """
-
-        scores = delayeds.compute(scheduler=client)
-        pass
-    else:
-        pipeline(training_samples,
-                biometric_reference_samples,
-                probe_samples,
-                preprocessor,
-                algorithm,
-                extractor,
-                client
-            )
-
+    scores = delayeds.compute(scheduler=client)
     client.shutdown()
