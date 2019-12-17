@@ -3,25 +3,35 @@
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
 
-"""
-Execute a particular pipeline
-"""
-from bob.extension.scripts.click_helper import (
-            verbosity_option, log_parameters)
+"""Executes a particular pipeline"""
+
+import os
+import functools
+
 import click
+
 from bob.extension.scripts.click_helper import verbosity_option, ResourceOption
-from bob.extension.config import load
-
-EPILOG = '''\b
 
 
-'''
+EPILOG = """\b
 
-@click.command(context_settings={'ignore_unknown_options': True,
-                                 'allow_extra_args': True})
+
+"""
+
+
+@click.command(
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True}
+)
+@click.option(
+    "-o",
+    "--output",
+    show_default=True,
+    default="results",
+    help="Name of output directory",
+)
 @verbosity_option(cls=ResourceOption)
 @click.pass_context
-def run(ctx, **kwargs):
+def run(ctx, output, **kwargs):
     """Run a pipeline
 
     FROM THE TIME BEING NOT PASSING ANY PARAMETER
@@ -33,101 +43,56 @@ def run(ctx, **kwargs):
 
     """
 
-
-    # TODO: THIS WILL BE THE MAIN EXECUTOR
-    # FOR TEST PURPOSES EVERYTHING IS HARD CODED IN THIS SCRIPT.
-    # THE GOAL IS JUST TO GRASP ALL THE NECESSARY TASKS AND POSSIBLE WORK
-    # AROUNDS THAT WE WILL NEED TO DO TO FINISH THIS TASK
-
-
-    #1. DEFINING THE CLIENT FOR EXECUTION
-    #   THIS COULD BE IN A CONFIG FILE
-    from bob.pipelines.distributed.local import debug_client
-    from bob.pipelines.distributed.sge import sge_iobig_client
-
-    client = debug_client(1)
-    #client = sge_iobig_client(10)
-
-    #2. DEFINING THE EXPERIMENT SETUP
-
-    # 2.1 DATABASE
-    protocol = "Default"
-    
+    # Configures the algorithm (concrete) implementations for the pipeline
     import bob.db.atnt
-    #import bob.db.mobio
-    database = bob.db.atnt.Database()
-    #database = bob.db.mobio.Database(original_directory="/idiap/resource/database/mobio/IMAGES_PNG", annotation_directory="/idiap/resource/database/mobio/IMAGE_ANNOTATIONS")
+    from ..bob_bio.blocks import DatabaseConnector
+    database = DatabaseConnector(bob.db.atnt.Database(), protocol="Default")
 
-
-    # 2.1 SIGNAL PROCESSING AND ML TOOLS
-    import numpy
-
-    # 2.1.1 preprocessor
-    import bob.bio.face
-    preprocessor = bob.bio.face.preprocessor.Base(color_channel="gray",
-                                                  dtype = numpy.float64)
-
-    # 2.1.2 extractor
+    from ..bob_bio.blocks import SampleLoader
     import bob.bio.base
-    extractor = bob.bio.base.extractor.Linearize()
+    import bob.bio.face
 
-    # 2.1.3 Algorithm
+    loader = SampleLoader(
+        functools.partial(
+            bob.bio.face.preprocessor.Base,
+            color_channel="gray",
+            dtype="float64",
+        ),
+        bob.bio.base.extractor.Linearize,
+    )
+
+    from ..bob_bio.blocks import AlgorithmAdaptor
     from bob.bio.base.algorithm import PCA
-    algorithm = PCA(0.99)
+    algorithm = AlgorithmAdaptor(
+        functools.partial(PCA, 0.99), os.path.join(output, "background",
+            "model.hdf5"),
+    )
 
-    # 2.1.........
 
+    # Configures the execution context
+    from bob.pipelines.distributed.local import debug_client
+    client = debug_client(1)
+    # from bob.pipelines.distributed.sge import sge_iobig_client
+    # client = sge_iobig_client(10)
 
+    # Chooses the pipeline to run
+    from bob.pipelines.bob_bio.pipelines import first as pipeline
 
-    # 3. FETCHING SAMPLES
-    
-    from bob.pipelines.samples.biometric_samples import create_training_samples, create_biometric_reference_samples, create_biometric_probe_samples
+    if not os.path.exists(output):
+        os.makedirs(output)
 
-    # TODO: WE SHOULD WORK THIS OUT
+    result = pipeline(
+        database.background_model_samples(),
+        database.references(group="dev"),
+        database.probes(group="dev"),
+        loader,
+        algorithm,
+        npartitions=len(client.cluster.workers),
+        cache=output,
+    )
 
-    #training_samples = create_training_samples(database, protocol=protocol)
+    result = result.compute(scheduler=client)
+    for k in result:
+        print(k.reference.subject, k.probe.subject, k.probe.path, k.data)
 
-    ### 
-    biometric_reference_samples = create_biometric_reference_samples(database, protocol=protocol)
-    probe_samples = create_biometric_probe_samples(database, biometric_reference_samples, protocol=protocol)
-
-    # 4. RUNNING THE PIPELINE
-    from bob.pipelines.bob_bio.simple_pipeline import pipeline
-
-    #"""
-    delayeds = pipeline(
-            database.objects(protocol="Default", groups="world"),
-            [(k, database.objects(protocol="Default", groups="dev",
-                purposes="enroll", model_ids=(k,))) for k in
-                database.model_ids(groups="dev")],
-            ## N.B.: Demangling probe_samples to KISS
-            [(k.sample_id, k.data, [z.sample_id for z in
-                k.biometric_references]) for k in probe_samples],
-            preprocessor,
-            extractor,
-            algorithm,
-            npartitions=len(client.cluster.workers),
-            experiment_path = "my_experiment"
-        )
-    #"""
-
-    """
-
-    delayeds = pipeline(                
-            database.objects(protocol=protocol, groups="world"),
-            [(k, database.objects(protocol=protocol, groups="dev",
-                purposes="enroll", model_ids=(k,))) for k in
-                database.model_ids(groups="dev")],
-            ## N.B.: Demangling probe_samples to KISS
-            [(k.sample_id, k.data, [z.sample_id for z in
-                k.biometric_references]) for k in probe_samples],
-            preprocessor,
-            extractor,
-            algorithm,
-            npartitions=len(client.cluster.workers),
-            experiment_path = "my_mobio"
-        )
-    """
-
-    scores = delayeds.compute(scheduler=client)
     client.shutdown()
