@@ -3,7 +3,7 @@
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
 
-def sge_iobig_client(n_nodes, queue="q_1day", queue_resource_spec="q_1day=TRUE,io_big=TRUE", memory="4GB", sge_log= "./logs"):
+def sge_iobig_client(n_nodes, queue="q_1day", queue_resource_spec="q_1day=TRUE,io_big=TRUE", memory="8GB", sge_log= "./logs"):
 
     from dask_jobqueue import SGECluster
     from dask.distributed import Client
