@@ -80,7 +80,8 @@ def first(
 
     ## Training background model (fit will return even if samples is ``None``,
     ## in which case we suppose the algorithm is not trainable in any way)
-    db = dask.bag.from_sequence(background_model_samples, npartitions=npartitions)
+    db = dask.bag.from_sequence(background_model_samples,
+            npartitions=npartitions)
     db = db.map_partitions(loader)
     background_model = dask.delayed(algorithm.fit)(db)
 

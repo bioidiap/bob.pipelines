@@ -32,9 +32,9 @@ EPILOG = """\b
 @verbosity_option(cls=ResourceOption)
 @click.pass_context
 def run(ctx, output, **kwargs):
-    """Run a pipeline
+    """Runs a pipeline
 
-    FROM THE TIME BEING NOT PASSING ANY PARAMETER
+    FOR THE TIME BEING, NOT PASSING ANY PARAMETER
 
     \b
 
@@ -68,7 +68,6 @@ def run(ctx, output, **kwargs):
             "model.hdf5"),
     )
 
-
     # Configures the execution context
     from bob.pipelines.distributed.local import debug_client
     client = debug_client(1)
@@ -90,6 +89,9 @@ def run(ctx, output, **kwargs):
         npartitions=len(client.cluster.workers),
         cache=output,
     )
+
+    # save graph on results directory
+    result.visualize(os.path.join(output, 'graph'), format='pdf', rankdir="LR")
 
     result = result.compute(scheduler=client)
     for k in result:
