@@ -121,6 +121,7 @@ def run(ctx, output, **kwargs):
                 "preprocessor": os.path.join(output, "references",
                     "preprocessed"),
                 "extractor": os.path.join(output, "references", "extracted"),
+                "enrolled": os.path.join(output, "references", "enrolled"),
                 },
             "probes": {
                 "preprocessor": os.path.join(output, "probes", "preprocessed"),

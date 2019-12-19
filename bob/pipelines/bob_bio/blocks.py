@@ -517,7 +517,7 @@ class AlgorithmAdaptor:
 
         return self.path
 
-    def enroll(self, references, path, *args, **kwargs):
+    def enroll(self, references, path, checkpoint, *args, **kwargs):
         """Runs prediction on multiple input samples
 
         This method is optimized to deal with multiple reference biometric
@@ -535,6 +535,12 @@ class AlgorithmAdaptor:
             path : str
                 Path pointing to stored model on disk
 
+            checkpoint : str, None
+                If passed and not ``None``, then it is considered to be the
+                path of a directory containing possible cached values for each
+                of the references in this experiment.  If that is the case, the
+                values are loaded from there and not recomputed.
+
             *args, **kwargs :
                 Extra parameters that can be used to hook-up processing graph
                 dependencies, but are currently ignored
@@ -549,12 +555,32 @@ class AlgorithmAdaptor:
         """
 
         model = self.algorithm()
-        model.load_projector(path)
+        model_loaded = False
+
+        def _enroll(k):
+            if not model_loaded:
+                model.load_projector(path)
+                model_loaded = True
+            return model.enroll([model.project(s.data) for s in k.samples])
+
         retval = []
         for k in references:
-            data = model.enroll([model.project(s.data) for s in k.samples])
-            # SampleSet -> Sample (1 reference)
-            retval.append(Sample(data, parent=k))
+            if checkpoint is not None:
+                candidate = os.path.join(
+                        os.path.join(checkpoint, k.path + '.hdf5')
+                        )
+                if not os.path.exists(candidate):
+                    # create new checkpoint
+                    bob.io.base.create_directories_safe(
+                            os.path.dirname(candidate)
+                            )
+                    enrolled = _enroll(k)
+                    model.write_model(enrolled, candidate)
+                retval.append(DelayedSample(functools.partial(model.read_model,
+                    candidate), parent=k))
+            else:
+                #compute on-the-fly
+                retval.append(Sample(_enroll(k), parent=k))
         return retval
 
     def score(self, probes, references, path, *args, **kwargs):

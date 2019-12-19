@@ -91,7 +91,8 @@ def first(
     ## Enroll biometric references
     db = dask.bag.from_sequence(references, npartitions=npartitions)
     db = db.map_partitions(loader, checkpoints.get("references", {}))
-    references = db.map_partitions(algorithm.enroll, background_model)
+    references = db.map_partitions(algorithm.enroll, background_model,
+            checkpoints.get("references", {}).get("enrolled"))
 
     ## Scores all probes
     db = dask.bag.from_sequence(probes, npartitions=npartitions)
