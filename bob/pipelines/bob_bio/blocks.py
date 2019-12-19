@@ -554,14 +554,29 @@ class AlgorithmAdaptor:
 
         """
 
-        model = self.algorithm()
-        model_loaded = False
+        class _CachedModel:
 
-        def _enroll(k):
-            if not model_loaded:
-                model.load_projector(path)
-                model_loaded = True
-            return model.enroll([model.project(s.data) for s in k.samples])
+            def __init__(self, algorithm, path):
+                self.model = algorithm()
+                self.loaded = False
+                self.path = path
+
+            def load(self):
+                if not self.loaded:
+                    self.model.load_projector(self.path)
+                    self.loaded = True
+
+            def enroll(self, k):
+                self.load()
+                return self.model.enroll([
+                    self.model.project(s.data)
+                    for s in k.samples
+                    ])
+
+            def write_enrolled(self, k, path):
+                self.model.write_model(k, path)
+
+        model = _CachedModel(self.algorithm, path)
 
         retval = []
         for k in references:
@@ -574,13 +589,15 @@ class AlgorithmAdaptor:
                     bob.io.base.create_directories_safe(
                             os.path.dirname(candidate)
                             )
-                    enrolled = _enroll(k)
-                    model.write_model(enrolled, candidate)
-                retval.append(DelayedSample(functools.partial(model.read_model,
-                    candidate), parent=k))
+                    enrolled = model.enroll(k)
+                    model.model.write_model(enrolled, candidate)
+                retval.append(DelayedSample(
+                    functools.partial(model.model.read_model, candidate),
+                    parent=k,
+                    ))
             else:
                 #compute on-the-fly
-                retval.append(Sample(_enroll(k), parent=k))
+                retval.append(Sample(model.enroll(k), parent=k))
         return retval
 
     def score(self, probes, references, path, *args, **kwargs):

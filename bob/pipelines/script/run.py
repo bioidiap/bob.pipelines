@@ -114,7 +114,7 @@ def run(ctx, output, **kwargs):
                 "preprocessor": os.path.join(output, "background",
                     "preprocessed"),
                 "extractor": os.path.join(output, "background", "extracted"),
-                # at least, the next stage must be provided
+                # at least, the next stage must be provided!
                 "model": os.path.join(output, "background", "model")
                 },
             "references": {
