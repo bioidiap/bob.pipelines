@@ -7,8 +7,92 @@
 
 import os
 import copy
+import functools
 
-from .samples import Sample, Reference, Probe, Score
+import bob.io.base
+
+
+def _copy_attributes(s, d):
+    """Copies attributes from a dictionary to self
+    """
+    s.__dict__.update(dict(
+        [k, v]
+        for k, v in d.items()
+        if k not in ("data", "load", "samples")
+        ))
+
+
+class DelayedSample:
+    """Representation of sample that can be loaded via a callable
+
+    The optional ``**kwargs`` argument allows you to attach more attributes to
+    this sample instance.
+
+
+    Parameters
+    ----------
+
+        load : function
+            A python function that can be called parameterlessly, to load the
+            sample in question from whatever medium
+
+        parent : :py:class:`DelayedSample`, :py:class:`Sample`, None
+            If passed, consider this as a parent of this sample, to copy
+            information
+
+        kwargs : dict
+            Further attributes of this sample, to be stored and eventually
+            transmitted to transformed versions of the sample
+
+    """
+
+    def __init__(self, load, parent=None, **kwargs):
+        self.load = load
+        if parent is not None:
+            _copy_attributes(self, parent.__dict__)
+        _copy_attributes(self, kwargs)
+
+    @property
+    def data(self):
+        """Loads the data from the disk file"""
+        return self.load()
+
+
+class Sample:
+    """Representation of sample that is sufficient for the blocks in this module
+
+    Each sample must have the following attributes:
+
+        * attribute ``data``: Contains the data for this sample
+
+
+    Parameters
+    ----------
+
+        data : object
+            Object representing the data to initialize this sample with.
+
+        parent : object
+            A parent object from which to inherit all other attributes (except
+            ``data``)
+
+    """
+
+    def __init__(self, data, parent=None, **kwargs):
+        self.data = data
+        if parent is not None:
+            _copy_attributes(self, parent.__dict__)
+        _copy_attributes(self, kwargs)
+
+
+class SampleSet:
+    """A set of samples with extra attributes"""
+
+    def __init__(self, samples, parent=None, **kwargs):
+        self.samples = samples
+        if parent is not None:
+            _copy_attributes(self, parent.__dict__)
+        _copy_attributes(self, kwargs)
 
 
 class DatabaseConnector:
@@ -57,13 +141,14 @@ class DatabaseConnector:
         objects = self.database.objects(protocol=self.protocol, groups="world")
 
         return [
-            Sample(
-                None,
-                k.path,
-                self.database.original_directory,
-                self.database.original_extension,
-                # these are optional
-                subject=k.client_id,
+            DelayedSample(
+                load=functools.partial(
+                    k.load,
+                    self.database.original_directory,
+                    self.database.original_extension,
+                ),
+                id=k.id,
+                path=k.path,
             )
             for k in objects
         ]
@@ -101,33 +186,35 @@ class DatabaseConnector:
             )
 
             retval.append(
-                Reference(
-                    None,
-                    str(m),
+                SampleSet(
                     [
-                        Sample(
-                            None,
-                            k.path,
-                            self.database.original_directory,
-                            self.database.original_extension,
+                        DelayedSample(
+                            load=functools.partial(
+                                k.load,
+                                self.database.original_directory,
+                                self.database.original_extension,
+                            ),
+                            id=k.id,
+                            path=k.path,
                         )
                         for k in objects
                     ],
-                    objects[0].client_id,
-                    m,
+                    id=m,
+                    path=str(m),
+                    subject=objects[0].client_id,
                 )
             )
 
         return retval
 
-    def probes(self, group="dev"):
+    def probes(self, group):
         """Returns :py:class:`Probe`'s to score biometric references
 
 
         Parameters
         ----------
 
-            group : :py:class:`str`, optional
+            group : str
                 A ``group`` to be plugged at
                 :py:meth:`bob.db.base.Database.objects`
 
@@ -157,20 +244,22 @@ class DatabaseConnector:
             # Creating probe samples
             for o in objects:
                 if o.id not in probes:
-                    probes[o.id] = Probe(
-                        None,
-                        o.path,
+                    probes[o.id] = SampleSet(
                         [
-                            Sample(
-                                None,
-                                o.path,
-                                self.database.original_directory,
-                                self.database.original_extension,
+                            DelayedSample(
+                                load=functools.partial(
+                                    o.load,
+                                    self.database.original_directory,
+                                    self.database.original_extension,
+                                ),
+                                id=o.id,
+                                path=o.path,
                             )
                         ],
-                        o.client_id,
-                        o.id,
-                        [m],
+                        id=o.id,
+                        path=o.path,
+                        subject=o.client_id,
+                        references=[m],
                     )
                 else:
                     probes[o.id].references.append(m)
@@ -189,91 +278,236 @@ class SampleLoader:
 
     The input sample object must obbey the following (minimal) API:
 
-        * method ``load()``: Loads the data for this sample, which should be an
-          iterable of :py:class:`numpy.ndarray`.
-        * attribute ``data``: Contains the data for this sample.  This field
-          may be set to ``None`` upon initialization.  It is used internally to
-          store and transmit pre-loaded and transformed data between different
-          processing stages.  It is an iterable which may contain elements of
-          different nature than those returned by ``load()``, but respect the
-          same ordering.  E.g., the first entry of ``data`` corresponds to a
-          transformed version of the first array returned by ``load()``
+        * attribute ``id``: Contains an unique (string-fiable) identifier for
+          processed samples
+        * attribute ``data``: Contains the data for this sample
 
-    The sample is loaded if its ``data`` attribute is ``None``, by using its
-    ``load()`` method.  After that, it is preprocessed, if the
-    ``preprocessor_type`` is not ``None``.  Then, feature extraction follows if
-    the ``extractor_type`` is not ``None``.
+    Optional checkpointing is also implemented for each of the states,
+    independently.  You may check-point just the preprocessing, feature
+    extraction or both.
 
 
     Parameters
     ----------
 
-    preprocessor_type : type
-        A python type, that can be instantiated and used through its
-        ``__call__()`` interface to preprocess a single entry of a sample.  If
-        not set, then does not apply any preprocessing to the sample after
-        loading it. If not set (or set to ``None``), then does not apply any
-        feature extraction to the sample after preprocessing it.  For python
-        types that you may want to plug-in, but do not offer a default
-        constructor that you like, pass the result of
-        :py:func:`functools.partial` instead.
-
-    extractor_type : type
-        A python type, that can be instantiated and used through its
-        ``__call__()`` interface to extract features from a single entry of a
-        sample.  If not set (or set to ``None``), then does not apply any
-        feature extraction to the sample after preprocessing it.  For python
-        types that you may want to plug-in, but do not offer a default
-        constructor that you like, pass the result of
+    pipeline : :py:class:`list` of (:py:class:`str`, callable)
+        A list of doubles in which the first entry are names of each processing
+        step in the pipeline and second entry must be default-constructible
+        :py:class:`bob.bio.base.preprocessor.Preprocessor` or
+        :py:class:`bob.bio.base.preprocessor.Extractor` in any order.  Each
+        of these objects must be a python type, that can be instantiated and
+        used through its ``__call__()`` interface to process a single entry of
+        a sample.  For python types that you may want to plug-in, but do not
+        offer a default constructor that you like, pass the result of
         :py:func:`functools.partial` instead.
 
     """
 
-    def __init__(self, preprocessor_type=None, extractor_type=None):
-        self.preprocessor_type = preprocessor_type
-        self.extractor_type = extractor_type
+    def __init__(self, pipeline):
+        self.pipeline = copy.deepcopy(pipeline)
 
-    def __call__(self, samples):
-        """Applies the chain load() -> preproc() -> extract() to a list of samples
+    def _handle_step(self, s, func, checkpoint):
+        """Handles a single step in the pipeline, with optional checkpointing
+
+        Parameters
+        ----------
+
+        s : Sample, DelayedSample
+            The sample to be processed
+
+        func : callable
+            The processing function to call for processing the sample, if needs
+            be
+
+        checkpoint : str, None
+            An optional string that may point to a directory that will be used
+            for checkpointing the processing phase in question
+
+
+        Returns
+        -------
+
+        r : Sample, DelayedSample
+            The prototype processed sample.  If no checkpointing required, this
+            will be of type :py:class:`Sample`.  Otherwise, it will be a
+            :py:class:`DelayedSample`.
+
+        """
+
+        if checkpoint is not None:
+            # there can be a checkpoint for the data to be processed
+            candidate = os.path.join(checkpoint, s.path + ".hdf5")
+            if not os.path.exists(candidate):
+                # preprocessing is required, and checkpointing, do it now
+                data = func(s.data)
+                # notice this can be called in parallel w/o failing
+                bob.io.base.create_directories_safe(os.path.dirname(candidate))
+                # bob.bio.base standard interface for preprocessor
+                # has a read/write_data methods
+                writer = getattr(func, 'write_data') \
+                        if hasattr(func, 'write_data') \
+                        else getattr(func, 'write_feature')
+                writer(data, candidate)
+
+            # because we are checkpointing, we return an DelayedSample instead
+            # of normal (preloaded) sample. This allows the next phase to avoid
+            # loading it would it be unnecessary (e.g. next phase is already
+            # check-pointed)
+            reader = getattr(func, 'read_data') if hasattr(func, 'read_data') \
+                    else getattr(func, 'read_feature')
+            r = DelayedSample(
+                functools.partial(reader, candidate), parent=s,
+            )
+        else:
+            # if checkpointing is not required, load the data and preprocess it
+            # as we would normally do
+            r = Sample(func(s.data), parent=s)
+
+        return r
+
+    def _handle_sample(self, s, pipeline):
+        """Handles a single sample through a pipelien
+
+        Parameters
+        ----------
+
+        s : Sample, DelayedSample
+            The original sample to be processed (delayed or pre-loaded)
+
+        pipeline : :py:class:`list` of :py:class:`tuple`
+            A list of tuples, each comprising of one processing function and
+            one checkpoint directory (:py:class:`str` or ``None``, to avoid
+            checkpointing that phase), respectively
+
+
+        Returns
+        -------
+
+        r : Sample
+            The processed sample
+
+        """
+
+        r = s
+        for func, checkpoint in pipeline:
+            r = r if func is None else self._handle_step(r, func, checkpoint)
+        return r
+
+    def __call__(self, samples, checkpoints):
+        """Applies the pipeline chaining with optional checkpointing
+
+        Our implementation is optimized to minimize disk I/O to the most.  It
+        yields :py:class:`DelayedSample`'s instead of :py:class:`Sample` if
+        checkpointing is enabled.
 
 
         Parameters
         ----------
 
         samples : list
-            A list of samples that should be treated
+            List of :py:class:`Sample` or :py:class:`DelayedSample` to be
+            treated by this pipeline
+
+        checkpoints : dict
+            A dictionary (with any number of entries) that may contain as many
+            keys as those defined when you constructed this class with the
+            pipeline tuple list.  Upon execution, the existance of an entry
+            that defines checkpointing, this phase of the pipeline will be
+            checkpointed.  Notice that you are in the control of checkpointing.
+            If you miss an intermediary step, it will trigger this loader to
+            load the relevant sample, even if the next phase is supposed to be
+            checkpointed.  This strategy keeps the implementation as simple as
+            possible.
 
 
         Returns
         -------
 
         samples : list
-            Prepared samples
+            Loaded samples, after optional preprocessing and extraction
 
         """
 
-        # the preprocessor and extractor are initialized once
-        preprocessor = (
-            self.preprocessor_type()
-            if self.preprocessor_type is not None
-            else None
-        )
-        extractor = (
-            self.extractor_type() if self.extractor_type is not None else None
-        )
+        pipe = [(v(), checkpoints.get(k)) for k, v in self.pipeline]
+        return [self._handle_sample(k, pipe) for k in samples]
 
-        loaded = []
-        for s in samples:
-            r = copy.copy(s)
-            r.data = []
-            for d in s.load():
-                if preprocessor is not None:
-                    d = preprocessor(d)
-                if extractor is not None:
-                    d = extractor(d)
-                r.data.append(d)
-            loaded.append(r)
-        return loaded
+
+class SampleSetLoader(SampleLoader):
+    """A loader that can work with sample sets and execute checkpointing
+
+    Like its parent, this class will implement the sample loading pipeline,
+    with the difference it can handle :py:class:`SampleSet`'s instead of just
+    simple :py:class:`Sample`'s.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(SampleSetLoader, self).__init__(*args, **kwargs)
+
+    def _handle_step(self, sset, func, checkpoint):
+        """Handles a single step in the pipeline, with optional checkpointing
+
+        Parameters
+        ----------
+
+        sset : SampleSet, DelayedSampleSet
+            The original sample set to be processed (delayed or pre-loaded)
+
+        func : callable
+            The processing function to call for processing **each** sample in
+            the set, if needs be
+
+        checkpoint : str, None
+            An optional string that may point to a directory that will be used
+            for checkpointing the processing phase in question
+
+
+        Returns
+        -------
+
+        r : SampleSet
+            The prototype processed sample.  If no checkpointing required, this
+            will be of type :py:class:`Sample`.  Otherwise, it will be a
+            :py:class:`DelayedSample`
+
+        """
+
+        if checkpoint is not None:
+            samples = []  #processed samples
+            for s in sset.samples:
+                # there can be a checkpoint for the data to be processed
+                candidate = os.path.join(checkpoint, s.path + ".hdf5")
+                if not os.path.exists(candidate):
+                    # preprocessing is required, and checkpointing, do it now
+                    data = func(s.data)
+                    # notice this can be called in parallel w/o failing
+                    bob.io.base.create_directories_safe(
+                        os.path.dirname(candidate)
+                    )
+                    # bob.bio.base standard interface for preprocessor
+                    # has a read/write_data methods
+                    writer = getattr(func, 'write_data') \
+                            if hasattr(func, 'write_data') \
+                            else getattr(func, 'write_feature')
+                    writer(data, candidate)
+
+                # because we are checkpointing, we return a DelayedSample
+                # instead of normal (preloaded) sample. This allows the next
+                # phase to avoid loading it would it be unnecessary (e.g. next
+                # phase is already check-pointed)
+                reader = getattr(func, 'read_data') \
+                        if hasattr(func, 'read_data') \
+                        else getattr(func, 'read_feature')
+                samples.append(DelayedSample(
+                    functools.partial(reader, candidate), parent=s
+                ))
+        else:
+            # if checkpointing is not required, load the data and preprocess it
+            # as we would normally do
+            samples = [Sample(func(s.data), parent=s) for s in sset.samples]
+
+        r = SampleSet(samples, parent=sset)
+        return r
 
 
 class AlgorithmAdaptor:
@@ -326,8 +560,8 @@ class AlgorithmAdaptor:
         ----------
 
             samples : list
-                A list of :py:class:`.samples.Sample` objects to be used for
-                fitting this model
+                A list of :py:class:`Sample` or :py:class:`DelayedSample`
+                objects to be used for fitting this model
 
 
         Returns
@@ -343,17 +577,12 @@ class AlgorithmAdaptor:
         ## will be trained from the training data above, it will get stored to
         ## disk.
 
-        def _flatten(l):
-            return [item for sublist in l for item in sublist]
-
         model = self.algorithm()
         dirname = os.path.dirname(self.path)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
         if model.requires_projector_training:
-            model.train_projector(
-                _flatten([k.load() for k in samples]), self.path
-            )
+            model.train_projector([k.data for k in samples], self.path)
         return self.path
 
     def enroll(self, references, *args, **kwargs):
@@ -367,8 +596,9 @@ class AlgorithmAdaptor:
         ----------
 
             references : list
-                A list of :py:class:`.samples.Reference` objects to be used for
-                creating biometric references
+                A list of :py:class:`SampleSet` objects to be used for
+                creating biometric references.  The sets must be identified
+                with a unique id and a path, for eventual checkpointing.
 
             *args, **kwargs :
                 Extra parameters that can be used to hook-up processing graph
@@ -387,9 +617,9 @@ class AlgorithmAdaptor:
         model.load_projector(self.path)
         retval = []
         for k in references:
-            r = copy.copy(k)
-            r.data = model.enroll([model.project(l) for l in k.load()])
-            retval.append(r)
+            data = model.enroll([model.project(s.data) for s in k.samples])
+            # SampleSet -> Sample (1 reference)
+            retval.append(Sample(data, parent=k))
         return retval
 
     def score(self, probes, references, *args, **kwargs):
@@ -399,12 +629,13 @@ class AlgorithmAdaptor:
         ----------
 
             probes : list
-                A list of :py:class:`.samples.Probe` objects to be used for
+                A list of :py:class:`SampleSet` objects to be used for
                 scoring the input references
 
             references : list
-                A list of :py:class:`.samples.Reference` objects to be used for
-                scoring the input probes
+                A list of :py:class:`Sample` objects to be used for
+                scoring the input probes, must have an ``id`` attribute that
+                will be used to cross-reference which probes need to be scored.
 
             *args, **kwargs :
                 Extra parameters that can be used to hook-up processing graph
@@ -426,20 +657,15 @@ class AlgorithmAdaptor:
 
         retval = []
         for p in probes:
-            data = [model.project(l) for l in p.load()]
-            for ref in [r for r in references if r.id in p.references]:
-                for s in data:
-                    retval.append(
-                        Score(
-                            probe=copy.copy(p),
-                            reference=copy.copy(ref),
-                            data=model.score(ref.data, s),
-                        )
-                    )
-                    # we are not interested on the original probe and reference
-                    # data in this score, so we just supress it to avoid
-                    # trafficking too much information
-                    retval[-1].probe.data = None
-                    retval[-1].probe.references = []
-                    retval[-1].reference.data = None
+            data = [model.project(s.data) for s in p.samples]
+            for subprobe_id, (s, parent) in enumerate(zip(data, p.samples)):
+                # each sub-probe in the probe needs to be checked
+                subprobe_scores = []
+                for ref in [r for r in references if r.id in p.references]:
+                    subprobe_scores.append(
+                            Sample(model.score(ref.data, s), parent=ref)
+                            )
+                subprobe = SampleSet(subprobe_scores, parent=p)
+                subprobe.subprobe_id = subprobe_id
+                retval.append(subprobe)
         return retval

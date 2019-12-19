@@ -15,10 +15,12 @@ def first(
     background_model_samples,
     references,
     probes,
-    loader,
+    background_model_loader,
+    reference_loader,
+    probe_loader,
     algorithm,
     npartitions,
-    cache,
+    checkpoints={},
     ):
     """Creates a simple pipeline for **biometric** experiments.
 
@@ -47,8 +49,17 @@ def first(
         provided must conform to the :py:class:`.samples.Probe` API, or be
         a delayed version of such.
 
-    loader : object
-        An object that conforms to the :py:class:`.blocks.SampleLoader` API
+    background_model_loader : object
+        An object that conforms to the :py:class:`.blocks.SampleLoader` API and
+        can load samples defined in ``background_model_samples``
+
+    reference_loader : object
+        An object that conforms to the :py:class:`.blocks.SampleLoader` API and
+        can load references defined in ``references``
+
+    probe_loader : object
+        An object that conforms to the :py:class:`.blocks.SampleLoader` API and
+        can load references defined in ``probes``
 
     algorithm : object
         An object that conforms to the :py:class:`.blocks.AlgorithmAdaptor` API
@@ -61,10 +72,11 @@ def first(
         :py:class:`dask.bag`'s and :py:meth:`dask.bag.map_partitions` to
         process one full partition in a single pass.
 
-    cache : :py:class:`str`, optional
-        A path that points to location that is shared by all workers in the
-        client, and is used to potentially cache partial outputs of this
-        pipeline
+    checkpoints : :py:class:`dict`, optional
+        A dictionary that maps processing phase names to paths that will be
+        used to create checkpoints of the different processing phases in this
+        pipeline.  Checkpointing may speed up your processing.  Existing files
+        that have been previously check-pointed will not be recomputed.
 
 
     Returns
@@ -82,27 +94,19 @@ def first(
     ## in which case we suppose the algorithm is not trainable in any way)
     db = dask.bag.from_sequence(background_model_samples,
             npartitions=npartitions)
-    db = db.map_partitions(loader)
+    db = db.map_partitions(background_model_loader,
+            checkpoints.get("background", {}))
     background_model = dask.delayed(algorithm.fit)(db)
 
     ## Enroll biometric references
     db = dask.bag.from_sequence(references, npartitions=npartitions)
-    db = db.map_partitions(loader)
+    db = db.map_partitions(reference_loader,
+            checkpoints.get("references", {}))
     references = db.map_partitions(algorithm.enroll, background_model)
-
-    # TODO: This phase is optional, it caches the models
-    # N.B.: This step will return the precomputed models
-    #models_path = os.path.join(experiment_path, "models")
-    #def _store(data, path):
-    #    from bob.io.base import save
-    #    save(data[1], os.path.join(path, '%s.hdf5' % data[0]),
-    #            create_directories=True)
-    #    return data
-    #models = models.map(_store, models_path)
 
     ## Scores all probes
     db = dask.bag.from_sequence(probes, npartitions=npartitions)
-    db = db.map_partitions(loader)
+    db = db.map_partitions(probe_loader, checkpoints.get("probes", {}))
 
     ## TODO: Here, we are sending all computed biometric references to all
     ## probes.  It would be more efficient if only the models related to each
