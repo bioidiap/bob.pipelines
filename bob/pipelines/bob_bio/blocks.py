@@ -15,11 +15,11 @@ import bob.io.base
 def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self
     """
-    s.__dict__.update(dict(
-        [k, v]
-        for k, v in d.items()
-        if k not in ("data", "load", "samples")
-        ))
+    s.__dict__.update(
+        dict(
+            [k, v] for k, v in d.items() if k not in ("data", "load", "samples")
+        )
+    )
 
 
 class DelayedSample:
@@ -141,16 +141,19 @@ class DatabaseConnector:
         objects = self.database.objects(protocol=self.protocol, groups="world")
 
         return [
-            SampleSet([
-                DelayedSample(
-                    load=functools.partial(
-                        k.load,
-                        self.database.original_directory,
-                        self.database.original_extension,
+            SampleSet(
+                [
+                    DelayedSample(
+                        load=functools.partial(
+                            k.load,
+                            self.database.original_directory,
+                            self.database.original_extension,
                         ),
-                    id=k.id,
-                    path=k.path,
-                    )])
+                        id=k.id,
+                        path=k.path,
+                    )
+                ]
+            )
             for k in objects
         ]
 
@@ -336,7 +339,7 @@ class SampleLoader:
         """
 
         if checkpoint is not None:
-            samples = []  #processed samples
+            samples = []  # processed samples
             for s in sset.samples:
                 # there can be a checkpoint for the data to be processed
                 candidate = os.path.join(checkpoint, s.path + ".hdf5")
@@ -349,21 +352,27 @@ class SampleLoader:
                     )
                     # bob.bio.base standard interface for preprocessor
                     # has a read/write_data methods
-                    writer = getattr(func, 'write_data') \
-                            if hasattr(func, 'write_data') \
-                            else getattr(func, 'write_feature')
+                    writer = (
+                        getattr(func, "write_data")
+                        if hasattr(func, "write_data")
+                        else getattr(func, "write_feature")
+                    )
                     writer(data, candidate)
 
                 # because we are checkpointing, we return a DelayedSample
                 # instead of normal (preloaded) sample. This allows the next
                 # phase to avoid loading it would it be unnecessary (e.g. next
                 # phase is already check-pointed)
-                reader = getattr(func, 'read_data') \
-                        if hasattr(func, 'read_data') \
-                        else getattr(func, 'read_feature')
-                samples.append(DelayedSample(
-                    functools.partial(reader, candidate), parent=s
-                ))
+                reader = (
+                    getattr(func, "read_data")
+                    if hasattr(func, "read_data")
+                    else getattr(func, "read_feature")
+                )
+                samples.append(
+                    DelayedSample(
+                        functools.partial(reader, candidate), parent=s
+                    )
+                )
         else:
             # if checkpointing is not required, load the data and preprocess it
             # as we would normally do
@@ -479,7 +488,7 @@ class AlgorithmAdaptor:
 
     def __init__(self, algorithm):
         self.algorithm = algorithm
-        self.extension = '.hdf5'
+        self.extension = ".hdf5"
 
     def fit(self, samplesets, checkpoint):
         """Fits this model, if it is fittable
@@ -508,11 +517,15 @@ class AlgorithmAdaptor:
         """
 
         self.path = checkpoint + self.extension
-        if not os.path.exists(self.path):  #needs training
+        if not os.path.exists(self.path):  # needs training
             model = self.algorithm()
             bob.io.base.create_directories_safe(os.path.dirname(self.path))
             if model.requires_projector_training:
-                alldata = [sample.data for sampleset in samplesets for sample in sampleset.samples]
+                alldata = [
+                    sample.data
+                    for sampleset in samplesets
+                    for sample in sampleset.samples
+                ]
                 model.train_projector(alldata, self.path)
 
         return self.path
@@ -555,7 +568,6 @@ class AlgorithmAdaptor:
         """
 
         class _CachedModel:
-
             def __init__(self, algorithm, path):
                 self.model = algorithm()
                 self.loaded = False
@@ -568,10 +580,9 @@ class AlgorithmAdaptor:
 
             def enroll(self, k):
                 self.load()
-                return self.model.enroll([
-                    self.model.project(s.data)
-                    for s in k.samples
-                    ])
+                return self.model.enroll(
+                    [self.model.project(s.data) for s in k.samples]
+                )
 
             def write_enrolled(self, k, path):
                 self.model.write_model(k, path)
@@ -582,21 +593,23 @@ class AlgorithmAdaptor:
         for k in references:
             if checkpoint is not None:
                 candidate = os.path.join(
-                        os.path.join(checkpoint, k.path + '.hdf5')
-                        )
+                    os.path.join(checkpoint, k.path + ".hdf5")
+                )
                 if not os.path.exists(candidate):
                     # create new checkpoint
                     bob.io.base.create_directories_safe(
-                            os.path.dirname(candidate)
-                            )
+                        os.path.dirname(candidate)
+                    )
                     enrolled = model.enroll(k)
                     model.model.write_model(enrolled, candidate)
-                retval.append(DelayedSample(
-                    functools.partial(model.model.read_model, candidate),
-                    parent=k,
-                    ))
+                retval.append(
+                    DelayedSample(
+                        functools.partial(model.model.read_model, candidate),
+                        parent=k,
+                    )
+                )
             else:
-                #compute on-the-fly
+                # compute on-the-fly
                 retval.append(Sample(model.enroll(k), parent=k))
         return retval
 
@@ -644,8 +657,8 @@ class AlgorithmAdaptor:
                 subprobe_scores = []
                 for ref in [r for r in references if r.id in p.references]:
                     subprobe_scores.append(
-                            Sample(model.score(ref.data, s), parent=ref)
-                            )
+                        Sample(model.score(ref.data, s), parent=ref)
+                    )
                 subprobe = SampleSet(subprobe_scores, parent=p)
                 subprobe.subprobe_id = subprobe_id
                 retval.append(subprobe)

@@ -8,8 +8,6 @@ This file contains simple processing blocks meant to be used
 for bob.bio experiments
 """
 
-import os
-
 
 def first(
     background_model_samples,
@@ -18,8 +16,8 @@ def first(
     loader,
     algorithm,
     npartitions,
-    checkpoints={},
-    ):
+    checkpoints,
+):
     """Creates a simple pipeline for **biometric** experiments.
 
     This contains the following steps:
@@ -62,11 +60,34 @@ def first(
         :py:class:`dask.bag`'s and :py:meth:`dask.bag.map_partitions` to
         process one full partition in a single pass.
 
-    checkpoints : :py:class:`dict`, optional
+    checkpoints : :py:class:`dict`
         A dictionary that maps processing phase names to paths that will be
         used to create checkpoints of the different processing phases in this
         pipeline.  Checkpointing may speed up your processing.  Existing files
         that have been previously check-pointed will not be recomputed.
+
+        Here is an example with all supported options for this pipeline:
+
+        .. code-block:: python
+
+           checkpoints = {
+               "background": {
+                   "preprocessor": os.path.join("background", "preprocessed"),
+                   "extractor": os.path.join("background", "extracted"),
+                   # at least, the next stage must be provided!
+                   "model": os.path.join("background", "model"),
+               },
+               "references": {
+                   "preprocessor": os.path.join("references", "preprocessed"),
+                   "extractor": os.path.join("references", "extracted"),
+                   "enrolled": os.path.join("references", "enrolled"),
+               },
+               "probes": {
+                   "preprocessor": os.path.join("probes", "preprocessed"),
+                   "extractor": os.path.join("probes", "extracted"),
+               },
+           }
+
 
 
     Returns
@@ -82,17 +103,22 @@ def first(
 
     ## Training background model (fit will return even if samples is ``None``,
     ## in which case we suppose the algorithm is not trainable in any way)
-    db = dask.bag.from_sequence(background_model_samples,
-            npartitions=npartitions)
+    db = dask.bag.from_sequence(
+        background_model_samples, npartitions=npartitions
+    )
     db = db.map_partitions(loader, checkpoints.get("background", {}))
-    background_model = \
-            dask.delayed(algorithm.fit)(db, checkpoints["background"]["model"])
+    background_model = dask.delayed(algorithm.fit)(
+        db, checkpoints["background"]["model"]
+    )
 
     ## Enroll biometric references
     db = dask.bag.from_sequence(references, npartitions=npartitions)
     db = db.map_partitions(loader, checkpoints.get("references", {}))
-    references = db.map_partitions(algorithm.enroll, background_model,
-            checkpoints.get("references", {}).get("enrolled"))
+    references = db.map_partitions(
+        algorithm.enroll,
+        background_model,
+        checkpoints.get("references", {}).get("enrolled"),
+    )
 
     ## Scores all probes
     db = dask.bag.from_sequence(probes, npartitions=npartitions)
