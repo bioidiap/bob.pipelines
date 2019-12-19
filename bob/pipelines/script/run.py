@@ -58,7 +58,7 @@ def run(ctx, output, **kwargs):
     from ..bob_bio.blocks import DatabaseConnector
     database = DatabaseConnector(bob.db.atnt.Database(), protocol="Default")
 
-    from ..bob_bio.blocks import SampleLoader, SampleSetLoader
+    from ..bob_bio.blocks import SampleLoader
     #from ..bob_bio.annotated_blocks import SampleLoaderAnnotated as SampleLoader
 
     import bob.bio.base
@@ -72,7 +72,6 @@ def run(ctx, output, **kwargs):
             ('extractor', bob.bio.base.extractor.Linearize),
             ]
     loader = SampleLoader(pipeline)
-    set_loader = SampleSetLoader(pipeline)
 
     # Using face crop
     #CROPPED_IMAGE_HEIGHT = 80
@@ -95,11 +94,7 @@ def run(ctx, output, **kwargs):
 
     from ..bob_bio.blocks import AlgorithmAdaptor
     from bob.bio.base.algorithm import PCA
-    algorithm = AlgorithmAdaptor(
-        functools.partial(PCA, 0.99), os.path.join(output, "background",
-            "model.hdf5"),
-    )
-
+    algorithm = AlgorithmAdaptor(functools.partial(PCA, 0.99))
 
     # Configures the execution context
     from bob.pipelines.distributed.local import debug_client
@@ -119,6 +114,8 @@ def run(ctx, output, **kwargs):
                 "preprocessor": os.path.join(output, "background",
                     "preprocessed"),
                 "extractor": os.path.join(output, "background", "extracted"),
+                # at least, the next stage must be provided
+                "model": os.path.join(output, "background", "model")
                 },
             "references": {
                 "preprocessor": os.path.join(output, "references",
@@ -136,8 +133,6 @@ def run(ctx, output, **kwargs):
         database.references(group="dev"),
         database.probes(group="dev"),
         loader,
-        set_loader,
-        set_loader,
         algorithm,
         npartitions=len(client.cluster.workers),
         checkpoints=checkpoints,

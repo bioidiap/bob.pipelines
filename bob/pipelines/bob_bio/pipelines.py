@@ -15,9 +15,7 @@ def first(
     background_model_samples,
     references,
     probes,
-    background_model_loader,
-    reference_loader,
-    probe_loader,
+    loader,
     algorithm,
     npartitions,
     checkpoints={},
@@ -49,17 +47,9 @@ def first(
         provided must conform to the :py:class:`.samples.Probe` API, or be
         a delayed version of such.
 
-    background_model_loader : object
+    loader : object
         An object that conforms to the :py:class:`.blocks.SampleLoader` API and
-        can load samples defined in ``background_model_samples``
-
-    reference_loader : object
-        An object that conforms to the :py:class:`.blocks.SampleLoader` API and
-        can load references defined in ``references``
-
-    probe_loader : object
-        An object that conforms to the :py:class:`.blocks.SampleLoader` API and
-        can load references defined in ``probes``
+        can load samples
 
     algorithm : object
         An object that conforms to the :py:class:`.blocks.AlgorithmAdaptor` API
@@ -94,19 +84,18 @@ def first(
     ## in which case we suppose the algorithm is not trainable in any way)
     db = dask.bag.from_sequence(background_model_samples,
             npartitions=npartitions)
-    db = db.map_partitions(background_model_loader,
-            checkpoints.get("background", {}))
-    background_model = dask.delayed(algorithm.fit)(db)
+    db = db.map_partitions(loader, checkpoints.get("background", {}))
+    background_model = \
+            dask.delayed(algorithm.fit)(db, checkpoints["background"]["model"])
 
     ## Enroll biometric references
     db = dask.bag.from_sequence(references, npartitions=npartitions)
-    db = db.map_partitions(reference_loader,
-            checkpoints.get("references", {}))
+    db = db.map_partitions(loader, checkpoints.get("references", {}))
     references = db.map_partitions(algorithm.enroll, background_model)
 
     ## Scores all probes
     db = dask.bag.from_sequence(probes, npartitions=npartitions)
-    db = db.map_partitions(probe_loader, checkpoints.get("probes", {}))
+    db = db.map_partitions(loader, checkpoints.get("probes", {}))
 
     ## TODO: Here, we are sending all computed biometric references to all
     ## probes.  It would be more efficient if only the models related to each
