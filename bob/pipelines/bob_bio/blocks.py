@@ -345,7 +345,14 @@ class SampleLoader:
                 candidate = os.path.join(checkpoint, s.path + ".hdf5")
                 if not os.path.exists(candidate):
                     # preprocessing is required, and checkpointing, do it now
-                    data = func(s.data)
+
+                    # TODO: Do a decent check of the `annotations` keyword argument
+                    # that is used in the preprocessor (with annotations) and extraction (no annotations)
+                    try:
+                        data = func(s.data, annotations=s.annotations)
+                    except:
+                        data = func(s.data)
+
                     # notice this can be called in parallel w/o failing
                     bob.io.base.create_directories_safe(
                         os.path.dirname(candidate)

@@ -7,20 +7,21 @@
 
 import os
 import copy
+import functools
 
-from .samples import Sample, Reference, Probe, Score
-from .blocks import DatabaseConnector
-from .blocks import SampleLoader
+import bob.io.base
+
+
+from .blocks import DatabaseConnector, SampleSet, DelayedSample, Sample, SampleLoader
 
 
 class DatabaseConnectorAnnotated(DatabaseConnector):
-    """Wraps a bob.bio.base database and generates conforming samples
+    """Wraps a bob.bio.base database and generates conforming samples for datasets
+    that has annotations
 
     This connector allows wrapping generic bob.bio.base datasets and generate
     samples that conform to the specifications of biometric pipelines defined
     in this package.
-    
-    ..Note: This connector supports annotations from bob.bio.database
 
 
     Parameters
@@ -37,6 +38,7 @@ class DatabaseConnectorAnnotated(DatabaseConnector):
 
     def __init__(self, database, protocol):
         super(DatabaseConnectorAnnotated, self).__init__(database, protocol)
+       
 
     def background_model_samples(self):
         """Returns :py:class:`Sample`'s to train a background model (group
@@ -58,14 +60,19 @@ class DatabaseConnectorAnnotated(DatabaseConnector):
         objects = self.database.objects(protocol=self.protocol, groups="world")
 
         return [
-            Sample(
-                None,
-                k.path,
-                self.database.original_directory,
-                self.database.original_extension,
-                # these are optional
-                annotations=self.database.annotations(k),
-                subject=k.client_id,
+            SampleSet(
+                [
+                    DelayedSample(
+                        load=functools.partial(
+                            k.load,
+                            self.database.original_directory,
+                            self.database.original_extension,
+                        ),
+                        id=k.id,
+                        path=k.path,
+                        annotations=self.database.annotations(k)
+                    )
+                ]
             )
             for k in objects
         ]
@@ -103,34 +110,36 @@ class DatabaseConnectorAnnotated(DatabaseConnector):
             )
 
             retval.append(
-                Reference(
-                    None,
-                    str(m),
+                SampleSet(
                     [
-                        Sample(
-                            None,
-                            k.path,
-                            self.database.original_directory,
-                            self.database.original_extension,
+                        DelayedSample(
+                            load=functools.partial(
+                                k.load,
+                                self.database.original_directory,
+                                self.database.original_extension,
+                            ),
+                            id=k.id,
+                            path=k.path,
                             annotations=self.database.annotations(k)
                         )
                         for k in objects
                     ],
-                    objects[0].client_id,
-                    m,
+                    id=m,
+                    path=str(m),
+                    subject=objects[0].client_id,
                 )
             )
 
         return retval
 
-    def probes(self, group="dev"):
+    def probes(self, group):
         """Returns :py:class:`Probe`'s to score biometric references
 
 
         Parameters
         ----------
 
-            group : :py:class:`str`, optional
+            group : str
                 A ``group`` to be plugged at
                 :py:meth:`bob.db.base.Database.objects`
 
@@ -160,130 +169,26 @@ class DatabaseConnectorAnnotated(DatabaseConnector):
             # Creating probe samples
             for o in objects:
                 if o.id not in probes:
-                    probes[o.id] = Probe(
-                        None,
-                        o.path,
+                    probes[o.id] = SampleSet(
                         [
-                            Sample(
-                                None,
-                                o.path,
-                                self.database.original_directory,
-                                self.database.original_extension,
+                            DelayedSample(
+                                load=functools.partial(
+                                    o.load,
+                                    self.database.original_directory,
+                                    self.database.original_extension,                                    
+                                ),
+                                id=o.id,
+                                path=o.path,
                                 annotations=self.database.annotations(o)
                             )
                         ],
-                        o.client_id,
-                        o.id,
-                        [m],
+                        id=o.id,
+                        path=o.path,
+                        subject=o.client_id,
+                        references=[m],
                     )
                 else:
                     probes[o.id].references.append(m)
 
         return list(probes.values())
-
-
-class SampleLoaderAnnotated(SampleLoader):
-    """Adaptor for loading, preprocessing and feature extracting samples
-
-    This adaptor class wraps around sample:
-
-    .. code-block:: text
-
-       [loading [-> preprocessing [-> extraction]]]
-
-    The input sample object must obbey the following (minimal) API:
-
-        * method ``load()``: Loads the data for this sample, which should be an
-          iterable of :py:class:`numpy.ndarray`.
-        * attribute ``data``: Contains the data for this sample.  This field
-          may be set to ``None`` upon initialization.  It is used internally to
-          store and transmit pre-loaded and transformed data between different
-          processing stages.  It is an iterable which may contain elements of
-          different nature than those returned by ``load()``, but respect the
-          same ordering.  E.g., the first entry of ``data`` corresponds to a
-          transformed version of the first array returned by ``load()``
-
-    The sample is loaded if its ``data`` attribute is ``None``, by using its
-    ``load()`` method.  After that, it is preprocessed, if the
-    ``preprocessor_type`` is not ``None``.  Then, feature extraction follows if
-    the ``extractor_type`` is not ``None``.
-
- 
-    ..Note: This is supposed to handle databases with annotations
-
-
-    Parameters
-    ----------
-
-    preprocessor_type : type
-        A python type, that can be instantiated and used through its
-        ``__call__()`` interface to preprocess a single entry of a sample.  If
-        not set, then does not apply any preprocessing to the sample after
-        loading it. If not set (or set to ``None``), then does not apply any
-        feature extraction to the sample after preprocessing it.  For python
-        types that you may want to plug-in, but do not offer a default
-        constructor that you like, pass the result of
-        :py:func:`functools.partial` instead.
-
-    extractor_type : type
-        A python type, that can be instantiated and used through its
-        ``__call__()`` interface to extract features from a single entry of a
-        sample.  If not set (or set to ``None``), then does not apply any
-        feature extraction to the sample after preprocessing it.  For python
-        types that you may want to plug-in, but do not offer a default
-        constructor that you like, pass the result of
-        :py:func:`functools.partial` instead.
-
-    """
-
-    def __init__(self, preprocessor_type=None, extractor_type=None):
-        super(SampleLoaderAnnotated, self).__init__(preprocessor_type, extractor_type)
-
-    def __call__(self, samples):
-        """Applies the chain load() -> preproc() -> extract() to a list of samples
-
-
-        Parameters
-        ----------
-
-        samples : list
-            A list of samples that should be treated
-
-
-        Returns
-        -------
-
-        samples : list
-            Prepared samples
-
-        """
-
-        # the preprocessor and extractor are initialized once
-        preprocessor = (
-            self.preprocessor_type()
-            if self.preprocessor_type is not None
-            else None
-        )
-        extractor = (
-            self.extractor_type() if self.extractor_type is not None else None
-        )
-
-        loaded = []
-        for s in samples:
-            r = copy.copy(s)
-            r.data = []
-            
-            # Dumping the annotationsi
-            if isinstance(s, Sample):
-                annotations = [s.annotations]
-            else:            
-                annotations = [o.annotations for o in s.samples]    
-            for d,a in zip(s.load(), annotations):
-                if preprocessor is not None:
-                    d = preprocessor(d, annotations=a)
-                if extractor is not None:
-                    d = extractor(d)
-                r.data.append(d)
-            loaded.append(r)
-        return loaded
 
