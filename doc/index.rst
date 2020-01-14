@@ -148,10 +148,5 @@ You will find a way to put all these elements together to run `existing pipeline
 Reference Manual
 ==================
 
-.. toctree::
-    :maxdepth: 2
-
-    py_api
-
 
 .. include:: links.rst
