@@ -3,7 +3,7 @@
 .. image:: https://img.shields.io/badge/docs-stable-yellow.svg
    :target: https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/stable/index.html
 .. image:: https://img.shields.io/badge/docs-latest-orange.svg
-   :target: beatubulatest.lab.idiap.ch/private/docs/bob/bob.pipelines/master/index.html
+   :target: https://beatubulatest.lab.idiap.ch/private/docs/bob/bob.pipelines/master/index.html
 .. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/build.svg
    :target: https://gitlab.idiap.ch/bob/bob.pipelines/commits/master
 .. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/coverage.svg
