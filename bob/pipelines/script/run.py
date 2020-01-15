@@ -46,24 +46,29 @@ def run(ctx, output, **kwargs):
     # Configures the algorithm (concrete) implementations for the pipeline
     # from ..bob_bio.annotated_blocks import DatabaseConnectorAnnotated as DatabaseConnector
 
-    # import bob.bio.face
-    # bob_db = bob.bio.face.database.MobioBioDatabase(
-    #        original_directory="/idiap/resource/database/mobio/IMAGES_PNG",
-    #        original_extension=".png",
-    #        annotation_directory="/idiap/resource/database/mobio/IMAGE_ANNOTATIONS")
-    # database = DatabaseConnector(bob_db, protocol="mobile0-male")
+    import bob.bio.face
+    bob_db = bob.bio.face.database.MobioBioDatabase(
+           original_directory="/idiap/resource/database/mobio/IMAGES_PNG",
+           original_extension=".png",
+           annotation_directory="/idiap/resource/database/mobio/IMAGE_ANNOTATIONS")
 
-    import bob.db.atnt
-    from ..bob_bio.blocks import DatabaseConnector
 
-    database = DatabaseConnector(bob.db.atnt.Database(), protocol="Default")
+
+    from ..bob_bio.annotated_blocks import DatabaseConnectorAnnotated as DatabaseConnector
+    database = DatabaseConnector(bob_db, protocol="mobile0-male")
 
     from ..bob_bio.blocks import SampleLoader
 
-    # from ..bob_bio.annotated_blocks import SampleLoaderAnnotated as SampleLoader
-
     import bob.bio.base
     import bob.bio.face
+
+    # Using face crop
+    CROPPED_IMAGE_HEIGHT = 80
+    CROPPED_IMAGE_WIDTH = CROPPED_IMAGE_HEIGHT * 4 // 5
+
+    ## eye positions for frontal images
+    RIGHT_EYE_POS = (CROPPED_IMAGE_HEIGHT // 5, CROPPED_IMAGE_WIDTH // 4 - 1)
+    LEFT_EYE_POS = (CROPPED_IMAGE_HEIGHT // 5, CROPPED_IMAGE_WIDTH // 4 * 3)
 
     # Defines the processing pipeline for loading samples
     # Can add any number of steps!
@@ -71,31 +76,19 @@ def run(ctx, output, **kwargs):
         (
             "preprocessor",
             functools.partial(
-                bob.bio.face.preprocessor.Base,
-                color_channel="gray",
-                dtype="float64",
+                bob.bio.face.preprocessor.FaceCrop,
+                cropped_image_size=(CROPPED_IMAGE_HEIGHT, CROPPED_IMAGE_WIDTH),
+                cropped_positions={'leye': LEFT_EYE_POS, 'reye': RIGHT_EYE_POS},
+
             ),
         ),
         ("extractor", bob.bio.base.extractor.Linearize),
     ]
+
+
     loader = SampleLoader(pipeline)
 
-    # Using face crop
-    # CROPPED_IMAGE_HEIGHT = 80
-    # CROPPED_IMAGE_WIDTH = CROPPED_IMAGE_HEIGHT * 4 // 5
 
-    ## eye positions for frontal images
-    # RIGHT_EYE_POS = (CROPPED_IMAGE_HEIGHT // 5, CROPPED_IMAGE_WIDTH // 4 - 1)
-    # LEFT_EYE_POS = (CROPPED_IMAGE_HEIGHT // 5, CROPPED_IMAGE_WIDTH // 4 * 3)
-
-    # loader = SampleLoader(
-    #    functools.partial(
-    #        bob.bio.face.preprocessor.FaceCrop,
-    #        cropped_image_size=(CROPPED_IMAGE_HEIGHT, CROPPED_IMAGE_WIDTH),
-    #        cropped_positions={'leye': LEFT_EYE_POS, 'reye': RIGHT_EYE_POS},
-    #    ),
-    #    bob.bio.base.extractor.Linearize,
-    # )
 
     from ..bob_bio.blocks import AlgorithmAdaptor
     from bob.bio.base.algorithm import PCA
@@ -103,15 +96,14 @@ def run(ctx, output, **kwargs):
     algorithm = AlgorithmAdaptor(functools.partial(PCA, 0.99))
 
     # Configures the execution context
-    from bob.pipelines.distributed.local import debug_client
+    #from bob.pipelines.distributed.local import debug_client
+    #client = debug_client(1)
 
-    client = debug_client(1)
-
-    # from bob.pipelines.distributed.sge import sge_iobig_client
-    # client = sge_iobig_client(15)
+    from bob.pipelines.distributed.sge import sge_iobig_client
+    client = sge_iobig_client(15)
 
     # Chooses the pipeline to run
-    from bob.pipelines.bob_bio.pipelines import first as pipeline
+    from bob.pipelines.bob_bio.pipelines import biometric_pipeline
 
     if not os.path.exists(output):
         os.makedirs(output)
@@ -133,8 +125,7 @@ def run(ctx, output, **kwargs):
             "extractor": os.path.join(output, "probes", "extracted"),
         },
     }
-
-    result = pipeline(
+    result = biometric_pipeline(
         database.background_model_samples(),
         database.references(group="dev"),
         database.probes(group="dev"),
