@@ -189,6 +189,120 @@ class DatabaseConnectorAnnotated(DatabaseConnector):
                     )
                 else:
                     probes[o.id].references.append(m)
-
+     
         return list(probes.values())
+
+
+class SampleLoaderAnnotated(SampleLoader):
+    """Adaptor for loading, preprocessing and feature extracting samples that uses annotations
+
+    This adaptor class wraps around sample:
+
+    .. code-block:: text
+
+       [loading [-> preprocessing [-> extraction]]]
+
+    The input sample object must obbey the following (minimal) API:
+
+        * attribute ``id``: Contains an unique (string-fiable) identifier for
+          processed samples
+        * attribute ``data``: Contains the data for this sample
+
+    Optional checkpointing is also implemented for each of the states,
+    independently.  You may check-point just the preprocessing, feature
+    extraction or both.
+
+
+    Parameters
+    ----------
+
+    pipeline : :py:class:`list` of (:py:class:`str`, callable)
+        A list of doubles in which the first entry are names of each processing
+        step in the pipeline and second entry must be default-constructible
+        :py:class:`bob.bio.base.preprocessor.Preprocessor` or
+        :py:class:`bob.bio.base.preprocessor.Extractor` in any order.  Each
+        of these objects must be a python type, that can be instantiated and
+        used through its ``__call__()`` interface to process a single entry of
+        a sample.  For python types that you may want to plug-in, but do not
+        offer a default constructor that you like, pass the result of
+        :py:func:`functools.partial` instead.
+
+    """
+
+    def __init__(self, pipeline):
+        super(SampleLoaderAnnotated, self).__init__(pipeline)
+
+
+    def _handle_step(self, sset, func, checkpoint):
+        """Handles a single step in the pipeline, with optional checkpointing
+
+        Parameters
+        ----------
+
+        sset : SampleSet
+            The original sample set to be processed (delayed or pre-loaded)
+
+        func : callable
+            The processing function to call for processing **each** sample in
+            the set, if needs be
+
+        checkpoint : str, None
+            An optional string that may point to a directory that will be used
+            for checkpointing the processing phase in question
+
+
+        Returns
+        -------
+
+        r : SampleSet
+            The prototype processed sample.  If no checkpointing required, this
+            will be of type :py:class:`Sample`.  Otherwise, it will be a
+            :py:class:`DelayedSample`
+
+        """
+
+        if checkpoint is not None:
+            samples = []  # processed samples
+            for s in sset.samples:
+                # there can be a checkpoint for the data to be processed
+                candidate = os.path.join(checkpoint, s.path + ".hdf5")
+                if not os.path.exists(candidate):
+                    # preprocessing is required, and checkpointing, do it now
+                    data = func(s.data, annotations=s.annotations)
+
+                    # notice this can be called in parallel w/o failing
+                    bob.io.base.create_directories_safe(
+                        os.path.dirname(candidate)
+                    )
+                    # bob.bio.base standard interface for preprocessor
+                    # has a read/write_data methods
+                    writer = (
+                        getattr(func, "write_data")
+                        if hasattr(func, "write_data")
+                        else getattr(func, "write_feature")
+                    )
+                    writer(data, candidate)
+
+                # because we are checkpointing, we return a DelayedSample
+                # instead of normal (preloaded) sample. This allows the next
+                # phase to avoid loading it would it be unnecessary (e.g. next
+                # phase is already check-pointed)
+                reader = (
+                    getattr(func, "read_data")
+                    if hasattr(func, "read_data")
+                    else getattr(func, "read_feature")
+                )
+                samples.append(
+                    DelayedSample(
+                        functools.partial(reader, candidate), parent=s
+                    )
+                )
+        else:
+            # if checkpointing is not required, load the data and preprocess it
+            # as we would normally do
+            samples = [Sample(func(s.data), parent=s) for s in sset.samples]
+
+        r = SampleSet(samples, parent=sset)
+        return r
+
 

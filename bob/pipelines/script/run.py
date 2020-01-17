@@ -57,7 +57,8 @@ def run(ctx, output, **kwargs):
     from ..bob_bio.annotated_blocks import DatabaseConnectorAnnotated as DatabaseConnector
     database = DatabaseConnector(bob_db, protocol="mobile0-male")
 
-    from ..bob_bio.blocks import SampleLoader
+    #from ..bob_bio.blocks import SampleLoader
+    from ..bob_bio.annotated_blocks import SampleLoaderAnnotated as SampleLoader
 
     import bob.bio.base
     import bob.bio.face
@@ -96,11 +97,11 @@ def run(ctx, output, **kwargs):
     algorithm = AlgorithmAdaptor(functools.partial(PCA, 0.99))
 
     # Configures the execution context
-    #from bob.pipelines.distributed.local import debug_client
-    #client = debug_client(1)
+    from bob.pipelines.distributed.local import debug_client
+    client = debug_client(1)
 
-    from bob.pipelines.distributed.sge import sge_iobig_client
-    client = sge_iobig_client(15)
+    #from bob.pipelines.distributed.sge import sge_iobig_client
+    #client = sge_iobig_client(15)
 
     # Chooses the pipeline to run
     from bob.pipelines.bob_bio.pipelines import biometric_pipeline
