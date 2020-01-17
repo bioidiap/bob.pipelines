@@ -8,7 +8,7 @@ def sge_iobig_client(n_nodes, queue="q_1day", queue_resource_spec="q_1day=TRUE,i
     from dask_jobqueue import SGECluster
     from dask.distributed import Client
 
-    cluster = SGECluster(queue=queue, memory=memory, cores=1,
+    cluster = SGECluster(queue=queue, memory=memory, cores=1, processes=1,
             log_directory=sge_log,
             local_directory=sge_log,
             resource_spec=queue_resource_spec
