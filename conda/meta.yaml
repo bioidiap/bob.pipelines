@@ -30,6 +30,7 @@ requirements:
     - bob.bio.base
     - bob.bio.face
     - dask
+    - dask-jobqueue
 
   run:
     - python
