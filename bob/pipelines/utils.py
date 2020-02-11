@@ -2,7 +2,7 @@
 # vim: set fileencoding=utf-8 :
 
 from dask.delayed import Delayed
-
+import copy
 
 class DaskDelayedTape:
     """
@@ -27,8 +27,13 @@ class DaskDelayedTape:
 
     """
 
-    def __init__(self, tag):
-        self._tape = dict()
+    def __init__(self, tag, old_tape=None):
+
+        if old_tape is None:
+            self._tape = dict()
+        else:
+            self._tape = copy.copy(old_tape.get_taped_delayeds)
+
         self.tag = tag
 
     def __enter__(self):
