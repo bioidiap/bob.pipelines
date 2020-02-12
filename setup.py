@@ -45,7 +45,7 @@ setup(
 
       # run pipelines
       'bob.pipelines.cli':[
-        'run = bob.pipelines.script.run:run',
+        'vanilla-biometrics = bob.pipelines.script.biometrics:vanilla_biometrics',
      ],
 
 

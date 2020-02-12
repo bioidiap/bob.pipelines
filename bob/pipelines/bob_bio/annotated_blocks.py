@@ -267,8 +267,14 @@ class SampleLoaderAnnotated(SampleLoader):
                 # there can be a checkpoint for the data to be processed
                 candidate = os.path.join(checkpoint, s.path + ".hdf5")
                 if not os.path.exists(candidate):
-                    # preprocessing is required, and checkpointing, do it now
-                    data = func(s.data, annotations=s.annotations)
+
+                    # TODO: Fix this on bob.bio.base
+                    try:
+                        # preprocessing is required, and checkpointing, do it now
+                        data = func(s.data, annotations=s.annotations)
+                    except:
+                        data = func(s.data)
+
 
                     # notice this can be called in parallel w/o failing
                     bob.io.base.create_directories_safe(
