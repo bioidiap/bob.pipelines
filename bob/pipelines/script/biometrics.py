@@ -3,7 +3,7 @@
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
 
-"""Executes a particular pipeline"""
+"""Executes biometric pipeline"""
 
 import os
 import functools
@@ -31,6 +31,17 @@ EPILOG = """\b
  >>> checkpoints = EXPLAIN CHECKPOINTING \n
  
 \b
+
+
+Look at the following example
+
+ $ bob pipelines vanilla-biometrics ./bob/pipelines/config/distributed/sge_iobig_16cores.py \
+                                    ./bob/pipelines/config/database/mobio_male.py \
+                                    ./bob/pipelines/config/baselines/facecrop_pca.py
+
+\b
+
+
 
 TODO: Work out this help
 
@@ -74,6 +85,14 @@ TODO: Work out this help
     help="Biometric Database connector (class that implements the methods: `background_model_samples`, `references` and `probes`)",
 )
 @click.option(
+    "--dask-client",
+    "-l",
+    required=True,
+    cls=ResourceOption,
+    entry_point_group="bob.pipelines.client",  # This should be linked to bob.bio.base
+    help="Dask client for the execution of the pipeline.",
+)
+@click.option(
     "--checkpointing", "-c", is_flag=True, help="Save checkpoints in this experiment?"
 )
 @click.option(
@@ -97,6 +116,7 @@ def vanilla_biometrics(
     extractor,
     algorithm,
     database,
+    dask_client,
     checkpointing,
     group,
     output,
@@ -149,14 +169,6 @@ def vanilla_biometrics(
     # Always turn-on the checkpointing
     checkpointing = True
 
-
-    # So far defining the client here
-    #from bob.pipelines.distributed.local import debug_client
-    #client = debug_client(1)
-
-    from bob.pipelines.distributed.sge import sge_iobig_client
-    client = sge_iobig_client(15)
-
     # Chooses the pipeline to run
     from bob.pipelines.bob_bio.pipelines import biometric_pipeline
 
@@ -201,15 +213,15 @@ def vanilla_biometrics(
             database.probes(group=g),
             loader,
             algorithm,
-            npartitions=len(client.cluster.workers),
+            npartitions=len(dask_client.cluster.workers),
             checkpoints=checkpoints,
         )
 
         # result.visualize(os.path.join(output, "graph.pdf"), rankdir="LR")
 
-        result = result.compute(scheduler=client)
+        result = result.compute(scheduler=dask_client)
         for probe in result:
             for reference in probe.samples:
                 print(reference.subject, probe.subject, probe.path, reference.data)
 
-    client.shutdown()
+    dask_client.shutdown()

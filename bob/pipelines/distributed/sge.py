@@ -95,7 +95,7 @@ class SGEIdiapCluster(JobQueueCluster):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, env_extra=None, **kwargs):
 
         # Defining the job launcher
         self.job_cls = SGEIdiapJob
@@ -114,6 +114,12 @@ class SGEIdiapCluster(JobQueueCluster):
         host = None
         security = None
 
+        if env_extra is None:
+            env_extra = []
+        elif not isinstance(env_extra, list):
+            env_extra = [env_extra]
+        self.env_extra = env_extra + ["export PYTHONPATH=" + ":".join(sys.path)]
+
         scheduler = {
             "cls": Scheduler,  # Use local scheduler for now
             "options": {
@@ -121,7 +127,7 @@ class SGEIdiapCluster(JobQueueCluster):
                 "interface": interface,
                 "host": host,
                 "dashboard_address": dashboard_address,
-                "security": security,
+                "security": security
             },
         }
 
@@ -129,7 +135,7 @@ class SGEIdiapCluster(JobQueueCluster):
         loop = None
         asynchronous = False
         name = None
-
+        
         # Starting the SpecCluster constructor        
         super(JobQueueCluster, self).__init__(
             scheduler=scheduler,
@@ -137,7 +143,7 @@ class SGEIdiapCluster(JobQueueCluster):
             loop=loop,
             silence_logs=silence_logs,
             asynchronous=asynchronous,
-            name=name,
+            name=name
         )
 
 
@@ -185,6 +191,7 @@ class SGEIdiapCluster(JobQueueCluster):
                 "protocol": self.protocol,
                 "security": None,
                 "resources": resources,
+                "env_extra": self.env_extra
             },
         }
 
@@ -230,96 +237,5 @@ def sge_iobig_client(
 
 
 
-def sge_submit_to_idiap(spec):
-    """
-    Submit a set of jobs to the Idiap cluster
 
-    Parameters
-    ----------
-      
-      spec: dict
-        A dictionary where the dict `key` is the SGE queue and the dict `value` contains another dictionary with the following elements that are self explained: `n_jobs`, `memory`, `sge_logs`, `io_big`, `resources`.
-
-
-    Returns
-    -------
-    A `dask.distributed.Client` containing all the SGE/dask workers submitted
-
-
-    Examples
-    --------
-    >>> from bob.pipelines.distributed.sge import sge_submit_to_idiap
-    >>> spec = dict()
-    >>> spec["q_1day"] = {'n_jobs':2, 'memory':'4GB', 'sge_logs':'./logs', 'io_big':True}
-    >>> client = sge_submit_to_idiap(spec)
-
-
-    """
-    from dask.distributed import Client
-
-    env_extra = ["export PYTHONPATH=" + ":".join(sys.path)]
-
-    cluster = SGEIdiapCluster()
-    for k in spec.keys():
-        cluster.scale(spec[k]["n_jobs"],
-                      queue=k,
-                      memory=spec[k]["memory"],
-                      io_big=spec[k]["io_big"] if "io_big" in spec[k] else False,
-                      resources=spec[k]["resources"] if "resources" in spec[k] else None
-                      )
-
-    return Client(cluster)
-
-
-def sge_submit_iobig_gpu(
-    n_jobs_iobig,
-    n_jobs_gpu,
-    memory="8GB",
-    memory_gpu="4GB",
-    sge_logs="./logs"
-):
-    """
-    Submits a set of SGE Jobs to the `IO_BIG` and `GPU` queues
-
-
-    Parameters
-    ----------
-      n_jobs_iobig: int
-         Number of nodes in the q_1day/io_big queues
-
-      n_jobs_gpu: int
-         Number of nodes in the q_gpu queues.
-
-      memory: str
-         Memory requirements for the q_1day queue
-
-      memory_gpu: str
-         Memory requirements for the q_gpu queue
-
-      sge_logs: str
-         Location to place the SGE logs
-
-    Returns
-    -------
-    A `dask.distributed.Client` containing all the SGE/dask workers submitted
-
-
-    """
-
-
-    env_extra = ["export PYTHONPATH=" + ":".join(sys.path)]
-
-    spec = dict()
-    spec["q_1day"] = {"n_jobs": n_jobs_iobig,
-                      "memory": memory,
-                      "sge_logs": sge_logs,
-                      "io_big": True}
-
-    spec["q_gpu"] = {"n_jobs": n_jobs_gpu,
-                      "memory": memory_gpu,
-                      "sge_logs": sge_logs,
-                      "io_big": False,
-                      "resources": "GPU=1"}
-
-    return sge_submit_to_idiap(spec)
 
