@@ -581,9 +581,12 @@ class AlgorithmAdaptor:
 
             def enroll(self, k):
                 self.load()
-                return self.model.enroll(
-                    [self.model.project(s.data) for s in k.samples]
-                )
+                if self.model.requires_projector_training:
+                    return self.model.enroll(
+                        [self.model.project(s.data) for s in k.samples]
+                    )
+                else:
+                    return [s.data for s in k.samples]
 
             def write_enrolled(self, k, path):
                 self.model.write_model(k, path)
@@ -652,7 +655,11 @@ class AlgorithmAdaptor:
 
         retval = []
         for p in probes:
-            data = [model.project(s.data) for s in p.samples]
+            if model.requires_projector_training:
+                data = [model.project(s.data) for s in p.samples]
+            else:
+                data = [s.data for s in p.samples]
+                
             for subprobe_id, (s, parent) in enumerate(zip(data, p.samples)):
                 # each sub-probe in the probe needs to be checked
                 subprobe_scores = []
