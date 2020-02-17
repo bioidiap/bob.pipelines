@@ -52,7 +52,8 @@ test:
     - sphinx
     - sphinx_rtd_theme
     - bob.db.atnt
-
+    - dask
+    - dask-jobqueue
 about:
   summary: bob.pipelines
   home: https://www.idiap.ch/software/bob/
