@@ -26,9 +26,6 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - bob.extension
-    - bob.db.base
-    - bob.bio.base
-    - bob.bio.face
     - dask
     - dask-jobqueue
 
@@ -51,7 +48,6 @@ test:
     - coverage
     - sphinx
     - sphinx_rtd_theme
-    - bob.db.atnt
     - dask
     - dask-jobqueue
 about:
