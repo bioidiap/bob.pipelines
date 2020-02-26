@@ -51,3 +51,18 @@ class DaskDelayedTape:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         pass
+
+
+def is_picklable(obj):
+    """
+    Test if an object is picklable or not
+    """
+    import pickle
+    try:
+        pickle.dumps(obj)
+    except TypeError:
+        return False
+    except pickle.PicklingError:
+        return False
+
+    return True
