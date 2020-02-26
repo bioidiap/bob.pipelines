@@ -34,8 +34,7 @@ class SGEIdiapJob(Job):
         *args,
         queue=None,
         project=None,
-        resource_spec=None,
-        walltime=None,
+        resource_spec=None,        
         job_extra=None,
         config_name="sge",
         **kwargs
@@ -46,12 +45,10 @@ class SGEIdiapJob(Job):
             project = dask.config.get("jobqueue.%s.project" % config_name)
         if resource_spec is None:
             resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
-        if walltime is None:
-            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
         if job_extra is None:
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
-        super().__init__(*args, config_name=config_name, **kwargs)
+        super().__init__(*args, config_name=config_name, death_timeout=10000, **kwargs)
 
         # Amending the --resources in the `distributed.cli.dask_worker` CLI command
         if "resources" in kwargs and kwargs["resources"]:
@@ -68,8 +65,7 @@ class SGEIdiapJob(Job):
             header_lines.append("#$ -P %(project)s")
         if resource_spec is not None:
             header_lines.append("#$ -l %(resource_spec)s")
-        if walltime is not None:
-            header_lines.append("#$ -l h_rt=%(walltime)s")
+        
         if self.log_directory is not None:
             header_lines.append("#$ -e %(log_directory)s/")
             header_lines.append("#$ -o %(log_directory)s/")
@@ -82,7 +78,6 @@ class SGEIdiapJob(Job):
             "queue": queue,
             "project": project,
             "processes": self.worker_processes,
-            "walltime": walltime,
             "resource_spec": resource_spec,
             "log_directory": self.log_directory,
         }
