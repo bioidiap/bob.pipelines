@@ -7,10 +7,12 @@ import logging
 import numpy
 logger = logging.getLogger(__name__)
 import os
-
+import bob.io.base
 from bob.pipelines.sample import (
     Sample, SampleSet, DelayedSample
     )
+from bob.pipelines.utils import is_picklable
+import functools
 
 
 class ProcessorBlock(object):
@@ -28,10 +30,12 @@ class ProcessorBlock(object):
     ----------
 
     """
-    def __init__(self, **kwargs):
+    def __init__(self, is_fittable=False, **kwargs):
         self.fitted = False
-        self.is_fittable = False
+        self.is_fittable = is_fittable
+        self.model_name = "model.pickle"
         super(ProcessorBlock, self).__init__(**kwargs)
+
 
     def fit(self, X, y=None, **kwargs):
         """
@@ -46,7 +50,9 @@ class ProcessorBlock(object):
           y: array-like (optional)
             Possible labels for training an arbitrary model
         """
-        raise NotImplemented("Please, implement me!!!")
+
+        self.fitted = True
+
 
     def transform(self, X, **kwargs):
         """
@@ -64,7 +70,9 @@ class ProcessorBlock(object):
             X trainsformed
 
         """
-        raise NotImplemented("Please, implement me!!!")
+
+        pass
+
 
     def fit_transform(self, X, y=None, **kwargs):
         """
@@ -89,19 +97,26 @@ class ProcessorBlock(object):
             self.fit(X, y)
         return self.transform(X)
 
-    def write(self, path):
+
+    def write(self, X, filename, default_extension=".hdf5"):
         """
         Saves itself into disk
 
         Parameters
         ----------
+          X: array-like
+            Input data
 
           path: str
             Path to save the model
         """
-        raise NotImplemented("Please, implement me!!!")
+        import h5py
+
+        with h5py.File(filename+default_extension, "w") as f:
+            f.create_dataset("array", data=X)
+
     
-    def read(self, path):
+    def read(self, filename, default_extension=".hdf5"):
         """
         Read model from disk
 
@@ -111,7 +126,45 @@ class ProcessorBlock(object):
           path: str
             Path to save the model
         """
-        raise NotImplemented("Please, implement me!!!")
+        import h5py
+
+        with h5py.File(filename+default_extension, "r") as f:
+            data = f["array"].value
+        return data
+
+
+    def write_model(self, path):
+        """
+        Writes itself in disk
+
+        Parameters
+        ----------
+
+          path:
+             Base path to save the model
+
+        """
+
+        import pickle
+        filename = os.path.join(path, self.model_name)
+        logger.info(f"Saving processor in in {filename}")
+        open(filename, "wb").write(pickle.dumps(self))
+
+
+    def load_model(self, filename):
+        """
+        Loads itself in disk
+
+        Parameters
+        ----------
+
+          path:
+             Base path to save the model
+
+        """
+        logger.info(f"Loading processor in in {filename}")
+        import pickle        
+        return pickle.loads(open(filename, "rb").read())
 
 
 class ProcessorPipeline(object):
@@ -214,36 +267,28 @@ class ProcessorPipeline(object):
 
         """
 
-        if checkpoint is not None:
-            
+        if checkpoint is not None:            
             samples = []  # processed samples
             for s in sset.samples:
                 # there can be a checkpoint for the data to be processed
-                candidate = os.path.join(checkpoint, s.path + ".hdf5")
+                candidate = os.path.join(checkpoint, s.path)
                 if not os.path.exists(candidate):
                     # preprocessing is required, and checkpointing, do it now
-                    data = func(s.data)
+                    data = func.transform(s.data)
 
                     # notice this can be called in parallel w/o failing
                     bob.io.base.create_directories_safe(os.path.dirname(candidate))
                     # bob.bio.base standard interface for preprocessor
                     # has a read/write_data methods
-                    writer = (
-                        getattr(func, "write_data")
-                        if hasattr(func, "write_data")
-                        else getattr(func, "write_feature")
-                    )
+                    writer = getattr(func, "write")
                     writer(data, candidate)
 
                 # because we are checkpointing, we return a DelayedSample
                 # instead of normal (preloaded) sample. This allows the next
                 # phase to avoid loading it would it be unnecessary (e.g. next
                 # phase is already check-pointed)
-                reader = (
-                    getattr(func, "read_data")
-                    if hasattr(func, "read_data")
-                    else getattr(func, "read_feature")
-                )
+                reader = getattr(func, "read")
+
                 if is_picklable(reader):
                     samples.append(
                         DelayedSample(
@@ -266,6 +311,7 @@ class ProcessorPipeline(object):
 
         r = SampleSet(samples, parent=sset)
         return r
+
 
     def _handle_sample(self, sset, pipeline):
         """Handles a single sampleset through a pipelien
@@ -292,10 +338,10 @@ class ProcessorPipeline(object):
 
         r = sset
         for func, checkpoint in pipeline:
-            r = r if func.transform is None else self._handle_step(r, func, checkpoint)
+            r = r if func is None else self._handle_step(r, func, checkpoint)
         return r
 
-    def fit(self, samples, checkpoints={}):
+    def fit(self, samples, checkpoints=None):
         """Trains Applies the pipeline chaining with optional checkpointing
 
         Our implementation is optimized to minimize disk I/O to the most.  It
@@ -320,7 +366,6 @@ class ProcessorPipeline(object):
             checkpointed.  This strategy keeps the implementation as simple as
             possible.
 
-
         Returns
         -------
 
@@ -328,10 +373,27 @@ class ProcessorPipeline(object):
             List containing the fitted pipelines
 
         """
-        #import ipdb; ipdb.set_trace()
+
+        logger.info("Fitting pipeline")
+
         X = self._stack_samples_2_ndarray(samples)
-        for processor in self.pipeline:
-            X = [(v.fit_transform(X), checkpoints.get(k)) for k, v in self.pipeline]
+
+        _ = [v.fit_transform(X) for k, v in self.pipeline[:-1]] # Fitting+transform everyone but the last
+        self.pipeline[-1][1].fit(X) # Fit the last
+
+        # Checkpointing the pipeline        
+        if checkpoints is not None:
+            for k, v in self.pipeline:
+                logger.info(f"  >> Saving {k}")
+                if v.is_fittable:
+                    path = checkpoints.get(k)
+                    if path is None:
+                        logger.info(f"  >> No checkpoint provided for {k}")
+                    else:
+                        bob.io.base.create_directories_safe(path)
+                        v.write_model(path)
+
+        return self.pipeline
 
 
     def transform(self, samples, checkpoints={}):
@@ -369,11 +431,13 @@ class ProcessorPipeline(object):
         """
         import inspect
         
-        pipe = []
+        pipe = []        
+        logger.info("Transforming pipeline")
         for k,v in self.pipeline:
-            if inspect.isclass(k):
-                pipe.append((v(), checkpoints.get(k)))
-            else:
-                pipe.append((v, checkpoints.get(k)))
+            logger.info(f"  >> Transforming {k}")
+            transformer = v() if inspect.isclass(v) or isinstance(v, functools.partial) else v
+            if transformer.is_fittable and not transformer.fitted:                
+                transformer = transformer.load_model(os.path.join(checkpoints.get(k), v.model_name))
+            pipe.append((transformer, checkpoints.get(k)))
 
         return [self._handle_sample(k, pipe) for k in samples]

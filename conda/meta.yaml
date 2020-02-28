@@ -26,9 +26,11 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - bob.extension
+    - bob.io.base
     - dask
     - dask-jobqueue
-
+    - numpy {{ numpy }}
+    - h5py
   run:
     - python
     - setuptools
