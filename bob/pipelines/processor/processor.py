@@ -5,12 +5,11 @@
 import copy
 import logging
 import numpy
+
 logger = logging.getLogger(__name__)
 import os
 import bob.io.base
-from bob.pipelines.sample import (
-    Sample, SampleSet, DelayedSample
-    )
+from bob.pipelines.sample import Sample, SampleSet, DelayedSample
 from bob.pipelines.utils import is_picklable
 import functools
 
@@ -30,12 +29,12 @@ class ProcessorBlock(object):
     ----------
 
     """
+
     def __init__(self, is_fittable=False, **kwargs):
         self.fitted = False
         self.is_fittable = is_fittable
         self.model_name = "model.pickle"
         super(ProcessorBlock, self).__init__(**kwargs)
-
 
     def fit(self, X, y=None, **kwargs):
         """
@@ -52,7 +51,6 @@ class ProcessorBlock(object):
         """
 
         self.fitted = True
-
 
     def transform(self, X, **kwargs):
         """
@@ -72,7 +70,6 @@ class ProcessorBlock(object):
         """
 
         pass
-
 
     def fit_transform(self, X, y=None, **kwargs):
         """
@@ -97,7 +94,6 @@ class ProcessorBlock(object):
             self.fit(X, y, **kwargs)
         return self.transform(X, **kwargs)
 
-
     def write(self, X, filename, default_extension=".hdf5"):
         """
         Saves itself into disk
@@ -112,10 +108,9 @@ class ProcessorBlock(object):
         """
         import h5py
 
-        with h5py.File(filename+default_extension, "w") as f:
+        with h5py.File(filename + default_extension, "w") as f:
             f.create_dataset("array", data=X)
 
-    
     def read(self, filename, default_extension=".hdf5"):
         """
         Read model from disk
@@ -128,10 +123,9 @@ class ProcessorBlock(object):
         """
         import h5py
 
-        with h5py.File(filename+default_extension, "r") as f:
+        with h5py.File(filename + default_extension, "r") as f:
             data = f["array"].value
         return data
-
 
     def write_model(self, path):
         """
@@ -146,10 +140,10 @@ class ProcessorBlock(object):
         """
 
         import pickle
+
         filename = os.path.join(path, self.model_name)
         logger.info(f"Saving processor in in {filename}")
         open(filename, "wb").write(pickle.dumps(self))
-
 
     def load_model(self, filename):
         """
@@ -163,7 +157,8 @@ class ProcessorBlock(object):
 
         """
         logger.info(f"Loading processor in in {filename}")
-        import pickle        
+        import pickle
+
         return pickle.loads(open(filename, "rb").read())
 
 
@@ -204,7 +199,6 @@ class ProcessorPipeline(object):
     def __init__(self, pipeline):
         self.pipeline = copy.deepcopy(pipeline)
 
-
     def _stack_samples_2_ndarray(self, samplesets, stack_per_sampleset=False):
         """
         Stack a set of :py:class:`bob.pipelines.sample.sample.SampleSet`
@@ -238,7 +232,6 @@ class ProcessorPipeline(object):
                 ]
             )
 
-
     def _handle_step(self, sset, func, checkpoint):
         """Handles a single step in the pipeline, with optional checkpointing
 
@@ -267,7 +260,7 @@ class ProcessorPipeline(object):
 
         """
 
-        if checkpoint is not None:            
+        if checkpoint is not None:
             samples = []  # processed samples
             for s in sset.samples:
                 # there can be a checkpoint for the data to be processed
@@ -291,13 +284,13 @@ class ProcessorPipeline(object):
 
                 if is_picklable(reader):
                     samples.append(
-                        DelayedSample(
-                            functools.partial(reader, candidate), parent=s
-                        )
+                        DelayedSample(functools.partial(reader, candidate), parent=s)
                     )
-                else:                    
-                    logger.warning(f"The method {func} is not picklable. Shiping its unbounded method to `DelayedSample`.")
-                    reader = reader.__func__ # The reader object might not be picklable
+                else:
+                    logger.warning(
+                        f"The method {func} is not picklable. Shiping its unbounded method to `DelayedSample`."
+                    )
+                    reader = reader.__func__  # The reader object might not be picklable
 
                     samples.append(
                         DelayedSample(
@@ -311,7 +304,6 @@ class ProcessorPipeline(object):
 
         r = SampleSet(samples, parent=sset)
         return r
-
 
     def _handle_sample(self, sset, pipeline):
         """Handles a single sampleset through a pipelien
@@ -378,10 +370,12 @@ class ProcessorPipeline(object):
 
         X = self._stack_samples_2_ndarray(samples)
 
-        _ = [v.fit_transform(X) for k, v in self.pipeline[:-1]] # Fitting+transform everyone but the last
-        self.pipeline[-1][1].fit(X) # Fit the last
+        _ = [
+            v.fit_transform(X) for k, v in self.pipeline[:-1]
+        ]  # Fitting+transform everyone but the last
+        self.pipeline[-1][1].fit(X)  # Fit the last
 
-        # Checkpointing the pipeline        
+        # Checkpointing the pipeline
         if checkpoints is not None:
             for k, v in self.pipeline:
                 logger.info(f"  >> Saving {k}")
@@ -394,7 +388,6 @@ class ProcessorPipeline(object):
                         v.write_model(path)
 
         return self.pipeline
-
 
     def transform(self, samples, checkpoints={}):
         """Trains Applies the pipeline chaining with optional checkpointing
@@ -430,14 +423,18 @@ class ProcessorPipeline(object):
 
         """
         import inspect
-        
-        pipe = []        
+
+        pipe = []
         logger.info("Transforming pipeline")
-        for k,v in self.pipeline:
+        for k, v in self.pipeline:
             logger.info(f"  >> Transforming {k}")
-            transformer = v() if inspect.isclass(v) or isinstance(v, functools.partial) else v
-            if transformer.is_fittable and not transformer.fitted:                
-                transformer = transformer.load_model(os.path.join(checkpoints.get(k), v.model_name))
+            transformer = (
+                v() if inspect.isclass(v) or isinstance(v, functools.partial) else v
+            )
+            if transformer.is_fittable and not transformer.fitted:
+                transformer = transformer.load_model(
+                    os.path.join(checkpoints.get(k), v.model_name)
+                )
             pipe.append((transformer, checkpoints.get(k)))
 
         return [self._handle_sample(k, pipe) for k in samples]
