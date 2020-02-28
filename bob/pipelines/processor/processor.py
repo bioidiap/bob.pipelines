@@ -94,8 +94,8 @@ class ProcessorBlock(object):
 
         """
         if self.is_fittable:
-            self.fit(X, y)
-        return self.transform(X)
+            self.fit(X, y, **kwargs)
+        return self.transform(X, **kwargs)
 
 
     def write(self, X, filename, default_extension=".hdf5"):

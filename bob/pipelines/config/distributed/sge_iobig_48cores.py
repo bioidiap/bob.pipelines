@@ -3,7 +3,7 @@ from dask.distributed import Client
 
 n_jobs = 48
 cluster = SGEIdiapCluster()
-cluster.scale(n_jobs, queue="q_1day", io_big=True)
+cluster.scale(n_jobs, queue="q_1day", io_big=True, memory="8GB")
 
 dask_client = Client(cluster)
 

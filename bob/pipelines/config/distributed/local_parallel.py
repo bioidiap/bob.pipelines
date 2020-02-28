@@ -1,6 +1,6 @@
 from dask.distributed import Client, LocalCluster
 
-n_nodes = 4
+n_nodes = 2
 threads_per_worker = 1
 
 cluster = LocalCluster(nanny=False, 

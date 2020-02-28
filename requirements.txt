@@ -2,6 +2,5 @@ setuptools
 numpy
 bob.extension
 bob.io.base
-h5py
 dask
 dask-jobqueue
