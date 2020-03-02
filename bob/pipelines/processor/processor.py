@@ -250,6 +250,7 @@ class ProcessorPipeline(object):
             for checkpointing the processing phase in question
 
 
+
         Returns
         -------
 
@@ -267,7 +268,7 @@ class ProcessorPipeline(object):
                 candidate = os.path.join(checkpoint, s.path)
                 if not os.path.exists(candidate):
                     # preprocessing is required, and checkpointing, do it now
-                    data = func.transform(s.data)
+                    data = self._transform(func, s)
 
                     # notice this can be called in parallel w/o failing
                     bob.io.base.create_directories_safe(os.path.dirname(candidate))
@@ -300,10 +301,36 @@ class ProcessorPipeline(object):
         else:
             # if checkpointing is not required, load the data and preprocess it
             # as we would normally do
-            samples = [Sample(func.transform(s.data), parent=s) for s in sset.samples]
+            samples = [Sample(self._transform(func, s), parent=s) for s in sset.samples]
 
         r = SampleSet(samples, parent=sset)
         return r
+
+    def _transform(self, func, sample):
+        """
+        Run `func.transform` in a function
+
+        Parameters
+        ----------
+
+        sset : SampleSet
+            The original sample set to be processed (delayed or pre-loaded)
+
+        func : callable
+            The processing function to call for processing **each** sample in
+            the set, if needs be
+
+
+        Return
+        ----------
+
+        r : array-like
+            The processed sample in its raw format
+
+        """
+
+        return func.transform(sample.data)
+
 
     def _handle_sample(self, sset, pipeline):
         """Handles a single sampleset through a pipelien
