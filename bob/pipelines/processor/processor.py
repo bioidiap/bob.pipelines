@@ -34,7 +34,7 @@ class ProcessorBlock(object):
         self.fitted = False
         self.is_fittable = is_fittable
         self.model_name = "model.pickle"
-        super(ProcessorBlock, self).__init__(**kwargs)
+        super(ProcessorBlock, self).__init__()
 
     def fit(self, X, y=None, **kwargs):
         """
@@ -264,6 +264,7 @@ class ProcessorPipeline(object):
         if checkpoint is not None:
             samples = []  # processed samples
             for s in sset.samples:
+                
                 # there can be a checkpoint for the data to be processed
                 candidate = os.path.join(checkpoint, s.path)
                 if not os.path.exists(candidate):
@@ -327,8 +328,7 @@ class ProcessorPipeline(object):
         r : array-like
             The processed sample in its raw format
 
-        """
-
+        """        
         return func.transform(sample.data)
 
 
@@ -458,6 +458,7 @@ class ProcessorPipeline(object):
             transformer = (
                 v() if inspect.isclass(v) or isinstance(v, functools.partial) else v
             )
+
             if transformer.is_fittable and not transformer.fitted:
                 transformer = transformer.load_model(
                     os.path.join(checkpoints.get(k), v.model_name)
