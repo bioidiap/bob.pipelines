@@ -1,14 +1,9 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-# Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
-
-
-from bob.pipelines.samples.biometric_samples import (
+from ..samples.biometric_samples import (
     create_training_samples,
     create_biometric_reference_samples,
     create_biometric_probe_samples,
 )
-from bob.pipelines.samples.samples import Sample
+from ..samples.samples import Sample
 
 import bob.db.atnt
 import bob.db.base

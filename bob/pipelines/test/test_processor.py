@@ -1,190 +1,176 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-# Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
-
-import numpy
+import numpy as np
 import os
-from bob.pipelines.processor import ProcessorBlock, ProcessorPipeline
-
-from bob.pipelines.sample import Sample, SampleSet, DelayedSample
-import pkg_resources
+import tempfile
 import shutil
-import functools
+
+from ..sample import (
+    Sample,
+    SampleSet,
+    DelayedSample,
+)
+from ..processor import (
+    SampleMixin,
+    SampleFunctionTransformer,
+    CheckpointMixin,
+    CheckpointSampleFunctionTransformer,
+)
+from ..processor.processor import _is_estimator_stateless
+from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.utils.estimator_checks import check_estimator
+from sklearn.utils.validation import check_array, check_is_fitted
 
 
-class Dummy(ProcessorBlock):
-    def __init__(self, offset=1, **kwargs):
-        self.is_fittable = False
-        self.offset = offset
-        super(Dummy, self).__init__()
+def _offset_add_func(X, offset=1):
+    return X + offset
+
+
+class DummyWithFit(TransformerMixin, BaseEstimator):
+    """See https://scikit-learn.org/stable/developers/develop.html and
+    https://github.com/scikit-learn-contrib/project-template/blob/master/skltemplate/_template.py"""
+
+    def fit(self, X, y=None):
+        X = check_array(X)
+        self.n_features_ = X.shape[1]
+
+        self.model_ = np.ones((self.n_features_, 2))
+
+        # Return the transformer
+        return self
 
     def transform(self, X):
-        return X + self.offset
-
-
-class DummyWithFit(ProcessorBlock):
-    def __init__(self, **kwargs):
-        super(DummyWithFit, self).__init__(is_fittable=True, **kwargs)
-
-    def fit(self, X, y=None, **kwargs):
-        super(DummyWithFit, self).fit(X, y, **kwargs)
-        self.model = numpy.ones((2, 2))
-
-    def transform(self, X):
-        return X @ self.model
-
-
-def test_processor_pipeline_only_transform():
-    """
-    Simple sequence of transformation.
-    Here the processor are TRANSFORMABLE only
-    """
-
-    X_transform = numpy.zeros(shape=(10, 2), dtype=int)
-
-    sampleset_transform = [SampleSet([Sample(X_transform), Sample(X_transform + 1)])]
-
-    pip = [("dummy1", Dummy(offset=1)), ("dummy2", Dummy(offset=2))]
-    pipeline = ProcessorPipeline(pip)
-
-    X_new_transform = pipeline.transform(sampleset_transform)
-
-    assert numpy.allclose(
-        X_new_transform[0].samples[0].data, numpy.zeros(shape=(10, 2), dtype=int) + 3
-    )
-
-
-def test_processor_pipeline_only_transform_delay():
-    """
-    Simple sequence of transformation.
-    Here the processor are TRANSFORMABLE only and they are checkpointable
-    """
-
-    candidate_path = pkg_resources.resource_filename("bob.pipelines", "dummy_test")
-
-    try:
-        X_transform = numpy.zeros(shape=(10, 2), dtype=int)
-
-        sampleset_transform = [
-            SampleSet(
-                [
-                    Sample(X_transform, path="sample1"),
-                    Sample(X_transform + 1, path="sample2"),
-                ]
+        # Check is fit had been called
+        check_is_fitted(self, "n_features_")
+        # Input validation
+        X = check_array(X)
+        # Check that the input is of the same shape as the one passed
+        # during fit.
+        if X.shape[1] != self.n_features_:
+            raise ValueError(
+                "Shape of input is different from what was seen" "in `fit`"
             )
-        ]
 
-        checkpoints = {
-            "dummy1": os.path.join(candidate_path, "dummy1"),
-            "dummy2": os.path.join(candidate_path, "dummy2"),
-        }
-
-        pip = [
-            ("dummy1", Dummy(offset=1)),
-            ("dummy2", functools.partial(Dummy, offset=2)),
-        ]
-        pipeline = ProcessorPipeline(pip)
-
-        X_new_transform = pipeline.transform(sampleset_transform, checkpoints)
-
-        assert numpy.allclose(
-            X_new_transform[0].samples[0].data,
-            numpy.zeros(shape=(10, 2), dtype=int) + 3,
-        )
-
-        dummy = Dummy()
-        data = dummy.read(os.path.join(candidate_path, "dummy1", "sample1"))
-        assert numpy.allclose(data, numpy.ones((10, 2), dtype=int))
-    finally:
-        shutil.rmtree(candidate_path)
+        return X @ self.model_
 
 
-def test_processor_pipeline_fit_transform():
-    """
-    Simple sequence of transformation.
-    Here the processor are TRANSFORMABLE only AND FITTABLE 
-    FURTHERMORE they are checkpointable
-    """
+class SampleDummyWithFit(SampleMixin, DummyWithFit):
+    pass
 
-    X_fit = numpy.zeros(shape=(10, 2), dtype=int)
-    sampleset_fit = [SampleSet([Sample(X_fit), Sample(X_fit + 1)])]
 
-    X_transform = numpy.ones(shape=(10, 2), dtype=int)
-    sampleset_transform = [SampleSet([Sample(X_transform)])]
+class CheckpointSampleDummyWithFit(CheckpointMixin, SampleMixin, DummyWithFit):
+    pass
 
-    pip = [("dummy1", Dummy(offset=1)), ("dummy2", DummyWithFit())]
-    pipeline = ProcessorPipeline(pip)
-    pipeline.fit(sampleset_fit)
 
-    X_new_transform = pipeline.transform(sampleset_transform)
-    assert numpy.allclose(
-        X_new_transform[0].samples[0].data, numpy.zeros(shape=(10, 2), dtype=int) + 4
+def _assert_all_close_numpy_array(oracle, result):
+    oracle, result = np.array(oracle), np.array(result)
+    assert (
+        oracle.shape == result.shape
+    ), f"Expected: {oracle.shape} but got: {result.shape}"
+    assert np.allclose(oracle, result), f"Expected: {oracle} but got: {result}"
+
+
+def test_sklearn_compatible_estimator():
+    # check classes for API consistency
+    check_estimator(DummyWithFit)
+
+
+def test_function_sample_transfomer():
+
+    X = np.zeros(shape=(10, 2), dtype=int)
+    samples = [Sample(data) for data in X]
+
+    transformer = SampleFunctionTransformer(
+        _offset_add_func, kw_args=dict(offset=3), validate=True
     )
 
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(X + 3, [s.data for s in features])
 
-def test_processor_pipeline_fit_transform_with_model_checkpoint():
-    """
-    Simple sequence of transformation.
-    Here the processor are TRANSFORMABLE only AND FITTABLE 
-    FURTHERMORE only one is checkpointable
-    """
+    features = transformer.fit_transform(samples)
+    _assert_all_close_numpy_array(X + 3, [s.data for s in features])
 
-    candidate_path = pkg_resources.resource_filename("bob.pipelines", "dummy_test")
-    try:
-        X_fit = numpy.zeros(shape=(10, 2), dtype=int)
-        sampleset_fit = [SampleSet([Sample(X_fit), Sample(X_fit + 1)])]
 
-        # Building a pipeline for fitting
-        pip = [("dummy1", Dummy(offset=1)), ("dummy2", DummyWithFit())]
-        checkpoints = {"dummy2": os.path.join(candidate_path, "dummy2")}
-        pipeline = ProcessorPipeline(pip)
-        pipeline.fit(sampleset_fit, checkpoints=checkpoints)
+def test_fittable_sample_transformer():
 
-        # Building a pipeline for transforming.
-        # This one will load the model directly in the worker
-        X_transform = numpy.ones(shape=(10, 2), dtype=int)
-        sampleset_transform = [SampleSet([Sample(X_transform, path="sample1")])]
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [Sample(data) for data in X]
 
-        new_pipeline = ProcessorPipeline(pip)
-        X_new_transform = new_pipeline.transform(
-            sampleset_transform, checkpoints=checkpoints
+    transformer = SampleDummyWithFit()
+    features = transformer.fit(samples).transform(samples)
+    _assert_all_close_numpy_array(X + 1, [s.data for s in features])
+
+    features = transformer.fit_transform(samples)
+    _assert_all_close_numpy_array(X + 1, [s.data for s in features])
+
+
+def _assert_checkpoints(features, oracle, model_path, features_dir, stateless):
+    _assert_all_close_numpy_array(oracle, [s.data for s in features])
+    if stateless:
+        assert not os.path.exists(model_path)
+    else:
+        assert os.path.exists(model_path), os.listdir(os.path.dirname(model_path))
+    assert os.path.isdir(features_dir)
+    for i in range(len(oracle)):
+        assert os.path.isfile(os.path.join(features_dir, f"{i}.h5"))
+
+
+def _assert_delayed_samples(samples):
+    for s in samples:
+        assert isinstance(s, DelayedSample)
+
+
+def test_checkpoint_function_sample_transfomer():
+
+    X = np.arange(20, dtype=int).reshape(10, 2)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    oracle = X + 3
+
+    with tempfile.TemporaryDirectory() as d:
+        model_path = os.path.join(d, "model.pkl")
+        features_dir = os.path.join(d, "features")
+
+        transformer = CheckpointSampleFunctionTransformer(
+            func=_offset_add_func,
+            kw_args=dict(offset=3),
+            validate=True,
+            model_path=model_path,
+            features_dir=features_dir,
         )
-        assert numpy.allclose(
-            X_new_transform[0].samples[0].data,
-            numpy.zeros(shape=(10, 2), dtype=int) + 4,
+
+        features = transformer.transform(samples)
+        _assert_checkpoints(features, oracle, model_path, features_dir, True)
+
+        features = transformer.fit_transform(samples)
+        _assert_checkpoints(features, oracle, model_path, features_dir, True)
+        _assert_delayed_samples(features)
+
+        # remove all files and call fit_transform again
+        shutil.rmtree(d)
+        features = transformer.fit_transform(samples)
+        _assert_checkpoints(features, oracle, model_path, features_dir, True)
+
+
+def test_checkpoint_fittable_sample_transformer():
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    oracle = X + 1
+
+    with tempfile.TemporaryDirectory() as d:
+        model_path = os.path.join(d, "model.pkl")
+        features_dir = os.path.join(d, "features")
+
+        transformer = CheckpointSampleDummyWithFit(
+            model_path=model_path, features_dir=features_dir,
         )
-    finally:
-        shutil.rmtree(candidate_path)
+        assert not _is_estimator_stateless(transformer)
 
+        features = transformer.fit(samples).transform(samples)
+        _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
-def test_processor_pipeline_fit_transform_with_model_checkpoint_2():
+        features = transformer.fit_transform(samples)
+        _assert_checkpoints(features, oracle, model_path, features_dir, False)
+        _assert_delayed_samples(features)
 
-    candidate_path = pkg_resources.resource_filename("bob.pipelines", "dummy_test")
-    try:
-        X_fit = numpy.zeros(shape=(10, 2), dtype=int)
-        sampleset_fit = [SampleSet([Sample(X_fit), Sample(X_fit + 1)])]
-
-        # Building a pipeline for fitting
-        pip = [
-            ("dummy1", Dummy(offset=1)),
-            ("dummy2", DummyWithFit()),
-            ("dummy3", DummyWithFit()),
-        ]
-        checkpoints = {"dummy2": os.path.join(candidate_path, "dummy2")}
-        pipeline = ProcessorPipeline(pip)
-        pipeline.fit(sampleset_fit, checkpoints=checkpoints)
-
-        # Building a pipeline for transforming.
-        # This one will load the model directly in the worker
-        X_transform = numpy.ones(shape=(10, 2), dtype=int)
-        sampleset_transform = [SampleSet([Sample(X_transform, path="sample1")])]
-
-        X_new_transform = pipeline.transform(
-            sampleset_transform, checkpoints=checkpoints
-        )
-        assert numpy.allclose(
-            X_new_transform[0].samples[0].data,
-            numpy.zeros(shape=(10, 2), dtype=int) + 8,
-        )
-    finally:
-        shutil.rmtree(candidate_path)
+        # remove all files and call fit_transform again
+        shutil.rmtree(d)
+        features = transformer.fit_transform(samples)
+        _assert_checkpoints(features, oracle, model_path, features_dir, False)

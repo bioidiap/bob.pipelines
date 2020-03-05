@@ -5,6 +5,7 @@
 import sys
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +27,7 @@ class SGEIdiapJob(Job):
            
 
     """
+
     submit_command = "qsub"
     cancel_command = "qdel"
 
@@ -34,10 +36,10 @@ class SGEIdiapJob(Job):
         *args,
         queue=None,
         project=None,
-        resource_spec=None,        
+        resource_spec=None,
         job_extra=None,
         config_name="sge",
-        **kwargs
+        **kwargs,
     ):
         if queue is None:
             queue = dask.config.get("jobqueue.%s.queue" % config_name)
@@ -55,7 +57,6 @@ class SGEIdiapJob(Job):
             resources = kwargs["resources"]
             self._command_template += f" --resources {resources}"
 
-
         header_lines = []
         if self.job_name is not None:
             header_lines.append("#$ -N %(job-name)s")
@@ -65,7 +66,7 @@ class SGEIdiapJob(Job):
             header_lines.append("#$ -P %(project)s")
         if resource_spec is not None:
             header_lines.append("#$ -l %(resource_spec)s")
-        
+
         if self.log_directory is not None:
             header_lines.append("#$ -e %(log_directory)s/")
             header_lines.append("#$ -o %(log_directory)s/")
@@ -98,7 +99,7 @@ class SGEIdiapCluster(JobQueueCluster):
         # we could use self.workers to could the workers
         # However, this variable works as async, hence we can't bootstrap
         # several cluster.scale at once
-        self.n_workers_sync = 0 
+        self.n_workers_sync = 0
 
         # Hard-coding some scheduler info from the time being
         self.protocol = "tcp://"
@@ -122,7 +123,7 @@ class SGEIdiapCluster(JobQueueCluster):
                 "interface": interface,
                 "host": host,
                 "dashboard_address": dashboard_address,
-                "security": security
+                "security": security,
             },
         }
 
@@ -130,17 +131,16 @@ class SGEIdiapCluster(JobQueueCluster):
         loop = None
         asynchronous = False
         name = None
-        
-        # Starting the SpecCluster constructor        
+
+        # Starting the SpecCluster constructor
         super(JobQueueCluster, self).__init__(
             scheduler=scheduler,
             worker={},
             loop=loop,
             silence_logs=silence_logs,
             asynchronous=asynchronous,
-            name=name
+            name=name,
         )
-
 
     def scale(self, n_jobs, queue=None, memory="4GB", io_big=True, resources=None):
         """
@@ -186,7 +186,7 @@ class SGEIdiapCluster(JobQueueCluster):
                 "protocol": self.protocol,
                 "security": None,
                 "resources": resources,
-                "env_extra": self.env_extra
+                "env_extra": self.env_extra,
             },
         }
 
@@ -229,8 +229,3 @@ def sge_iobig_client(
     client = Client(cluster)  # start local workers as threads
 
     return client
-
-
-
-
-

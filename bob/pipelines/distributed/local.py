@@ -17,12 +17,12 @@ def debug_client(n_nodes):
          Number of process
     """
 
-
     from dask.distributed import Client, LocalCluster
 
-    cluster = LocalCluster(nanny=False, processes=False, n_workers=1, threads_per_worker=1)
+    cluster = LocalCluster(
+        nanny=False, processes=False, n_workers=1, threads_per_worker=1
+    )
     cluster.scale_up(n_nodes)
     client = Client(cluster)  # start local workers as threads
 
     return client
-

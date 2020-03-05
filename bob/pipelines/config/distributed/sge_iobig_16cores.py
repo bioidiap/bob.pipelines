@@ -6,4 +6,3 @@ cluster = SGEIdiapCluster()
 cluster.scale(n_jobs, queue="q_1day", io_big=True)
 
 dask_client = Client(cluster)
-
