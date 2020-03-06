@@ -251,7 +251,7 @@ def test_checkpoint_fit_transform_pipeline():
 
     from sklearn.pipeline import Pipeline
 
-    X = np.ones(shape=(1, 2), dtype=int)
+    X = np.ones(shape=(10, 2), dtype=int)
     samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
     samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
     oracle = X + 2
@@ -263,5 +263,57 @@ def test_checkpoint_fit_transform_pipeline():
         pipeline.fit(samples)
 
         transformed_samples = pipeline.transform(samples_transform)
+
+        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+
+def test_checkpoint_fit_transform_pipeline_with_dask():
+
+    from sklearn.pipeline import Pipeline
+    from dask import delayed
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    oracle = X + 2
+
+    with tempfile.TemporaryDirectory() as d:
+        fitter = ("0", _build_estimator(d, 0))
+        transformer = ("1", _build_transformer(d, 1))
+        pipeline = Pipeline([fitter, transformer], memory=d)
+
+        delayed_pipeline = delayed(pipeline.fit)(samples)
+
+        transformed_samples = delayed(delayed_pipeline.transform)(samples_transform)
+        transformed_samples = transformed_samples.compute(scheduler="single-threaded")
+
+        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+
+def test_checkpoint_fit_transform_pipeline_with_daskbag():
+
+    from sklearn.pipeline import Pipeline
+    from dask import delayed
+    import dask.bag
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    oracle = X + 2
+
+    with tempfile.TemporaryDirectory() as d:
+        fitter = ("0", _build_estimator(d, 0))
+        transformer = ("1", _build_transformer(d, 1))
+        pipeline = Pipeline([fitter, transformer], memory=d)
+
+        delayed_pipeline = delayed(pipeline.fit)(samples)
+
+        dask_bag = dask.bag.from_sequence(samples_transform, npartitions=2)
+
+        # TODO: I don't know if we can dask.bag.map a delayed method
+        dask_bag = dask_bag.map_partitions(
+            delayed_pipeline.transform.compute(scheduler="single-threaded")
+        )
+        transformed_samples = dask_bag.compute(scheduler="single-threaded")
 
         _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
