@@ -48,9 +48,20 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
         return X @ self.model_
 
 
-class DummyTransformer(TransformerMixin):
+class DummyTransformer(TransformerMixin, BaseEstimator):
     """See https://scikit-learn.org/stable/developers/develop.html and
     https://github.com/scikit-learn-contrib/project-template/blob/master/skltemplate/_template.py"""
+
+    def __init__(self, picklable=True, **kwargs):
+        super().__init__(**kwargs)
+
+        if not picklable:
+            import bob.core
+            self.rng = bob.core.random.mt19937()
+
+
+    def fit(self, X, y=None):        
+        return self
 
     def transform(self, X):
 
@@ -65,12 +76,11 @@ class DummyTransformer(TransformerMixin):
 class SampleDummyWithFit(SampleMixin, DummyWithFit):
     pass
 
-
 class CheckpointSampleDummyWithFit(CheckpointMixin, SampleMixin, DummyWithFit):
     pass
 
 
-class CheckpointSampleDummyWithFit(CheckpointMixin, SampleMixin, DummyWithFit):
+class CheckpointSampleDummyTransformer(CheckpointMixin, SampleMixin, DummyTransformer):
     pass
 
 
@@ -203,13 +213,11 @@ def _build_estimator(path, i):
     )
 
 
-def _build_transformer(path, i):
+def _build_transformer(path, i, picklable=True):
     features_dir = os.path.join(path, f"transformer{i}")
-    return CheckpointSampleFunctionTransformer(
-        func=_offset_add_func,
-        kw_args=dict(offset=1),
-        validate=True,
+    return CheckpointSampleDummyTransformer(
         features_dir=features_dir,
+        picklable=picklable
     )
 
 
@@ -316,4 +324,41 @@ def test_checkpoint_fit_transform_pipeline_with_daskbag():
         )
         transformed_samples = dask_bag.compute(scheduler="single-threaded")
 
+        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+
+
+def _get_local_client():
+    from dask.distributed import Client, LocalCluster
+    n_nodes = 1
+    threads_per_worker = 1
+
+    cluster = LocalCluster(
+        nanny=False, processes=False, n_workers=1, threads_per_worker=1
+    )
+    cluster.scale_up(1)
+    return Client(cluster)  # start local workers as threads
+
+
+def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
+
+    from sklearn.pipeline import Pipeline
+    from dask import delayed
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    oracle = X + 2
+
+    with tempfile.TemporaryDirectory() as d:
+        fitter = ("0", _build_estimator(d, 0))
+        transformer = ("1", _build_transformer(d, 1, picklable=False))
+        pipeline = Pipeline([fitter, transformer], memory=d)
+        
+        dask_client = _get_local_client()
+
+        delayed_pipeline = delayed(pipeline.fit)(samples)
+        transformed_samples = delayed(delayed_pipeline.transform)(samples_transform)
+        transformed_samples = transformed_samples.compute(scheduler=dask_client)
+        
         _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
