@@ -31,6 +31,7 @@ requirements:
     - dask-jobqueue
     - numpy {{ numpy }}
     - h5py
+    - scikit-learn
   run:
     - python
     - setuptools
