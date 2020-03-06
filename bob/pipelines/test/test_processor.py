@@ -3,18 +3,14 @@ import os
 import tempfile
 import shutil
 
-from ..sample import (
-    Sample,
-    SampleSet,
-    DelayedSample,
-)
-from ..processor import (
+from bob.pipelines.sample import Sample, SampleSet, DelayedSample
+from bob.pipelines.processor import (
     SampleMixin,
     SampleFunctionTransformer,
     CheckpointMixin,
     CheckpointSampleFunctionTransformer,
 )
-from ..processor.processor import _is_estimator_stateless
+from bob.pipelines.processor.processor import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted
@@ -52,7 +48,25 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
         return X @ self.model_
 
 
+class DummyTransformer(TransformerMixin):
+    """See https://scikit-learn.org/stable/developers/develop.html and
+    https://github.com/scikit-learn-contrib/project-template/blob/master/skltemplate/_template.py"""
+
+    def transform(self, X):
+
+        # Input validation
+        X = check_array(X)
+        # Check that the input is of the same shape as the one passed
+        # during fit.
+
+        return _offset_add_func(X)
+
+
 class SampleDummyWithFit(SampleMixin, DummyWithFit):
+    pass
+
+
+class CheckpointSampleDummyWithFit(CheckpointMixin, SampleMixin, DummyWithFit):
     pass
 
 
@@ -159,7 +173,7 @@ def test_checkpoint_fittable_sample_transformer():
         features_dir = os.path.join(d, "features")
 
         transformer = CheckpointSampleDummyWithFit(
-            model_path=model_path, features_dir=features_dir,
+            model_path=model_path, features_dir=features_dir
         )
         assert not _is_estimator_stateless(transformer)
 
@@ -174,3 +188,80 @@ def test_checkpoint_fittable_sample_transformer():
         shutil.rmtree(d)
         features = transformer.fit_transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
+
+
+from bob.io.base import create_directories_safe
+
+
+def _build_estimator(path, i):
+    base_dir = os.path.join(path, f"transformer{i}")
+    create_directories_safe(base_dir)
+    model_path = os.path.join(base_dir, "model.pkl")
+    features_dir = os.path.join(base_dir, "features")
+    return CheckpointSampleDummyWithFit(
+        model_path=model_path, features_dir=features_dir
+    )
+
+
+def _build_transformer(path, i):
+    features_dir = os.path.join(path, f"transformer{i}")
+    return CheckpointSampleFunctionTransformer(
+        func=_offset_add_func,
+        kw_args=dict(offset=1),
+        validate=True,
+        features_dir=features_dir,
+    )
+
+
+def test_checkpoint_fittable_pipeline():
+
+    from sklearn.pipeline import Pipeline
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    oracle = X + 3
+
+    with tempfile.TemporaryDirectory() as d:
+        pipeline = Pipeline([(f"{i}", _build_estimator(d, i)) for i in range(2)])
+        pipeline.fit(samples)
+
+        transformed_samples = pipeline.transform(samples_transform)
+
+        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+
+def test_checkpoint_transform_pipeline():
+
+    from sklearn.pipeline import Pipeline
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    offset = 2
+    oracle = X + offset
+
+    with tempfile.TemporaryDirectory() as d:
+        pipeline = Pipeline([(f"{i}", _build_transformer(d, i)) for i in range(offset)])
+        transformed_samples = pipeline.transform(samples_transform)
+
+        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+
+def test_checkpoint_fit_transform_pipeline():
+
+    from sklearn.pipeline import Pipeline
+
+    X = np.ones(shape=(1, 2), dtype=int)
+    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    oracle = X + 2
+
+    with tempfile.TemporaryDirectory() as d:
+        fitter = ("0", _build_estimator(d, 0))
+        transformer = ("1", _build_transformer(d, 1))
+        pipeline = Pipeline([fitter, transformer], memory=d)
+        pipeline.fit(samples)
+
+        transformed_samples = pipeline.transform(samples_transform)
+
+        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])

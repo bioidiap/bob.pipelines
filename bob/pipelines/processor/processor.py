@@ -26,7 +26,7 @@ class SampleMixin:
         new_samples = [Sample(data, parent=s) for data, s in zip(features, samples)]
         return new_samples
 
-    def fit(self, samples):
+    def fit(self, samples, y=None):
         return super().fit([s.data for s in samples])
 
 
@@ -47,7 +47,6 @@ class CheckpointMixin:
 
         if path is None or not os.path.isfile(path):
             new_sample = super().transform([sample])[0]
-            new_sample.key = sample.key
 
             # save the new sample
             self.save(new_sample)
@@ -59,15 +58,16 @@ class CheckpointMixin:
     def transform(self, samples):
         return [self.transform_one_sample(s) for s in samples]
 
-    def fit(self, samples):
-        if os.path.isfile(self.model_path):
+    def fit(self, samples, y=None):
+
+        if self.model_path is not None and os.path.isfile(self.model_path):
             return self.load_model()
 
-        super().fit(samples)
+        super().fit(samples, y=y)
         return self.save_model()
 
-    def fit_transform(self, samples):
-        return self.fit(samples).transform(samples)
+    def fit_transform(self, samples, y=None):
+        return self.fit(samples, y=y).transform(samples)
 
     def make_path(self, sample):
         if self.features_dir is None:
@@ -98,7 +98,7 @@ class CheckpointMixin:
             return pickle.load(f)
 
     def save_model(self):
-        if _is_estimator_stateless(self):
+        if _is_estimator_stateless(self) or self.model_path is None:
             return self
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         with open(self.model_path, "wb") as f:
@@ -107,12 +107,22 @@ class CheckpointMixin:
 
 
 class SampleFunctionTransformer(SampleMixin, FunctionTransformer):
+    """Mixin class that transforms Scikit learn FunctionTransformer (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
+    work with :any:`Sample`-based pipelines.
+    """
+
     pass
 
 
 class CheckpointSampleFunctionTransformer(
     CheckpointMixin, SampleMixin, FunctionTransformer
 ):
+    """Mixin class that transforms Scikit learn FunctionTransformer (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
+    work with :any:`Sample`-based pipelines.
+
+    Furthermore, it makes it checkpointable
+    """
+
     pass
 
 
