@@ -126,6 +126,49 @@ class CheckpointSampleFunctionTransformer(
     pass
 
 
+from sklearn.base import BaseEstimator
+class NonPicklableWrapper:
+    """Class that wraps estimators that are not picklable
+
+    Example
+    -------
+        >>> from bob.pipelines.processor import NonPicklableWrapper
+        >>> wrapper = NonPicklableWrapper(my_non_picklable_class_callable)
+
+    Example
+    -------
+        >>> from bob.pipelines.processor import NonPicklableWrapper
+        >>> import functools
+        >>> wrapper = NonPicklableWrapper(functools.partial(MyNonPicklableClass, arg1, arg2))
+
+
+    Parameters
+    ----------
+      callable: callable
+         Calleble function that instantiates the scikit estimator
+
+    """
+
+    def __init__(self, callable):
+        self.callable = callable
+        self.instance = None
+
+
+    def fit(self, X, y=None, **fit_params):        
+        # Instantiates and do the "real" fit
+        if self.instance is None:
+            self.instance = self.callable()
+        return self.instance.fit(X, y=y, **fit_params)
+
+
+    def transform(self, X):
+        
+        # Instantiates and do the "real" transform
+        if self.instance is None:
+            self.instance = self.callable()
+        return self.instance.transform(X)
+
+
 def _is_estimator_stateless(estimator):
     if not hasattr(estimator, "_get_tags"):
         return False

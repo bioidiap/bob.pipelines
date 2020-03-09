@@ -9,11 +9,13 @@ from bob.pipelines.processor import (
     SampleFunctionTransformer,
     CheckpointMixin,
     CheckpointSampleFunctionTransformer,
+    NonPicklableWrapper
 )
 from bob.pipelines.processor.processor import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.pipeline import Pipeline
 
 
 def _offset_add_func(X, offset=1):
@@ -214,16 +216,18 @@ def _build_estimator(path, i):
 
 
 def _build_transformer(path, i, picklable=True):
-    features_dir = os.path.join(path, f"transformer{i}")
-    return CheckpointSampleDummyTransformer(
-        features_dir=features_dir,
-        picklable=picklable
-    )
 
+    features_dir = os.path.join(path, f"transformer{i}")
+    if picklable:
+        return CheckpointSampleDummyTransformer(
+            features_dir=features_dir,
+            picklable=picklable
+        )
+    else:
+        import functools        
+        return NonPicklableWrapper(functools.partial(CheckpointSampleDummyTransformer,features_dir=features_dir,picklable=picklable))
 
 def test_checkpoint_fittable_pipeline():
-
-    from sklearn.pipeline import Pipeline
 
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
@@ -241,8 +245,6 @@ def test_checkpoint_fittable_pipeline():
 
 def test_checkpoint_transform_pipeline():
 
-    from sklearn.pipeline import Pipeline
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
     offset = 2
@@ -256,8 +258,6 @@ def test_checkpoint_transform_pipeline():
 
 
 def test_checkpoint_fit_transform_pipeline():
-
-    from sklearn.pipeline import Pipeline
 
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
@@ -277,7 +277,6 @@ def test_checkpoint_fit_transform_pipeline():
 
 def test_checkpoint_fit_transform_pipeline_with_dask():
 
-    from sklearn.pipeline import Pipeline
     from dask import delayed
 
     X = np.ones(shape=(10, 2), dtype=int)
@@ -300,7 +299,6 @@ def test_checkpoint_fit_transform_pipeline_with_dask():
 
 def test_checkpoint_fit_transform_pipeline_with_daskbag():
 
-    from sklearn.pipeline import Pipeline
     from dask import delayed
     import dask.bag
 
@@ -342,7 +340,6 @@ def _get_local_client():
 
 def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
 
-    from sklearn.pipeline import Pipeline
     from dask import delayed
 
     X = np.ones(shape=(10, 2), dtype=int)
@@ -351,14 +348,15 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
     oracle = X + 2
 
     with tempfile.TemporaryDirectory() as d:
-        fitter = ("0", _build_estimator(d, 0))
+        fitter = ("0", _build_estimator(d, 0))        
+
         transformer = ("1", _build_transformer(d, 1, picklable=False))
         pipeline = Pipeline([fitter, transformer], memory=d)
-        
+
         dask_client = _get_local_client()
 
         delayed_pipeline = delayed(pipeline.fit)(samples)
-        transformed_samples = delayed(delayed_pipeline.transform)(samples_transform)
+        transformed_samples = delayed(delayed_pipeline.transform)(samples_transform)        
         transformed_samples = transformed_samples.compute(scheduler=dask_client)
-        
+
         _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])

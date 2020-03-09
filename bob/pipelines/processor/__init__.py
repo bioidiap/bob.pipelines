@@ -3,4 +3,5 @@ from .processor import (
     SampleMixin,
     SampleFunctionTransformer,
     CheckpointSampleFunctionTransformer,
+    NonPicklableWrapper
 )
