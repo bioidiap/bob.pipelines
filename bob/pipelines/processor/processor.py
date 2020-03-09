@@ -169,6 +169,17 @@ class NonPicklableWrapper:
         return self.instance.transform(X)
 
 
+from dask import delayed
+class DaskEstimatorMixin:
+    """Wraps Scikit estimators into Daskable objects
+    """
+
+    def fit(self, X, y=None, **fit_params):
+        return delayed(super().fit)(X, y, **fit_params)
+
+
+
+
 def _is_estimator_stateless(estimator):
     if not hasattr(estimator, "_get_tags"):
         return False
