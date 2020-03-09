@@ -4,6 +4,7 @@
 from dask.delayed import Delayed
 import copy
 
+
 class DaskDelayedTape:
     """
     Record dask delayed operations with a particular TAG.
@@ -58,6 +59,7 @@ def is_picklable(obj):
     Test if an object is picklable or not
     """
     import pickle
+
     try:
         pickle.dumps(obj)
     except TypeError:

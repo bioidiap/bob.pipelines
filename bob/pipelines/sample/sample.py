@@ -1,24 +1,11 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-
-
 """Base definition of sample"""
-
-
-import os
-import copy
-import functools
-
-import bob.io.base
 
 
 def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self
     """
     s.__dict__.update(
-        dict(
-            [k, v] for k, v in d.items() if k not in ("data", "load", "samples")
-        )
+        dict([k, v] for k, v in d.items() if k not in ("data", "load", "samples"))
     )
 
 
@@ -93,4 +80,3 @@ class SampleSet:
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
-

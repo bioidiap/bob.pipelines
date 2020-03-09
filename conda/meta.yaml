@@ -26,9 +26,12 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - bob.extension
+    - bob.io.base
     - dask
     - dask-jobqueue
-
+    - numpy {{ numpy }}
+    - h5py
+    - scikit-learn
   run:
     - python
     - setuptools
@@ -50,6 +53,7 @@ test:
     - sphinx_rtd_theme
     - dask
     - dask-jobqueue
+    - scikit-learn
 about:
   summary: bob.pipelines
   home: https://www.idiap.ch/software/bob/

@@ -1,5 +1,7 @@
 setuptools
 numpy
 bob.extension
+bob.io.base
+scikit-learn
 dask
 dask-jobqueue
