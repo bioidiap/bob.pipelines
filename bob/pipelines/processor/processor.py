@@ -1,10 +1,54 @@
 """Sample-based Processors"""
 from ..sample import Sample, DelayedSample
 import os
-import pickle
+import cloudpickle
 import functools
 import bob.io.base
 from sklearn.preprocessing import FunctionTransformer
+import six
+
+
+def mix_me_up(cls, o):
+    """
+    Mix :any:object or :py:class with another class
+
+    For instance, mix_me_up(class_A, class_B) is equal to `class AB(A,B) pass:`
+
+    Example
+    -------
+
+       >>> my_mixed_class = mix_me_up([MixInA, MixInB], original_class)
+       >>> object = my_mixed_class(*args)
+
+
+    Parameters
+    ----------
+      cls: :py:class or list(:py:class)
+        class to be mixed
+      o: 
+        class or instance of a class
+
+    """
+
+    # Mix one by one
+    def mix_2(cls, o):
+        if isinstance(o, six.class_types):
+            # If it's a class, just merge them
+            return type(cls.__name__ + o.__name__, (cls, o), {})
+        else:
+            # If it's an object, creates a new class and copy the state of the current object
+            return type(
+                cls.__name__ + o.__class__.__name__, (cls, o.__class__), o.__dict__
+            )()
+
+    cls = cls if isinstance(cls, list) else [cls]
+
+    final_cls = o
+    # We want the classed to be integrated in the reversed order
+    # Because this how it's done here: class AB(A,B) pass:
+    for c in cls[::-1]:
+        final_cls = mix_2(c, final_cls)
+    return final_cls
 
 
 class SampleMixin:
@@ -95,14 +139,14 @@ class CheckpointMixin:
         if _is_estimator_stateless(self):
             return self
         with open(self.model_path, "rb") as f:
-            return pickle.load(f)
+            return cloudpickle.load(f)
 
     def save_model(self):
         if _is_estimator_stateless(self) or self.model_path is None:
             return self
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         with open(self.model_path, "wb") as f:
-            pickle.dump(self, f)
+            cloudpickle.dump(self, f)
         return self
 
 
@@ -127,6 +171,8 @@ class CheckpointSampleFunctionTransformer(
 
 
 from sklearn.base import BaseEstimator
+
+
 class NonPicklableWrapper:
     """Class that wraps estimators that are not picklable
 
@@ -153,16 +199,14 @@ class NonPicklableWrapper:
         self.callable = callable
         self.instance = None
 
-
-    def fit(self, X, y=None, **fit_params):        
+    def fit(self, X, y=None, **fit_params):
         # Instantiates and do the "real" fit
         if self.instance is None:
             self.instance = self.callable()
         return self.instance.fit(X, y=y, **fit_params)
 
-
     def transform(self, X):
-        
+
         # Instantiates and do the "real" transform
         if self.instance is None:
             self.instance = self.callable()
@@ -170,14 +214,21 @@ class NonPicklableWrapper:
 
 
 from dask import delayed
+
+
 class DaskEstimatorMixin:
     """Wraps Scikit estimators into Daskable objects
     """
 
     def fit(self, X, y=None, **fit_params):
-        return delayed(super().fit)(X, y, **fit_params)
+        self._dask_state = delayed(super().fit)(X, y, **fit_params)
+        return self
 
+    def transform(self, X):
+        def _transf(X_line, dask_state):
+            return super(DaskEstimatorMixin, dask_state).transform(X_line)
 
+        return X.map_partitions(_transf, self._dask_state)
 
 
 def _is_estimator_stateless(estimator):

@@ -4,5 +4,6 @@ from .processor import (
     SampleFunctionTransformer,
     CheckpointSampleFunctionTransformer,
     NonPicklableWrapper,
-    DaskEstimatorMixin
+    DaskEstimatorMixin,
+    mix_me_up
 )
