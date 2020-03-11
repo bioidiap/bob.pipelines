@@ -6,6 +6,16 @@ import functools
 import bob.io.base
 from sklearn.preprocessing import FunctionTransformer
 import six
+from sklearn.pipeline import Pipeline
+
+
+def dask_it(o):
+    """
+    Mix up any scikit learn pipeline or scikit estimarto with
+    :py:class`DaskEstimatorMixin`
+    """
+
+    return mix_me_up([DaskEstimatorMixin], o)
 
 
 def mix_me_up(cls, o):
@@ -31,24 +41,39 @@ def mix_me_up(cls, o):
     """
 
     # Mix one by one
-    def mix_2(cls, o):
+    def _mix_2(cls, o):
         if isinstance(o, six.class_types):
             # If it's a class, just merge them
             return type(cls.__name__ + o.__name__, (cls, o), {})
         else:
             # If it's an object, creates a new class and copy the state of the current object
-            return type(
+            new_type = type(
                 cls.__name__ + o.__class__.__name__, (cls, o.__class__), o.__dict__
             )()
+            # new_type.__dict__ is made in the descending order of the classes
+            # so the values of o.__dict__ are overwritten by the lower ones
+            # here we are copying them back
+            for k in o.__dict__:
+                new_type.__dict__[k] = o.__dict__[k]
+            return new_type
 
     cls = cls if isinstance(cls, list) else [cls]
 
-    final_cls = o
-    # We want the classed to be integrated in the reversed order
-    # Because this how it's done here: class AB(A,B) pass:
-    for c in cls[::-1]:
-        final_cls = mix_2(c, final_cls)
-    return final_cls
+    def _mix_all(head):
+        final_cls = head
+        # We want the classed to be integrated in the reversed order
+        # Because this how it's done here: class AB(A,B) pass:
+        for c in cls[::-1]:
+            final_cls = _mix_2(c, final_cls)
+        return final_cls
+
+    if isinstance(o, Pipeline):
+        # mixing all pipelines
+        for i in range(len(o.steps)):
+            o.steps[i] = (str(i), dask_it(o.steps[i][1]))
+        return o
+    else:
+        return _mix_all(o)
 
 
 class SampleMixin:
@@ -88,10 +113,8 @@ class CheckpointMixin:
 
         # Check if the sample is already processed.
         path = self.make_path(sample)
-
         if path is None or not os.path.isfile(path):
             new_sample = super().transform([sample])[0]
-
             # save the new sample
             self.save(new_sample)
         else:
@@ -103,7 +126,6 @@ class CheckpointMixin:
         return [self.transform_one_sample(s) for s in samples]
 
     def fit(self, samples, y=None):
-
         if self.model_path is not None and os.path.isfile(self.model_path):
             return self.load_model()
 
@@ -115,7 +137,8 @@ class CheckpointMixin:
 
     def make_path(self, sample):
         if self.features_dir is None:
-            return None
+            raise ValueError("`features_dir` is not in %s" % CheckpointMixin.__name__)
+
         return os.path.join(self.features_dir, sample.key + self.extension)
 
     def recover_key_from_path(self, path):
@@ -195,7 +218,7 @@ class NonPicklableWrapper:
 
     """
 
-    def __init__(self, callable):
+    def __init__(self, callable=None):
         self.callable = callable
         self.instance = None
 
@@ -220,12 +243,17 @@ class DaskEstimatorMixin:
     """Wraps Scikit estimators into Daskable objects
     """
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._dask_state = self
+
     def fit(self, X, y=None, **fit_params):
         self._dask_state = delayed(super().fit)(X, y, **fit_params)
         return self
 
     def transform(self, X):
         def _transf(X_line, dask_state):
+            # return dask_state.transform(X_line)
             return super(DaskEstimatorMixin, dask_state).transform(X_line)
 
         return X.map_partitions(_transf, self._dask_state)
