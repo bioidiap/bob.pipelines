@@ -52,20 +52,18 @@ def mix_me_up(bases, o):
         Base element to be extended
 
     """
- 
+
     def _mix(bases, o):
         bases = bases if isinstance(bases, tuple) else tuple([bases])
-        class_name = ''.join([c.__name__ for c in bases])
-        if isinstance(o, six.class_types):            
+        class_name = "".join([c.__name__ for c in bases])
+        if isinstance(o, six.class_types):
             # If it's a class, just merge them
             class_name += o.__name__
-            new_type = type(class_name, bases+tuple([o]), {})
-        else:            
+            new_type = type(class_name, bases + tuple([o]), {})
+        else:
             # If it's an object, creates a new class and copy the state of the current object
             class_name += o.__class__.__name__
-            new_type = type(
-                class_name, bases+tuple([o.__class__]), o.__dict__
-            )()
+            new_type = type(class_name, bases + tuple([o.__class__]), o.__dict__)()
             # new_type.__dict__ is made in the descending order of the classes
             # so the values of o.__dict__ are overwritten by the lower ones
             # here we are copying them back
@@ -78,21 +76,10 @@ def mix_me_up(bases, o):
     if isinstance(o, Pipeline):
         # mixing all pipelines
         for i in range(len(o.steps)):
-            o.steps[i] = (str(i), dask_it(o.steps[i][1]))
+            o.steps[i] = (str(i), _mix(bases, o.steps[i][1]))
         return o
     else:
         return _mix(bases, o)
-
-    
-
-    #def _mix_all(head):
-    #    final_cls = head
-    #    # We want the classed to be integrated in the reversed order
-    #    # Because this how it's done here: class AB(A,B) pass:
-    #    for c in cls[::-1]:
-    #        final_cls = _mix_2(c, final_cls)
-    #    return final_cls
-
 
 
 class SampleMixin:
@@ -285,14 +272,12 @@ class DaskEstimatorMixin:
         self.fit_resource = fit_resource
         self.transform_resource = transform_resource
 
-
     def fit(self, X, y=None, **fit_params):
         self._dask_state = delayed(super().fit)(X, y, **fit_params)
         if self.fit_resource is not None:
             self.resource_tape[self._dask_state] = self.fit_resource
 
         return self
-
 
     def transform(self, X):
         def _transf(X_line, dask_state):
