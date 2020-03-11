@@ -241,22 +241,50 @@ from dask import delayed
 
 class DaskEstimatorMixin:
     """Wraps Scikit estimators into Daskable objects
+
+    Parameters
+    ----------
+
+       fit_resource: str
+           Mark the delayed(self.fit) with this value. This can be used in 
+           a future delayed(self.fit).compute(resources=resource_tape) so
+           dask scheduler can place this task in a particular resource
+           (e.g GPU)
+
+       transform_resource: str
+           Mark the delayed(self.transform) with this value. This can be used in 
+           a future delayed(self.transform).compute(resources=resource_tape) so
+           dask scheduler can place this task in a particular resource
+           (e.g GPU)
+
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, fit_resource=None, transform_resource=None, **kwargs):
         super().__init__(**kwargs)
         self._dask_state = self
+        self.resource_tape = dict()
+        self.fit_resource = fit_resource
+        self.transform_resource = transform_resource
+
 
     def fit(self, X, y=None, **fit_params):
         self._dask_state = delayed(super().fit)(X, y, **fit_params)
+        if self.fit_resource is not None:
+            self.resource_tape[self._dask_state] = self.fit_resource
+
         return self
+
 
     def transform(self, X):
         def _transf(X_line, dask_state):
             # return dask_state.transform(X_line)
             return super(DaskEstimatorMixin, dask_state).transform(X_line)
 
-        return X.map_partitions(_transf, self._dask_state)
+        map_partitions = X.map_partitions(_transf, self._dask_state)
+        if self.transform_resource is not None:
+            self.resource_tape[map_partitions] = self.transform_resource
+
+        return map_partitions
 
 
 def _is_estimator_stateless(estimator):
