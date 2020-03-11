@@ -1,4 +1,6 @@
-"""Sample-based Processors"""
+#!/usr/bin/env python
+# vim: set fileencoding=utf-8 :
+
 from ..sample import Sample, DelayedSample
 import os
 import cloudpickle
@@ -11,69 +13,86 @@ from sklearn.pipeline import Pipeline
 
 def dask_it(o):
     """
-    Mix up any scikit learn pipeline or scikit estimarto with
+    Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base with
     :py:class`DaskEstimatorMixin`
     """
 
-    return mix_me_up([DaskEstimatorMixin], o)
+    return mix_me_up(DaskEstimatorMixin, o)
 
 
-def mix_me_up(cls, o):
+def mix_me_up(bases, o):
     """
-    Mix :any:object or :py:class with another class
+    Dynamically creates a new class from :any:`object` or :any:`class` using `cls` a base classes.
+    For instance, mix_me_up((class_A, classB), class_c) is equal to `class ABC(A,B,C) pass:`
+    
+    Example
+    -------
 
-    For instance, mix_me_up(class_A, class_B) is equal to `class AB(A,B) pass:`
+       >>> my_mixed_class = mix_me_up([MixInA, MixInB], OriginalClass)
+       >>> mixed_object = my_mixed_class(*args)
+
+    It's also possible to mix up an instance:
 
     Example
     -------
 
-       >>> my_mixed_class = mix_me_up([MixInA, MixInB], original_class)
-       >>> object = my_mixed_class(*args)
+       >>> instance = OriginalClass()
+       >>> mixed_object = mix_me_up([MixInA, MixInB], instance)       
+
+    It's also possible to mix up a :py:class:`sklearn.pipeline.Pipeline`.
+    In this case, every estimator inside of :py:meth:`sklearn.pipeline.Pipeline.steps`
+    will be mixed up
 
 
     Parameters
     ----------
-      cls: :py:class or list(:py:class)
-        class to be mixed
-      o: 
-        class or instance of a class
+      bases:  or :any:`tuple` 
+        Base classes to be mixed in
+      o: :any:`class`, :any:`object` or :py:class:`sklearn.pipeline.Pipeline`
+        Base element to be extended
 
     """
-
-    # Mix one by one
-    def _mix_2(cls, o):
-        if isinstance(o, six.class_types):
+ 
+    def _mix(bases, o):
+        bases = bases if isinstance(bases, tuple) else tuple([bases])
+        class_name = ''.join([c.__name__ for c in bases])
+        if isinstance(o, six.class_types):            
             # If it's a class, just merge them
-            return type(cls.__name__ + o.__name__, (cls, o), {})
-        else:
+            class_name += o.__name__
+            new_type = type(class_name, bases+tuple([o]), {})
+        else:            
             # If it's an object, creates a new class and copy the state of the current object
+            class_name += o.__class__.__name__
             new_type = type(
-                cls.__name__ + o.__class__.__name__, (cls, o.__class__), o.__dict__
+                class_name, bases+tuple([o.__class__]), o.__dict__
             )()
             # new_type.__dict__ is made in the descending order of the classes
             # so the values of o.__dict__ are overwritten by the lower ones
             # here we are copying them back
             for k in o.__dict__:
                 new_type.__dict__[k] = o.__dict__[k]
-            return new_type
+        return new_type
 
-    cls = cls if isinstance(cls, list) else [cls]
-
-    def _mix_all(head):
-        final_cls = head
-        # We want the classed to be integrated in the reversed order
-        # Because this how it's done here: class AB(A,B) pass:
-        for c in cls[::-1]:
-            final_cls = _mix_2(c, final_cls)
-        return final_cls
-
+    # If it is a scikit pipeline, mixIN everything inside of
+    # Pipeline.steps
     if isinstance(o, Pipeline):
         # mixing all pipelines
         for i in range(len(o.steps)):
             o.steps[i] = (str(i), dask_it(o.steps[i][1]))
         return o
     else:
-        return _mix_all(o)
+        return _mix(bases, o)
+
+    
+
+    #def _mix_all(head):
+    #    final_cls = head
+    #    # We want the classed to be integrated in the reversed order
+    #    # Because this how it's done here: class AB(A,B) pass:
+    #    for c in cls[::-1]:
+    #        final_cls = _mix_2(c, final_cls)
+    #    return final_cls
+
 
 
 class SampleMixin:

@@ -178,11 +178,10 @@ def test_checkpoint_fittable_sample_transformer():
         model_path = os.path.join(d, "model.pkl")
         features_dir = os.path.join(d, "features")
 
-        transformer = mix_me_up([CheckpointMixin, SampleMixin], DummyWithFit)(
+        transformer = mix_me_up((CheckpointMixin, SampleMixin), DummyWithFit)(
             model_path=model_path, features_dir=features_dir
         )
         assert not _is_estimator_stateless(transformer)
-
         features = transformer.fit(samples).transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
@@ -205,7 +204,7 @@ def _build_estimator(path, i):
     model_path = os.path.join(base_dir, "model.pkl")
     features_dir = os.path.join(base_dir, "features")
 
-    return mix_me_up([CheckpointMixin, SampleMixin], DummyWithFit)(
+    return mix_me_up((CheckpointMixin, SampleMixin), DummyWithFit)(
         model_path=model_path, features_dir=features_dir
     )
 
@@ -213,7 +212,7 @@ def _build_estimator(path, i):
 def _build_transformer(path, i, picklable=True, dask_enabled=True):
 
     features_dir = os.path.join(path, f"transformer{i}")
-    estimator_cls = mix_me_up([CheckpointMixin, SampleMixin], DummyTransformer)
+    estimator_cls = mix_me_up((CheckpointMixin, SampleMixin), DummyTransformer)
     if picklable:
         return estimator_cls(features_dir=features_dir, picklable=picklable)
     else:
@@ -233,7 +232,7 @@ def _build_daskable_transformer(path, i):
     features_dir = os.path.join(path, f"transformer{i}")
     model_path = os.path.join(path, "./model.pkl")
     estimator_cls = mix_me_up(
-        [DaskEstimatorMixin, CheckpointMixin, SampleMixin], DummyWithFit
+        (DaskEstimatorMixin, CheckpointMixin, SampleMixin), DummyWithFit
     )
     return estimator_cls(model_path=model_path, features_dir=features_dir)
 
