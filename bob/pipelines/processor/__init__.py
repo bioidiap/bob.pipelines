@@ -3,8 +3,9 @@ from .processor import (
     SampleMixin,
     SampleFunctionTransformer,
     CheckpointSampleFunctionTransformer,
-    NonPicklableWrapper,
+    NonPicklableMixin,
     DaskEstimatorMixin,
     mix_me_up,
-    dask_it
+    dask_it,
+    DaskBagMixin
 )

@@ -3,19 +3,24 @@
 
 from ..sample import Sample, DelayedSample
 import os
+import six
 import cloudpickle
 import functools
 import bob.io.base
 from sklearn.preprocessing import FunctionTransformer
-import six
+from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
-
+from dask import delayed
+import dask.bag
 
 def dask_it(o):
     """
     Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base with
     :py:class`DaskEstimatorMixin`
-    """
+    """    
+    if isinstance(o, Pipeline):
+        #Adding a daskbag in the tail of the pipeline
+        o.steps.insert(0, ('0', DaskBagMixin()))
 
     return mix_me_up(DaskEstimatorMixin, o)
 
@@ -76,10 +81,19 @@ def mix_me_up(bases, o):
     if isinstance(o, Pipeline):
         # mixing all pipelines
         for i in range(len(o.steps)):
+            # checking if it's not the bag transformer
+            if isinstance(o.steps[i][1], DaskBagMixin):
+                continue
             o.steps[i] = (str(i), _mix(bases, o.steps[i][1]))
         return o
     else:
         return _mix(bases, o)
+
+
+def _is_estimator_stateless(estimator):
+    if not hasattr(estimator, "_get_tags"):
+        return False
+    return estimator._get_tags()["stateless"]
 
 
 class SampleMixin:
@@ -195,26 +209,22 @@ class CheckpointSampleFunctionTransformer(
 
     Furthermore, it makes it checkpointable
     """
-
     pass
 
 
-from sklearn.base import BaseEstimator
-
-
-class NonPicklableWrapper:
+class NonPicklableMixin:
     """Class that wraps estimators that are not picklable
 
     Example
     -------
-        >>> from bob.pipelines.processor import NonPicklableWrapper
-        >>> wrapper = NonPicklableWrapper(my_non_picklable_class_callable)
+        >>> from bob.pipelines.processor import NonPicklableMixin
+        >>> wrapper = NonPicklableMixin(my_non_picklable_class_callable)
 
     Example
     -------
-        >>> from bob.pipelines.processor import NonPicklableWrapper
+        >>> from bob.pipelines.processor import NonPicklableMixin
         >>> import functools
-        >>> wrapper = NonPicklableWrapper(functools.partial(MyNonPicklableClass, arg1, arg2))
+        >>> wrapper = NonPicklableMixin(functools.partial(MyNonPicklableClass, arg1, arg2))
 
 
     Parameters
@@ -241,8 +251,6 @@ class NonPicklableWrapper:
             self.instance = self.callable()
         return self.instance.transform(X)
 
-
-from dask import delayed
 
 
 class DaskEstimatorMixin:
@@ -291,7 +299,32 @@ class DaskEstimatorMixin:
         return map_partitions
 
 
-def _is_estimator_stateless(estimator):
-    if not hasattr(estimator, "_get_tags"):
-        return False
-    return estimator._get_tags()["stateless"]
+class DaskBagMixin(TransformerMixin):
+    """Transform an arbitrary iterator into a :py:class:`dask.bag`
+
+
+    Paramters
+    ---------
+
+      npartitions: int
+        Number of partitions used it :py:meth:`dask.bag.npartitions`
+
+
+    Example
+    -------
+
+    >>> transformer = DaskBagMixin()
+    >>> dask_bag = transformer.transform([1,2,3])
+    >>> dask_bag.map_partitions.....
+
+    """
+
+    def __init__(self, npartitions=None, **kwargs):
+        super().__init__(**kwargs)
+        self.npartitions = npartitions
+
+    def fit(self, X, y=None, **kwargs):
+        return self
+
+    def transform(self, X, **kwargs):
+        return dask.bag.from_sequence(X, npartitions=self.npartitions)

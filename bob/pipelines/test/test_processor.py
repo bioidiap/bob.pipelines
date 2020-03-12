@@ -10,10 +10,11 @@ from bob.pipelines.processor import (
     SampleFunctionTransformer,
     CheckpointMixin,
     CheckpointSampleFunctionTransformer,
-    NonPicklableWrapper,
+    NonPicklableMixin,
     DaskEstimatorMixin,
+    DaskBagMixin,
     mix_me_up,
-    dask_it,
+    dask_it
 )
 from bob.pipelines.processor.processor import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
@@ -49,8 +50,7 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
         if X.shape[1] != self.n_features_:
             raise ValueError(
                 "Shape of input is different from what was seen" "in `fit`"
-            )
-
+            )        
         return X @ self.model_
 
 
@@ -74,8 +74,7 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
         # Input validation
         X = check_array(X)
         # Check that the input is of the same shape as the one passed
-        # during fit.
-
+        # during fit.        
         return _offset_add_func(X)
 
 
@@ -221,20 +220,11 @@ def _build_transformer(path, i, picklable=True, dask_enabled=True):
         if dask_enabled:
             estimator_cls = dask_it(estimator_cls)
 
-        return NonPicklableWrapper(
+        return NonPicklableMixin(
             functools.partial(
                 estimator_cls, features_dir=features_dir, picklable=picklable
             )
         )
-
-
-def _build_daskable_transformer(path, i):
-    features_dir = os.path.join(path, f"transformer{i}")
-    model_path = os.path.join(path, "./model.pkl")
-    estimator_cls = mix_me_up(
-        (DaskEstimatorMixin, CheckpointMixin, SampleMixin), DummyWithFit
-    )
-    return estimator_cls(model_path=model_path, features_dir=features_dir)
 
 
 def test_checkpoint_fittable_pipeline():
@@ -266,9 +256,8 @@ def test_checkpoint_transform_pipeline():
                 [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
             )
             if dask_enabled:
-                pipeline = dask_it(pipeline)
-                db = dask.bag.from_sequence(samples_transform)
-                transformed_samples = pipeline.transform(db).compute(
+                pipeline = dask_it(pipeline)                
+                transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler="single-threaded"
                 )
             else:
@@ -293,9 +282,10 @@ def test_checkpoint_fit_transform_pipeline():
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
                 pipeline = dask_it(pipeline)
-                db = dask.bag.from_sequence(samples_transform)
-                pipeline = pipeline.fit(db)
-                transformed_samples = pipeline.transform(db).compute(
+                pipeline = pipeline.fit(samples)
+                transformed_samples = pipeline.transform(samples_transform)
+
+                transformed_samples = transformed_samples.compute(
                     scheduler="single-threaded"
                 )
             else:
@@ -338,10 +328,9 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
                 dask_client = _get_local_client()
-                pipeline = dask_it(pipeline)
-                db = dask.bag.from_sequence(samples_transform)
-                pipeline = pipeline.fit(db)
-                transformed_samples = pipeline.transform(db).compute(
+                pipeline = dask_it(pipeline)                
+                pipeline = pipeline.fit(samples)
+                transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler=dask_client
                 )
             else:
@@ -356,11 +345,9 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
 
 def test_dask_checkpoint_transform_pipeline():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    with tempfile.TemporaryDirectory() as d:
-
-        db = dask.bag.from_sequence(samples_transform)
-        estimator = _build_daskable_transformer(d, 0)
-        estimator = estimator.fit(db)
-        X_tr = estimator.transform(db)
+    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]    
+    with tempfile.TemporaryDirectory() as d:        
+        bag_transformer = DaskBagMixin()        
+        estimator = dask_it(_build_transformer(d, 0))
+        X_tr = estimator.transform(bag_transformer.transform(samples_transform))
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
