@@ -3,7 +3,7 @@
 
 from ..sample import Sample, DelayedSample
 import os
-import six
+import types
 import cloudpickle
 import functools
 import bob.io.base
@@ -27,8 +27,8 @@ def dask_it(o):
 
 def mix_me_up(bases, o):
     """
-    Dynamically creates a new class from :any:`object` or :any:`class` using `cls` a base classes.
-    For instance, mix_me_up((class_A, classB), class_c) is equal to `class ABC(A,B,C) pass:`
+    Dynamically creates a new class from :any:`object` or :any:`class`.
+    For instance, mix_me_up((A,B), class_c) is equal to `class ABC(A,B,C) pass:`
     
     Example
     -------
@@ -53,6 +53,7 @@ def mix_me_up(bases, o):
     ----------
       bases:  or :any:`tuple` 
         Base classes to be mixed in
+
       o: :any:`class`, :any:`object` or :py:class:`sklearn.pipeline.Pipeline`
         Base element to be extended
 
@@ -61,7 +62,7 @@ def mix_me_up(bases, o):
     def _mix(bases, o):
         bases = bases if isinstance(bases, tuple) else tuple([bases])
         class_name = "".join([c.__name__ for c in bases])
-        if isinstance(o, six.class_types):
+        if isinstance(o, types.ClassType):
             # If it's a class, just merge them
             class_name += o.__name__
             new_type = type(class_name, bases + tuple([o]), {})
