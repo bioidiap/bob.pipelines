@@ -16,7 +16,7 @@ from bob.pipelines.mixins import (
     mix_me_up,
     dask_it
 )
-from bob.pipelines.mixins.mixins import _is_estimator_stateless
+from bob.pipelines.mixins import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 :
 
-from ..sample import Sample, DelayedSample
+from .sample import Sample, DelayedSample
 import os
 import types
 import cloudpickle
