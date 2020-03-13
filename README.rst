@@ -15,16 +15,12 @@
 
 
 ===========================================================================
- Tool that helps you create pipelines for arbitrary scientific experiments
+ Tools to build robust and extensible pipelines
 ===========================================================================
 
 This package is part of the signal-processing and machine learning toolbox Bob_.
 
-This is **STILL EXPERIMENTAL** and the goal is to provide better option than `bob.bio.base <http://gitlab.idiap.ch/bob/bob.bio.base>`_ and `bob.pad.base <http://gitlab.idiap.ch/bob/bob.pad.base>`_  in terms of extensibility.
-
-The goal is to have tool with the following skeleton::
-
-  $ bob pipelines run <EXECUTION-CONFIG> <DATABASE-CONFIG> <EXPERIMENT-CONFIG> [<PIPELINES>] [OPTIONS] 
+This is **STILL EXPERIMENTAL** and the goal is to provide more flexible pipeline mechanism for `bob.bio.base <http://gitlab.idiap.ch/bob/bob.bio.base>`_ and `bob.pad.base <http://gitlab.idiap.ch/bob/bob.pad.base>`_.
 
 
 Installation

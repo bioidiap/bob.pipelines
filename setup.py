@@ -13,7 +13,7 @@ install_requires = load_requirements()
 setup(
     name="bob.pipelines",
     version=open("version.txt").read().rstrip(),
-    description="Tool that helps you create pipelines for arbitrary scientific experiments",
+    description="Tools to build robust and extensible pipelines",
     url="https://gitlab.idiap.cih/bob/bob.pipelines",
     license="BSD",
     # there may be multiple authors (separate entries by comma)

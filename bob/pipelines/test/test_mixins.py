@@ -5,7 +5,7 @@ import shutil
 import dask.bag
 
 from bob.pipelines.sample import Sample, SampleSet, DelayedSample
-from bob.pipelines.processor import (
+from bob.pipelines.mixins import (
     SampleMixin,
     SampleFunctionTransformer,
     CheckpointMixin,
@@ -16,7 +16,7 @@ from bob.pipelines.processor import (
     mix_me_up,
     dask_it
 )
-from bob.pipelines.processor.processor import _is_estimator_stateless
+from bob.pipelines.mixins.mixins import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted
@@ -328,7 +328,7 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
                 dask_client = _get_local_client()
-                pipeline = dask_it(pipeline)                
+                pipeline = dask_it(pipeline)
                 pipeline = pipeline.fit(samples)
                 transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler=dask_client

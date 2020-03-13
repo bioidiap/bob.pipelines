@@ -1,4 +1,4 @@
-from .processor import (
+from .mixins import (
     CheckpointMixin,
     SampleMixin,
     SampleFunctionTransformer,
