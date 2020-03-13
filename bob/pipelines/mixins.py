@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: set fileencoding=utf-8 :
 
 from .sample import Sample, DelayedSample
@@ -18,11 +17,25 @@ def dask_it(o):
     Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base with
     :py:class`DaskEstimatorMixin`
     """    
+
+    def _fetch_resource_tape(o):
+        """
+        Get all the resources take
+        """
+        resource_tape = dict()
+        if isinstance(o, Pipeline):
+            for o in range(1,len(o.steps)):
+                resource_tape += o.resource_tape
+
+        return resource_tape
+
     if isinstance(o, Pipeline):
         #Adding a daskbag in the tail of the pipeline
         o.steps.insert(0, ('0', DaskBagMixin()))
 
-    return mix_me_up(DaskEstimatorMixin, o)
+    dasked = mix_me_up(DaskEstimatorMixin, o)
+    #dasked.dask_resources = _fetch_resource_tape(o)
+    return dasked
 
 
 def mix_me_up(bases, o):
@@ -289,8 +302,7 @@ class DaskEstimatorMixin:
         return self
 
     def transform(self, X):
-        def _transf(X_line, dask_state):
-            # return dask_state.transform(X_line)
+        def _transf(X_line, dask_state):            
             return super(DaskEstimatorMixin, dask_state).transform(X_line)
 
         map_partitions = X.map_partitions(_transf, self._dask_state)
