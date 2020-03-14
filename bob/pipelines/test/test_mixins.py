@@ -280,9 +280,12 @@ def test_checkpoint_fit_transform_pipeline():
             fitter = ("0", _build_estimator(d, 0))
             transformer = ("1", _build_transformer(d, 1))
             pipeline = Pipeline([fitter, transformer])
-            if dask_enabled:
-                pipeline = dask_it(pipeline)
+            if dask_enabled:                
+                pipeline = dask_it(pipeline, fit_tag=[(1, "GPU")])
                 pipeline = pipeline.fit(samples)
+                tags = pipeline.dask_tags()
+
+                assert len(tags) == 1
                 transformed_samples = pipeline.transform(samples_transform)
 
                 transformed_samples = transformed_samples.compute(
@@ -348,6 +351,7 @@ def test_dask_checkpoint_transform_pipeline():
     samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]    
     with tempfile.TemporaryDirectory() as d:        
         bag_transformer = DaskBagMixin()        
-        estimator = dask_it(_build_transformer(d, 0))
+        estimator = dask_it(_build_transformer(d, 0), transform_tag="CPU")
         X_tr = estimator.transform(bag_transformer.transform(samples_transform))
+        assert len(estimator.dask_tags()) == 1
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
