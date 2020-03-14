@@ -2,16 +2,21 @@ import numpy as np
 import os
 import tempfile
 import shutil
+import dask.bag
 
 from bob.pipelines.sample import Sample, SampleSet, DelayedSample
-from bob.pipelines.processor import (
+from bob.pipelines.mixins import (
     SampleMixin,
     SampleFunctionTransformer,
     CheckpointMixin,
     CheckpointSampleFunctionTransformer,
-    NonPicklableWrapper
+    NonPicklableMixin,
+    DaskEstimatorMixin,
+    DaskBagMixin,
+    mix_me_up,
+    dask_it
 )
-from bob.pipelines.processor.processor import _is_estimator_stateless
+from bob.pipelines.mixins import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted
@@ -45,8 +50,7 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
         if X.shape[1] != self.n_features_:
             raise ValueError(
                 "Shape of input is different from what was seen" "in `fit`"
-            )
-
+            )        
         return X @ self.model_
 
 
@@ -59,10 +63,10 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
 
         if not picklable:
             import bob.core
+
             self.rng = bob.core.random.mt19937()
 
-
-    def fit(self, X, y=None):        
+    def fit(self, X, y=None):
         return self
 
     def transform(self, X):
@@ -70,20 +74,8 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
         # Input validation
         X = check_array(X)
         # Check that the input is of the same shape as the one passed
-        # during fit.
-
+        # during fit.        
         return _offset_add_func(X)
-
-
-class SampleDummyWithFit(SampleMixin, DummyWithFit):
-    pass
-
-class CheckpointSampleDummyWithFit(CheckpointMixin, SampleMixin, DummyWithFit):
-    pass
-
-
-class CheckpointSampleDummyTransformer(CheckpointMixin, SampleMixin, DummyTransformer):
-    pass
 
 
 def _assert_all_close_numpy_array(oracle, result):
@@ -120,7 +112,8 @@ def test_fittable_sample_transformer():
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [Sample(data) for data in X]
 
-    transformer = SampleDummyWithFit()
+    # Mixing up with an object
+    transformer = mix_me_up(SampleMixin, DummyWithFit())
     features = transformer.fit(samples).transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
 
@@ -184,11 +177,10 @@ def test_checkpoint_fittable_sample_transformer():
         model_path = os.path.join(d, "model.pkl")
         features_dir = os.path.join(d, "features")
 
-        transformer = CheckpointSampleDummyWithFit(
+        transformer = mix_me_up((CheckpointMixin, SampleMixin), DummyWithFit)(
             model_path=model_path, features_dir=features_dir
         )
         assert not _is_estimator_stateless(transformer)
-
         features = transformer.fit(samples).transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
@@ -210,22 +202,30 @@ def _build_estimator(path, i):
     create_directories_safe(base_dir)
     model_path = os.path.join(base_dir, "model.pkl")
     features_dir = os.path.join(base_dir, "features")
-    return CheckpointSampleDummyWithFit(
+
+    return mix_me_up((CheckpointMixin, SampleMixin), DummyWithFit)(
         model_path=model_path, features_dir=features_dir
     )
 
 
-def _build_transformer(path, i, picklable=True):
+def _build_transformer(path, i, picklable=True, dask_enabled=True):
 
     features_dir = os.path.join(path, f"transformer{i}")
+    estimator_cls = mix_me_up((CheckpointMixin, SampleMixin), DummyTransformer)
     if picklable:
-        return CheckpointSampleDummyTransformer(
-            features_dir=features_dir,
-            picklable=picklable
-        )
+        return estimator_cls(features_dir=features_dir, picklable=picklable)
     else:
-        import functools        
-        return NonPicklableWrapper(functools.partial(CheckpointSampleDummyTransformer,features_dir=features_dir,picklable=picklable))
+        import functools
+
+        if dask_enabled:
+            estimator_cls = dask_it(estimator_cls)
+
+        return NonPicklableMixin(
+            functools.partial(
+                estimator_cls, features_dir=features_dir, picklable=picklable
+            )
+        )
+
 
 def test_checkpoint_fittable_pipeline():
 
@@ -244,90 +244,66 @@ def test_checkpoint_fittable_pipeline():
 
 
 def test_checkpoint_transform_pipeline():
+    def _run(dask_enabled):
 
-    X = np.ones(shape=(10, 2), dtype=int)
-    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    offset = 2
-    oracle = X + offset
+        X = np.ones(shape=(10, 2), dtype=int)
+        samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+        offset = 2
+        oracle = X + offset
 
-    with tempfile.TemporaryDirectory() as d:
-        pipeline = Pipeline([(f"{i}", _build_transformer(d, i)) for i in range(offset)])
-        transformed_samples = pipeline.transform(samples_transform)
+        with tempfile.TemporaryDirectory() as d:
+            pipeline = Pipeline(
+                [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
+            )
+            if dask_enabled:
+                pipeline = dask_it(pipeline)                
+                transformed_samples = pipeline.transform(samples_transform).compute(
+                    scheduler="single-threaded"
+                )
+            else:
+                transformed_samples = pipeline.transform(samples_transform)
 
-        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+            _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+    _run(dask_enabled=True)
+    _run(dask_enabled=False)
 
 
 def test_checkpoint_fit_transform_pipeline():
+    def _run(dask_enabled):
+        X = np.ones(shape=(10, 2), dtype=int)
+        samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+        oracle = X + 2
 
-    X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
-    oracle = X + 2
+        with tempfile.TemporaryDirectory() as d:
+            fitter = ("0", _build_estimator(d, 0))
+            transformer = ("1", _build_transformer(d, 1))
+            pipeline = Pipeline([fitter, transformer])
+            if dask_enabled:                
+                pipeline = dask_it(pipeline, fit_tag=[(1, "GPU")])
+                pipeline = pipeline.fit(samples)
+                tags = pipeline.dask_tags()
 
-    with tempfile.TemporaryDirectory() as d:
-        fitter = ("0", _build_estimator(d, 0))
-        transformer = ("1", _build_transformer(d, 1))
-        pipeline = Pipeline([fitter, transformer], memory=d)
-        pipeline.fit(samples)
+                assert len(tags) == 1
+                transformed_samples = pipeline.transform(samples_transform)
 
-        transformed_samples = pipeline.transform(samples_transform)
+                transformed_samples = transformed_samples.compute(
+                    scheduler="single-threaded"
+                )
+            else:
+                pipeline = pipeline.fit(samples)
+                transformed_samples = pipeline.transform(samples_transform)
 
-        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+            _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
 
-
-def test_checkpoint_fit_transform_pipeline_with_dask():
-
-    from dask import delayed
-
-    X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
-    oracle = X + 2
-
-    with tempfile.TemporaryDirectory() as d:
-        fitter = ("0", _build_estimator(d, 0))
-        transformer = ("1", _build_transformer(d, 1))
-        pipeline = Pipeline([fitter, transformer], memory=d)
-
-        delayed_pipeline = delayed(pipeline.fit)(samples)
-
-        transformed_samples = delayed(delayed_pipeline.transform)(samples_transform)
-        transformed_samples = transformed_samples.compute(scheduler="single-threaded")
-
-        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
-
-
-def test_checkpoint_fit_transform_pipeline_with_daskbag():
-
-    from dask import delayed
-    import dask.bag
-
-    X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
-    oracle = X + 2
-
-    with tempfile.TemporaryDirectory() as d:
-        fitter = ("0", _build_estimator(d, 0))
-        transformer = ("1", _build_transformer(d, 1))
-        pipeline = Pipeline([fitter, transformer], memory=d)
-
-        delayed_pipeline = delayed(pipeline.fit)(samples)
-
-        dask_bag = dask.bag.from_sequence(samples_transform, npartitions=2)
-
-        # TODO: I don't know if we can dask.bag.map a delayed method
-        dask_bag = dask_bag.map_partitions(
-            delayed_pipeline.transform.compute(scheduler="single-threaded")
-        )
-        transformed_samples = dask_bag.compute(scheduler="single-threaded")
-
-        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
-
+    _run(dask_enabled=True)
+    _run(dask_enabled=False)
 
 
 def _get_local_client():
     from dask.distributed import Client, LocalCluster
+
     n_nodes = 1
     threads_per_worker = 1
 
@@ -339,24 +315,43 @@ def _get_local_client():
 
 
 def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
+    def _run(dask_enabled):
+        X = np.ones(shape=(10, 2), dtype=int)
+        samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+        oracle = X + 2
 
-    from dask import delayed
+        with tempfile.TemporaryDirectory() as d:
+            fitter = ("0", _build_estimator(d, 0))
+            transformer = (
+                "1",
+                _build_transformer(d, 1, picklable=False, dask_enabled=dask_enabled),
+            )
 
+            pipeline = Pipeline([fitter, transformer])
+            if dask_enabled:
+                dask_client = _get_local_client()
+                pipeline = dask_it(pipeline)
+                pipeline = pipeline.fit(samples)
+                transformed_samples = pipeline.transform(samples_transform).compute(
+                    scheduler=dask_client
+                )
+            else:
+                pipeline = pipeline.fit(samples)
+                transformed_samples = pipeline.transform(samples_transform)
+
+            _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+
+    _run(True)
+    _run(False)
+
+
+def test_dask_checkpoint_transform_pipeline():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
-    oracle = X + 2
-
-    with tempfile.TemporaryDirectory() as d:
-        fitter = ("0", _build_estimator(d, 0))        
-
-        transformer = ("1", _build_transformer(d, 1, picklable=False))
-        pipeline = Pipeline([fitter, transformer], memory=d)
-
-        dask_client = _get_local_client()
-
-        delayed_pipeline = delayed(pipeline.fit)(samples)
-        transformed_samples = delayed(delayed_pipeline.transform)(samples_transform)        
-        transformed_samples = transformed_samples.compute(scheduler=dask_client)
-
-        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]    
+    with tempfile.TemporaryDirectory() as d:        
+        bag_transformer = DaskBagMixin()        
+        estimator = dask_it(_build_transformer(d, 0), transform_tag="CPU")
+        X_tr = estimator.transform(bag_transformer.transform(samples_transform))
+        assert len(estimator.dask_tags()) == 1
+        assert len(X_tr.compute(scheduler="single-threaded")) == 10
