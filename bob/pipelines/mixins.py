@@ -174,6 +174,7 @@ def _is_estimator_stateless(estimator):
     return estimator._get_tags()["stateless"]
 
 
+
 class SampleMixin:
     """Mixin class to make scikit-learn estimators work in :any:`Sample`-based
     pipelines.
@@ -260,7 +261,9 @@ class CheckpointMixin:
         if _is_estimator_stateless(self):
             return self
         with open(self.model_path, "rb") as f:
-            return cloudpickle.load(f)
+            model = cloudpickle.load(f)
+            self.__dict__.update(model.__dict__)
+            return model
 
     def save_model(self):
         if _is_estimator_stateless(self) or self.model_path is None:
