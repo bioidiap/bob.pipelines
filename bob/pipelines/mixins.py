@@ -238,7 +238,7 @@ class CheckpointMixin:
         if self.features_dir is None:
             raise ValueError("`features_dir` is not in %s" % CheckpointMixin.__name__)
 
-        return os.path.join(self.features_dir, sample.key + self.extension)
+        return os.path.join(self.features_dir, str(sample.key) + self.extension)
 
     def recover_key_from_path(self, path):
         key = path.replace(os.path.abspath(self.features_dir), "")
