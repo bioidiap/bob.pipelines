@@ -32,14 +32,6 @@ def samplesets_to_samples(samplesets):
     return X, y
 
 
-def transform_sample_sets(transformer, sample_sets):
-    return [
-        SampleSet(transformer.transform(sset.samples), parent=sset)
-        for sset in sample_sets
-    ]
-
-
-
 def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self
     """
