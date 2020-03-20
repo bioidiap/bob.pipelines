@@ -206,7 +206,7 @@ class SampleMixin:
 
 
     def fit(self, samples, y=None):
-        return super().fit([s.data for s in samples])
+        return super().fit([s.data for s in samples], y=y)
 
 
 class CheckpointMixin:
