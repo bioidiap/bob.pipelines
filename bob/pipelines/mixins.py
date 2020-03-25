@@ -27,14 +27,14 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
          Tag the `fit` method. This is useful to tag dask tasks to run in specific workers https://distributed.dask.org/en/latest/resources.html
          If `o` is :py:class:`sklearn.pipeline.Pipeline`, this parameter should contain a list of tuples
          containing the pipeline.step index and the `str` tag for `fit`.
-         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `fit` 
+         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `fit`
 
 
       transform_tag: list(tuple()) or "str"
          Tag the `fit` method. This is useful to tag dask tasks to run in specific workers https://distributed.dask.org/en/latest/resources.html
          If `o` is :py:class:`sklearn.pipeline.Pipeline`, this parameter should contain a list of tuples
          containing the pipeline.step index and the `str` tag for `transform`.
-         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `transform` 
+         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `transform`
 
 
     Examples
@@ -49,7 +49,7 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
       In this example we will "mark" the fit method with a particular tag
       Hence, we can set the `dask.delayed.compute` method to place some
       delayeds to be executed in particular resources
-      
+
       >>> pipeline = dask_it(pipeline, fit_tag=[(1, "GPU")]) # Take some pipeline and make the methods `fit`and `transform` run over dask
       >>> fit = pipeline.fit(samples)
       >>> fit.compute(resources=pipeline.dask_tags())
@@ -59,7 +59,7 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
       >>> transf = estimator.transform(samples)
       >>> transf.compute(resources=estimator.dask_tags())
 
-    """    
+    """
 
     def _fetch_resource_tape(self):
         """
@@ -81,7 +81,7 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
     # Patching dask_resources
     dasked = mix_me_up(DaskEstimatorMixin, o)
 
-    # Tagging each element in a pipeline    
+    # Tagging each element in a pipeline
     if isinstance(o, Pipeline):
 
         # Tagging each element for fitting and transforming
@@ -89,14 +89,14 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
             for t in fit_tag:
                 o.steps[t[0]][1].fit_tag = t[1]
 
-        if transform_tag is not None:        
+        if transform_tag is not None:
             for t in transform_tag:
                 o.steps[t[0]][1].transform_tag = t[1]
     else:
         dasked.fit_tag = fit_tag
         dasked.transform_tag = transform_tag
 
-    # Bounding the method        
+    # Bounding the method
     dasked.dask_tags = types.MethodType( _fetch_resource_tape, dasked )
 
     return dasked
@@ -106,7 +106,7 @@ def mix_me_up(bases, o):
     """
     Dynamically creates a new class from :any:`object` or :any:`class`.
     For instance, mix_me_up((A,B), class_c) is equal to `class ABC(A,B,C) pass:`
-    
+
     Example
     -------
 
@@ -119,7 +119,7 @@ def mix_me_up(bases, o):
     -------
 
        >>> instance = OriginalClass()
-       >>> mixed_object = mix_me_up([MixInA, MixInB], instance)       
+       >>> mixed_object = mix_me_up([MixInA, MixInB], instance)
 
     It's also possible to mix up a :py:class:`sklearn.pipeline.Pipeline`.
     In this case, every estimator inside of :py:meth:`sklearn.pipeline.Pipeline.steps`
@@ -128,7 +128,7 @@ def mix_me_up(bases, o):
 
     Parameters
     ----------
-      bases:  or :any:`tuple` 
+      bases:  or :any:`tuple`
         Base classes to be mixed in
 
       o: :any:`class`, :any:`object` or :py:class:`sklearn.pipeline.Pipeline`
@@ -185,6 +185,11 @@ class SampleMixin:
         https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects
 
     """
+    def __init__(self, extra_arguments=None, supervised_fit=False, y_attribute_name=None, **kwargs):
+        super().__init__(**kwargs)
+        self.extra_arguments = extra_arguments or []
+        self.supervised_fit = supervised_fit
+        self.y_attribute_name = y_attribute_name
 
     def transform(self, samples):
 
@@ -192,7 +197,8 @@ class SampleMixin:
         #    samples = [samples]
         # Transform eith samples or samplesets
         if isinstance(samples[0], Sample) or isinstance(samples[0], DelayedSample):
-            features = super().transform([s.data for s in samples])
+            kwargs = {arg: [getattr(s, arg) for s in samples] for arg in self.extra_arguments}
+            features = super().transform([s.data for s in samples], **kwargs)
             new_samples = [Sample(data, parent=s) for data, s in zip(features, samples)]
             return new_samples
         elif isinstance(samples[0], SampleSet):
@@ -203,10 +209,12 @@ class SampleMixin:
 
 
     def fit(self, samples, y=None):
-        
+
         # IF THE SUPER METHOD IS NOT FITTABLE,
         # THERE'S NO REASON TO STACK THOSE SAMPLES
         if( hasattr(super(), "fit")):
+            if self.supervised_fit:
+                y = [getattr(s, self.y_attribute_name) for s in samples]
             return super().fit([s.data for s in samples], y=y)
 
         return self
@@ -224,7 +232,7 @@ class CheckpointMixin:
 
     def transform_one_sample(self, sample):
 
-        
+
         # Check if the sample is already processed.
         path = self.make_path(sample)
         if path is None or not os.path.isfile(path):
@@ -266,7 +274,7 @@ class CheckpointMixin:
         super().fit(samples, y=y)
         return self.save_model()
 
-        
+
     def fit_transform(self, samples, y=None):
 
         return self.fit(samples, y=y).transform(samples)
@@ -386,13 +394,13 @@ class DaskEstimatorMixin:
     ----------
 
        fit_resource: str
-           Mark the delayed(self.fit) with this value. This can be used in 
+           Mark the delayed(self.fit) with this value. This can be used in
            a future delayed(self.fit).compute(resources=resource_tape) so
            dask scheduler can place this task in a particular resource
            (e.g GPU)
 
        transform_resource: str
-           Mark the delayed(self.transform) with this value. This can be used in 
+           Mark the delayed(self.transform) with this value. This can be used in
            a future delayed(self.transform).compute(resources=resource_tape) so
            dask scheduler can place this task in a particular resource
            (e.g GPU)
