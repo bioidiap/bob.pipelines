@@ -1,37 +1,6 @@
 """Base definition of sample"""
 
 
-def samplesets_to_samples(samplesets):
-    """
-    Given a list of :py:class:`SampleSet` break them in to a list of :py:class:`Sample` with its 
-    corresponding key
-
-    This is supposed to fit the :py:meth:`sklearn.estimator.BaseEstimator.fit` where X and y are the inputs
-    Check here https://scikit-learn.org/stable/developers/develop.html for more info
-
-    Parameters
-    ----------
-      samplesets: list
-         List of :py:class:`SampleSet
-
-
-    Return 
-    ------
-       X and y used in :py:meth:`sklearn.estimator.BaseEstimator.fit`
-
-    """
-
-    # TODO: Is there a way to make this operation more efficient? numpy.arrays?
-    X = []
-    y= []
-
-    for s in samplesets:
-        X += s.samples
-        y += [s.key]
-
-    return X, y
-
-
 def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self
     """

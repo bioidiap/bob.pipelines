@@ -14,7 +14,7 @@ from bob.pipelines.mixins import (
     DaskEstimatorMixin,
     DaskBagMixin,
     mix_me_up,
-    dask_it
+    estimator_dask_it,
 )
 from bob.pipelines.mixins import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
@@ -50,7 +50,7 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
         if X.shape[1] != self.n_features_:
             raise ValueError(
                 "Shape of input is different from what was seen" "in `fit`"
-            )        
+            )
         return X @ self.model_
 
 
@@ -74,7 +74,7 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
         # Input validation
         X = check_array(X)
         # Check that the input is of the same shape as the one passed
-        # during fit.        
+        # during fit.
         return _offset_add_func(X)
 
 
@@ -218,7 +218,7 @@ def _build_transformer(path, i, picklable=True, dask_enabled=True):
         import functools
 
         if dask_enabled:
-            estimator_cls = dask_it(estimator_cls)
+            estimator_cls = estimator_dask_it(estimator_cls)
 
         return NonPicklableMixin(
             functools.partial(
@@ -256,7 +256,7 @@ def test_checkpoint_transform_pipeline():
                 [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
             )
             if dask_enabled:
-                pipeline = dask_it(pipeline)                
+                pipeline = estimator_dask_it(pipeline)
                 transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler="single-threaded"
                 )
@@ -280,8 +280,8 @@ def test_checkpoint_fit_transform_pipeline():
             fitter = ("0", _build_estimator(d, 0))
             transformer = ("1", _build_transformer(d, 1))
             pipeline = Pipeline([fitter, transformer])
-            if dask_enabled:                
-                pipeline = dask_it(pipeline, fit_tag=[(1, "GPU")])
+            if dask_enabled:
+                pipeline = estimator_dask_it(pipeline, fit_tag=[(1, "GPU")])
                 pipeline = pipeline.fit(samples)
                 tags = pipeline.dask_tags()
 
@@ -331,7 +331,7 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
                 dask_client = _get_local_client()
-                pipeline = dask_it(pipeline)
+                pipeline = estimator_dask_it(pipeline)
                 pipeline = pipeline.fit(samples)
                 transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler=dask_client
@@ -348,10 +348,10 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
 
 def test_dask_checkpoint_transform_pipeline():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]    
-    with tempfile.TemporaryDirectory() as d:        
-        bag_transformer = DaskBagMixin()        
-        estimator = dask_it(_build_transformer(d, 0), transform_tag="CPU")
+    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    with tempfile.TemporaryDirectory() as d:
+        bag_transformer = DaskBagMixin()
+        estimator = estimator_dask_it(_build_transformer(d, 0), transform_tag="CPU")
         X_tr = estimator.transform(bag_transformer.transform(samples_transform))
         assert len(estimator.dask_tags()) == 1
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
