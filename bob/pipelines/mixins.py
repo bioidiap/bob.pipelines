@@ -12,7 +12,14 @@ from sklearn.pipeline import Pipeline
 from dask import delayed
 import dask.bag
 
-def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
+
+def estimator_dask_it(
+    o,
+    fit_tag=None,
+    transform_tag=None,
+    npartitions=None,
+    mix_for_each_step_in_pipelines=True,
+):
     """
     Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base` with
     :py:class`DaskEstimatorMixin`
@@ -27,14 +34,14 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
          Tag the `fit` method. This is useful to tag dask tasks to run in specific workers https://distributed.dask.org/en/latest/resources.html
          If `o` is :py:class:`sklearn.pipeline.Pipeline`, this parameter should contain a list of tuples
          containing the pipeline.step index and the `str` tag for `fit`.
-         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `fit` 
+         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `fit`
 
 
       transform_tag: list(tuple()) or "str"
          Tag the `fit` method. This is useful to tag dask tasks to run in specific workers https://distributed.dask.org/en/latest/resources.html
          If `o` is :py:class:`sklearn.pipeline.Pipeline`, this parameter should contain a list of tuples
          containing the pipeline.step index and the `str` tag for `transform`.
-         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `transform` 
+         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `transform`
 
 
     Examples
@@ -42,24 +49,24 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
 
       Vanilla example
 
-      >>> pipeline = dask_it(pipeline) # Take some pipeline and make the methods `fit`and `transform` run over dask
+      >>> pipeline = estimator_dask_it(pipeline) # Take some pipeline and make the methods `fit`and `transform` run over dask
       >>> pipeline.fit(samples).compute()
 
 
       In this example we will "mark" the fit method with a particular tag
       Hence, we can set the `dask.delayed.compute` method to place some
       delayeds to be executed in particular resources
-      
-      >>> pipeline = dask_it(pipeline, fit_tag=[(1, "GPU")]) # Take some pipeline and make the methods `fit`and `transform` run over dask
+
+      >>> pipeline = estimator_dask_it(pipeline, fit_tag=[(1, "GPU")]) # Take some pipeline and make the methods `fit`and `transform` run over dask
       >>> fit = pipeline.fit(samples)
       >>> fit.compute(resources=pipeline.dask_tags())
 
       Taging estimator
-      >>> estimator = dask_it(estimator)
+      >>> estimator = estimator_dask_it(estimator)
       >>> transf = estimator.transform(samples)
       >>> transf.compute(resources=estimator.dask_tags())
 
-    """    
+    """
 
     def _fetch_resource_tape(self):
         """
@@ -67,7 +74,7 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
         """
         resource_tags = dict()
         if isinstance(self, Pipeline):
-            for i in range(1,len(self.steps)):
+            for i in range(1, len(self.steps)):
                 resource_tags.update(o[i].resource_tags)
         else:
             resource_tags.update(self.resource_tags)
@@ -75,13 +82,17 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
         return resource_tags
 
     if isinstance(o, Pipeline):
-        #Adding a daskbag in the tail of the pipeline
-        o.steps.insert(0, ('0', DaskBagMixin(npartitions=npartitions)))
+        # Adding a daskbag in the tail of the pipeline
+        o.steps.insert(0, ("0", DaskBagMixin(npartitions=npartitions)))
 
     # Patching dask_resources
-    dasked = mix_me_up(DaskEstimatorMixin, o)
+    dasked = mix_me_up(
+        DaskEstimatorMixin,
+        o,
+        mix_for_each_step_in_pipelines=mix_for_each_step_in_pipelines,
+    )
 
-    # Tagging each element in a pipeline    
+    # Tagging each element in a pipeline
     if isinstance(o, Pipeline):
 
         # Tagging each element for fitting and transforming
@@ -89,24 +100,24 @@ def dask_it(o, fit_tag=None, transform_tag=None, npartitions=None):
             for t in fit_tag:
                 o.steps[t[0]][1].fit_tag = t[1]
 
-        if transform_tag is not None:        
+        if transform_tag is not None:
             for t in transform_tag:
                 o.steps[t[0]][1].transform_tag = t[1]
     else:
         dasked.fit_tag = fit_tag
         dasked.transform_tag = transform_tag
 
-    # Bounding the method        
-    dasked.dask_tags = types.MethodType( _fetch_resource_tape, dasked )
+    # Bounding the method
+    dasked.dask_tags = types.MethodType(_fetch_resource_tape, dasked)
 
     return dasked
 
 
-def mix_me_up(bases, o):
+def mix_me_up(bases, o, mix_for_each_step_in_pipelines=True):
     """
     Dynamically creates a new class from :any:`object` or :any:`class`.
     For instance, mix_me_up((A,B), class_c) is equal to `class ABC(A,B,C) pass:`
-    
+
     Example
     -------
 
@@ -119,7 +130,7 @@ def mix_me_up(bases, o):
     -------
 
        >>> instance = OriginalClass()
-       >>> mixed_object = mix_me_up([MixInA, MixInB], instance)       
+       >>> mixed_object = mix_me_up([MixInA, MixInB], instance)
 
     It's also possible to mix up a :py:class:`sklearn.pipeline.Pipeline`.
     In this case, every estimator inside of :py:meth:`sklearn.pipeline.Pipeline.steps`
@@ -128,7 +139,7 @@ def mix_me_up(bases, o):
 
     Parameters
     ----------
-      bases:  or :any:`tuple` 
+      bases:  or :any:`tuple`
         Base classes to be mixed in
 
       o: :any:`class`, :any:`object` or :py:class:`sklearn.pipeline.Pipeline`
@@ -156,7 +167,7 @@ def mix_me_up(bases, o):
 
     # If it is a scikit pipeline, mixIN everything inside of
     # Pipeline.steps
-    if isinstance(o, Pipeline):
+    if isinstance(o, Pipeline) and mix_for_each_step_in_pipelines:
         # mixing all pipelines
         for i in range(len(o.steps)):
             # checking if it's not the bag transformer
@@ -174,7 +185,6 @@ def _is_estimator_stateless(estimator):
     return estimator._get_tags()["stateless"]
 
 
-
 class SampleMixin:
     """Mixin class to make scikit-learn estimators work in :any:`Sample`-based
     pipelines.
@@ -186,28 +196,41 @@ class SampleMixin:
 
     """
 
+    def __init__(
+        self, transform_extra_arguments=None, fit_extra_arguments=None, **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.transform_extra_arguments = transform_extra_arguments or tuple()
+        self.fit_extra_arguments = fit_extra_arguments or tuple()
+
     def transform(self, samples):
 
-        #if not isinstance(samples, list):
-        #    samples = [samples]
-        # Transform eith samples or samplesets
+        # Transform either samples or samplesets
         if isinstance(samples[0], Sample) or isinstance(samples[0], DelayedSample):
-            features = super().transform([s.data for s in samples])
+            kwargs = {
+                arg: [getattr(s, attr) for s in samples]
+                for arg, attr in self.transform_extra_arguments
+            }
+            features = super().transform([s.data for s in samples], **kwargs)
             new_samples = [Sample(data, parent=s) for data, s in zip(features, samples)]
             return new_samples
         elif isinstance(samples[0], SampleSet):
-            return [SampleSet(self.transform(sset.samples), parent=sset)
-                    for sset in samples]
+            return [
+                SampleSet(self.transform(sset.samples), parent=sset) for sset in samples
+            ]
         else:
             raise ValueError("Type for sample not supported %s" % type(samples))
 
-
     def fit(self, samples, y=None):
-        
-        # IF THE SUPER METHOD IS NOT FITTABLE,
-        # THERE'S NO REASON TO STACK THOSE SAMPLES
-        if( hasattr(super(), "fit")):
-            return super().fit([s.data for s in samples], y=y)
+
+        # if the super method is not fittable,
+        # there's no reason to stack those samples
+        if hasattr(super(), "fit"):
+            kwargs = {
+                arg: [getattr(s, attr) for s in samples]
+                for arg, attr in self.fit_extra_arguments
+            }
+            return super().fit([s.data for s in samples], **kwargs)
 
         return self
 
@@ -216,15 +239,24 @@ class CheckpointMixin:
     """Mixin class that allows :any:`Sample`-based estimators save their results into
     disk."""
 
-    def __init__(self, model_path=None, features_dir=None, extension=".h5", **kwargs):
+    def __init__(
+        self,
+        model_path=None,
+        features_dir=None,
+        extension=".h5",
+        save_func=None,
+        load_func=None,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.model_path = model_path
         self.features_dir = features_dir
         self.extension = extension
+        self.save_func = save_func or bob.io.base.save
+        self.load_func = load_func or bob.io.base.load
 
     def transform_one_sample(self, sample):
 
-        
         # Check if the sample is already processed.
         path = self.make_path(sample)
         if path is None or not os.path.isfile(path):
@@ -240,7 +272,6 @@ class CheckpointMixin:
         samples = [self.transform_one_sample(s) for s in sample_set.samples]
         return SampleSet(samples, parent=sample_set)
 
-
     def transform(self, samples):
         if not isinstance(samples, list):
             raise ValueError("It's expected a list, not %s" % type(samples))
@@ -252,12 +283,11 @@ class CheckpointMixin:
         else:
             raise ValueError("Type not allowed %s" % type(samples[0]))
 
-
     def fit(self, samples, y=None):
 
         # IF THE SUPER METHOD IS NOT FITTABLE,
         # THERE'S NO REASON TO STACK THOSE SAMPLES
-        if( not hasattr(super(), "fit")  ):
+        if not hasattr(super(), "fit"):
             return self
 
         if self.model_path is not None and os.path.isfile(self.model_path):
@@ -266,7 +296,6 @@ class CheckpointMixin:
         super().fit(samples, y=y)
         return self.save_model()
 
-        
     def fit_transform(self, samples, y=None):
 
         return self.fit(samples, y=y).transform(samples)
@@ -285,14 +314,13 @@ class CheckpointMixin:
     def save(self, sample):
         if isinstance(sample, Sample):
             path = self.make_path(sample)
-            return bob.io.base.save(sample.data, path, create_directories=True)
+            return self.save_func(sample.data, path, create_directories=True)
         elif isinstance(sample, SampleSet):
             for s in sample.samples:
                 path = self.make_path(s)
-                return bob.io.base.save(s.data, path, create_directories=True)
+                return self.save_func(s.data, path, create_directories=True)
         else:
-            raise ValueError("Type for sample not supported %s" % type(sample) )
-
+            raise ValueError("Type for sample not supported %s" % type(sample))
 
     def load(self, path):
         key = self.recover_key_from_path(path)
@@ -300,7 +328,7 @@ class CheckpointMixin:
         # instead of a normal (preloaded) sample. This allows the next
         # phase to avoid loading it would it be unnecessary (e.g. next
         # phase is already check-pointed)
-        return DelayedSample(functools.partial(bob.io.base.load, path), key=key)
+        return DelayedSample(functools.partial(self.load_func, path), key=key)
 
     def load_model(self):
         if _is_estimator_stateless(self):
@@ -335,6 +363,7 @@ class CheckpointSampleFunctionTransformer(
 
     Furthermore, it makes it checkpointable
     """
+
     pass
 
 
@@ -378,7 +407,6 @@ class NonPicklableMixin:
         return self.instance.transform(X)
 
 
-
 class DaskEstimatorMixin:
     """Wraps Scikit estimators into Daskable objects
 
@@ -386,13 +414,13 @@ class DaskEstimatorMixin:
     ----------
 
        fit_resource: str
-           Mark the delayed(self.fit) with this value. This can be used in 
+           Mark the delayed(self.fit) with this value. This can be used in
            a future delayed(self.fit).compute(resources=resource_tape) so
            dask scheduler can place this task in a particular resource
            (e.g GPU)
 
        transform_resource: str
-           Mark the delayed(self.transform) with this value. This can be used in 
+           Mark the delayed(self.transform) with this value. This can be used in
            a future delayed(self.transform).compute(resources=resource_tape) so
            dask scheduler can place this task in a particular resource
            (e.g GPU)
