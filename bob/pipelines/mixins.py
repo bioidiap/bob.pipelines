@@ -11,6 +11,7 @@ from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from dask import delayed
 import dask.bag
+import os
 
 
 def estimator_dask_it(
@@ -324,11 +325,13 @@ class CheckpointMixin:
     def save(self, sample):
         if isinstance(sample, Sample):
             path = self.make_path(sample)
-            return self.save_func(sample.data, path, create_directories=True)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            return self.save_func(sample.data, path)
         elif isinstance(sample, SampleSet):
             for s in sample.samples:
                 path = self.make_path(s)
-                return self.save_func(s.data, path, create_directories=True)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                return self.save_func(s.data, path)
         else:
             raise ValueError("Type for sample not supported %s" % type(sample))
 
