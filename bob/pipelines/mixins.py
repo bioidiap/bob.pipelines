@@ -315,12 +315,12 @@ class CheckpointMixin:
     def save(self, sample):
         if isinstance(sample, Sample):
             path = self.make_path(sample)
-            bob.io.base.create_directories_safe(os.path.dirname(path))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             return self.save_func(sample.data, path)
         elif isinstance(sample, SampleSet):
             for s in sample.samples:
                 path = self.make_path(s)
-                bob.io.base.create_directories_safe(os.path.dirname(path))
+                os.makedirs(os.path.dirname(path), exist_ok=True)
                 return self.save_func(s.data, path)
         else:
             raise ValueError("Type for sample not supported %s" % type(sample))
