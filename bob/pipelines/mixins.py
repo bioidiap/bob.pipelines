@@ -185,15 +185,33 @@ def _is_estimator_stateless(estimator):
     return estimator._get_tags()["stateless"]
 
 
+def _make_kwargs_from_samples(samples, arg_attr_list):
+    kwargs = {arg: [getattr(s, attr) for s in samples] for arg, attr in arg_attr_list}
+    return kwargs
+
+
 class SampleMixin:
     """Mixin class to make scikit-learn estimators work in :any:`Sample`-based
     pipelines.
+    Do not use this class except for scikit-learn estimators.
 
     .. todo::
 
         Also implement ``predict``, ``predict_proba``, and ``score``. See:
         https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects
 
+    Attributes
+    ----------
+    fit_extra_arguments : [tuple], optional
+        Use this option if you want to pass extra arguments to the fit method of the
+        mixed instance. The format is a list of two value tuples. The first value in
+        tuples is the name of the argument that fit accepts, like ``y``, and the second
+        value is the name of the attribute that samples carry. For example, if you are
+        passing samples to the fit method and want to pass ``subject`` attributes of
+        samples as the ``y`` argument to the fit method, you can provide ``[("y",
+        "subject")]`` as the value for this attribute.
+    transform_extra_arguments : [tuple], optional
+        Similar to ``fit_extra_arguments`` but for the transform method.
     """
 
     def __init__(
@@ -207,10 +225,7 @@ class SampleMixin:
 
         # Transform either samples or samplesets
         if isinstance(samples[0], Sample) or isinstance(samples[0], DelayedSample):
-            kwargs = {
-                arg: [getattr(s, attr) for s in samples]
-                for arg, attr in self.transform_extra_arguments
-            }
+            kwargs = _make_kwargs_from_samples(samples, self.transform_extra_arguments)
             features = super().transform([s.data for s in samples], **kwargs)
             new_samples = [Sample(data, parent=s) for data, s in zip(features, samples)]
             return new_samples
@@ -223,16 +238,16 @@ class SampleMixin:
 
     def fit(self, samples, y=None):
 
-        # if the super method is not fittable,
-        # there's no reason to stack those samples
-        if hasattr(super(), "fit"):
-            kwargs = {
-                arg: [getattr(s, attr) for s in samples]
-                for arg, attr in self.fit_extra_arguments
-            }
-            return super().fit([s.data for s in samples], **kwargs)
+        # See: https://scikit-learn.org/stable/developers/develop.html
+        # if the estimator does not require fit or is stateless don't call fit
+        tags = self._get_tags()
+        if tags["stateless"] or not tags["requires_fit"]:
+            return self
 
-        return self
+        # if the estimator needs to be fitted.
+        kwargs = _make_kwargs_from_samples(samples, self.fit_extra_arguments)
+        X = [s.data for s in samples]
+        return super().fit(X, **kwargs)
 
 
 class CheckpointMixin:
@@ -284,11 +299,6 @@ class CheckpointMixin:
             raise ValueError("Type not allowed %s" % type(samples[0]))
 
     def fit(self, samples, y=None):
-
-        # IF THE SUPER METHOD IS NOT FITTABLE,
-        # THERE'S NO REASON TO STACK THOSE SAMPLES
-        if not hasattr(super(), "fit"):
-            return self
 
         if self.model_path is not None and os.path.isfile(self.model_path):
             return self.load_model()

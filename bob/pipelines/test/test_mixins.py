@@ -97,7 +97,7 @@ def test_function_sample_transfomer():
     samples = [Sample(data) for data in X]
 
     transformer = SampleFunctionTransformer(
-        _offset_add_func, kw_args=dict(offset=3), validate=True
+        func=_offset_add_func, kw_args=dict(offset=3), validate=True
     )
 
     features = transformer.transform(samples)
