@@ -18,7 +18,6 @@ def estimator_dask_it(
     fit_tag=None,
     transform_tag=None,
     npartitions=None,
-    mix_for_each_step_in_pipelines=True,
 ):
     """
     Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base` with
@@ -89,7 +88,6 @@ def estimator_dask_it(
     dasked = mix_me_up(
         [DaskEstimatorMixin],
         o,
-        mix_for_each_step_in_pipelines=mix_for_each_step_in_pipelines,
     )
 
     # Tagging each element in a pipeline
@@ -111,7 +109,7 @@ def estimator_dask_it(
                 estimator[1].transform_tag = transform_tag
 
         for estimator in o.steps:
-            estimator.resource_tags = dict()
+            estimator[1].resource_tags = dict()
     else:
         dasked.fit_tag = fit_tag
         dasked.transform_tag = transform_tag
@@ -123,7 +121,7 @@ def estimator_dask_it(
     return dasked
 
 
-def mix_me_up(bases, o, mix_for_each_step_in_pipelines=True):
+def mix_me_up(bases, o):
     """
     Dynamically creates a new class from :any:`object` or :any:`class`.
     For instance, mix_me_up((A,B), class_c) is equal to `class ABC(A,B,C) pass:`
@@ -178,7 +176,7 @@ def mix_me_up(bases, o, mix_for_each_step_in_pipelines=True):
 
     # If it is a scikit pipeline, mixIN everything inside of
     # Pipeline.steps
-    if isinstance(o, Pipeline) and mix_for_each_step_in_pipelines:
+    if isinstance(o, Pipeline):
         # mixing all pipelines
         for i in range(len(o.steps)):
             # checking if it's not the bag transformer
