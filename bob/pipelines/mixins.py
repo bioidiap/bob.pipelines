@@ -91,7 +91,7 @@ def estimator_dask_it(
     )
 
     # Tagging each element in a pipeline
-    if isinstance(o, Pipeline) and mix_for_each_step_in_pipelines:
+    if isinstance(o, Pipeline):
 
         # Tagging each element for fitting and transforming
         if fit_tag is not None:
