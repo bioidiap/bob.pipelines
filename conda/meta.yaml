@@ -51,9 +51,6 @@ test:
     - coverage
     - sphinx
     - sphinx_rtd_theme
-  {% for package in resolved_packages('host') %}
-     - {{ package }}
-  {% endfor %}
 
 about:
   summary: bob.pipelines
