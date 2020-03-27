@@ -14,10 +14,7 @@ import dask.bag
 
 
 def estimator_dask_it(
-    o,
-    fit_tag=None,
-    transform_tag=None,
-    npartitions=None,
+    o, fit_tag=None, transform_tag=None, npartitions=None,
 ):
     """
     Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base` with
@@ -85,10 +82,7 @@ def estimator_dask_it(
         o.steps.insert(0, ("0", DaskBagMixin(npartitions=npartitions)))
 
     # Patching dask_resources
-    dasked = mix_me_up(
-        [DaskEstimatorMixin],
-        o,
-    )
+    dasked = mix_me_up([DaskEstimatorMixin], o,)
 
     # Tagging each element in a pipeline
     if isinstance(o, Pipeline):
@@ -288,6 +282,8 @@ class CheckpointMixin:
             # save the new sample
             self.save(new_sample)
         else:
+            # Setting the solved path to the sample
+            sample.path = path
             new_sample = self.load(sample)
 
         return new_sample
@@ -339,12 +335,13 @@ class CheckpointMixin:
             raise ValueError("Type for sample not supported %s" % type(sample))
 
     def load(self, sample):
-        path = self.make_path(sample)
         # because we are checkpointing, we return a DelayedSample
         # instead of a normal (preloaded) sample. This allows the next
         # phase to avoid loading it would it be unnecessary (e.g. next
         # phase is already check-pointed)
-        return DelayedSample(functools.partial(self.load_func, path), parent=sample)
+        return DelayedSample(
+            functools.partial(self.load_func, sample.path), parent=sample
+        )
 
     def load_model(self):
         if _is_estimator_stateless(self):
