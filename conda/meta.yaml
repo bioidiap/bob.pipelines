@@ -31,7 +31,7 @@ requirements:
     - dask-jobqueue
     - numpy {{ numpy }}
     - h5py
-    - scikit-learn >-= 0.22
+    - scikit-learn >=0.22
   run:
     - python
     - setuptools
@@ -51,9 +51,10 @@ test:
     - coverage
     - sphinx
     - sphinx_rtd_theme
-    - dask
-    - dask-jobqueue
-    - scikit-learn
+  {% for package in resolved_packages('host') %}
+     - {{ package }}
+  {% endfor %}
+
 about:
   summary: bob.pipelines
   home: https://www.idiap.ch/software/bob/
