@@ -86,28 +86,27 @@ def estimator_dask_it(
 
     # Tagging each element in a pipeline
     if isinstance(o, Pipeline):
-
         # Tagging each element for fitting and transforming
+        for estimator in o.steps:
+            estimator[1].fit_tag = None
         if fit_tag is not None:
             for index, tag in fit_tag:
                 o.steps[index][1].fit_tag = tag
-        else:
-            for estimator in o.steps:
-                estimator[1].fit_tag = fit_tag
 
+        for estimator in o.steps:
+            estimator[1].transform_tag = None
         if transform_tag is not None:
             for index, tag in transform_tag:
                 o.steps[index][1].transform_tag = tag
-        else:
-            for estimator in o.steps:
-                estimator[1].transform_tag = transform_tag
 
         for estimator in o.steps:
             estimator[1].resource_tags = dict()
+            estimator[1]._dask_state = estimator[1]
     else:
         dasked.fit_tag = fit_tag
         dasked.transform_tag = transform_tag
         dasked.resource_tags = dict()
+        dasked._dask_state = dasked
 
     # Bounding the method
     dasked.dask_tags = types.MethodType(_fetch_resource_tape, dasked)
