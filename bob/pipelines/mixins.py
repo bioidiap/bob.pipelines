@@ -281,9 +281,7 @@ class CheckpointMixin:
             # save the new sample
             self.save(new_sample)
         else:
-            # Setting the solved path to the sample
-            sample.path = path
-            new_sample = self.load(sample)
+            new_sample = self.load(sample, path)
 
         return new_sample
 
@@ -333,13 +331,13 @@ class CheckpointMixin:
         else:
             raise ValueError("Type for sample not supported %s" % type(sample))
 
-    def load(self, sample):
+    def load(self, sample, path):
         # because we are checkpointing, we return a DelayedSample
         # instead of a normal (preloaded) sample. This allows the next
         # phase to avoid loading it would it be unnecessary (e.g. next
         # phase is already check-pointed)
         return DelayedSample(
-            functools.partial(self.load_func, sample.path), parent=sample
+            functools.partial(self.load_func, path), parent=sample
         )
 
     def load_model(self):
