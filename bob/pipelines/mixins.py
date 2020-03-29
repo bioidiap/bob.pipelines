@@ -14,10 +14,7 @@ import dask.bag
 
 
 def estimator_dask_it(
-    o,
-    fit_tag=None,
-    transform_tag=None,
-    npartitions=None,
+    o, fit_tag=None, transform_tag=None, npartitions=None,
 ):
     """
     Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base` with
@@ -85,35 +82,31 @@ def estimator_dask_it(
         o.steps.insert(0, ("0", DaskBagMixin(npartitions=npartitions)))
 
     # Patching dask_resources
-    dasked = mix_me_up(
-        [DaskEstimatorMixin],
-        o,
-    )
+    dasked = mix_me_up([DaskEstimatorMixin], o,)
 
     # Tagging each element in a pipeline
     if isinstance(o, Pipeline):
-
         # Tagging each element for fitting and transforming
+        for estimator in o.steps:
+            estimator[1].fit_tag = None
         if fit_tag is not None:
             for index, tag in fit_tag:
                 o.steps[index][1].fit_tag = tag
-        else:
-            for estimator in o.steps:
-                estimator[1].fit_tag = fit_tag
 
+        for estimator in o.steps:
+            estimator[1].transform_tag = None
         if transform_tag is not None:
             for index, tag in transform_tag:
                 o.steps[index][1].transform_tag = tag
-        else:
-            for estimator in o.steps:
-                estimator[1].transform_tag = transform_tag
 
         for estimator in o.steps:
             estimator[1].resource_tags = dict()
+            estimator[1]._dask_state = estimator[1]
     else:
         dasked.fit_tag = fit_tag
         dasked.transform_tag = transform_tag
         dasked.resource_tags = dict()
+        dasked._dask_state = dasked
 
     # Bounding the method
     dasked.dask_tags = types.MethodType(_fetch_resource_tape, dasked)
@@ -288,7 +281,7 @@ class CheckpointMixin:
             # save the new sample
             self.save(new_sample)
         else:
-            new_sample = self.load(sample)
+            new_sample = self.load(sample, path)
 
         return new_sample
 
@@ -338,13 +331,14 @@ class CheckpointMixin:
         else:
             raise ValueError("Type for sample not supported %s" % type(sample))
 
-    def load(self, sample):
-        path = self.make_path(sample)
+    def load(self, sample, path):
         # because we are checkpointing, we return a DelayedSample
         # instead of a normal (preloaded) sample. This allows the next
         # phase to avoid loading it would it be unnecessary (e.g. next
         # phase is already check-pointed)
-        return DelayedSample(functools.partial(self.load_func, path), parent=sample)
+        return DelayedSample(
+            functools.partial(self.load_func, path), parent=sample
+        )
 
     def load_model(self):
         if _is_estimator_stateless(self):

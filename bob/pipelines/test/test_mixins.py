@@ -113,7 +113,7 @@ def test_fittable_sample_transformer():
     samples = [Sample(data) for data in X]
 
     # Mixing up with an object
-    transformer = mix_me_up(SampleMixin, DummyWithFit())
+    transformer = mix_me_up([SampleMixin], DummyWithFit)()
     features = transformer.fit(samples).transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
 
@@ -194,12 +194,9 @@ def test_checkpoint_fittable_sample_transformer():
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
 
-from bob.io.base import create_directories_safe
-
-
 def _build_estimator(path, i):
     base_dir = os.path.join(path, f"transformer{i}")
-    create_directories_safe(base_dir)
+    os.makedirs(base_dir, exist_ok=True)
     model_path = os.path.join(base_dir, "model.pkl")
     features_dir = os.path.join(base_dir, "features")
 
