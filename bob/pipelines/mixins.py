@@ -293,6 +293,10 @@ class CheckpointMixin:
         if not isinstance(samples, list):
             raise ValueError("It's expected a list, not %s" % type(samples))
 
+        # If there's no samples, not fit/transform
+        if len(samples) == 0:
+            return []
+
         if isinstance(samples[0], Sample) or isinstance(samples[0], DelayedSample):
             return [self.transform_one_sample(s) for s in samples]
         elif isinstance(samples[0], SampleSet):
