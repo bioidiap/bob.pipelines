@@ -352,3 +352,39 @@ def test_dask_checkpoint_transform_pipeline():
         X_tr = estimator.transform(bag_transformer.transform(samples_transform))
         assert len(estimator.dask_tags()) == 1
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
+
+
+def test_checkpoint_transform_pipeline_with_sampleset():
+    def _run(dask_enabled):
+
+        X = np.ones(shape=(10, 2), dtype=int)
+        samples_transform = SampleSet(
+            [Sample(data, key=str(i)) for i, data in enumerate(X)], key="1"
+        )
+        offset = 2
+        oracle = X + offset
+
+        with tempfile.TemporaryDirectory() as d:
+            pipeline = Pipeline(
+                [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
+            )
+            if dask_enabled:
+                pipeline = estimator_dask_it(pipeline)
+                transformed_samples = pipeline.transform([samples_transform]).compute(
+                    scheduler="single-threaded"
+                )
+            else:
+                transformed_samples = pipeline.transform([samples_transform])
+
+            _assert_all_close_numpy_array(
+                oracle,
+                [
+                    s.data
+                    for sampleset in transformed_samples
+                    for s in sampleset.samples
+                ],
+            )
+            assert np.all([len(s) == 10 for s in transformed_samples])
+
+    _run(dask_enabled=True)
+    _run(dask_enabled=False)

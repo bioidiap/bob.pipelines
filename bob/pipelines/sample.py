@@ -80,3 +80,6 @@ class SampleSet:
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
+
+    def __len__(self):
+        return len(self.samples)
