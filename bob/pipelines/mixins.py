@@ -11,6 +11,9 @@ from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from dask import delayed
 import dask.bag
+import logging
+
+logger = logging.getLogger("bob.pipelines")
 
 
 def estimator_dask_it(
@@ -226,6 +229,8 @@ class SampleMixin:
     def transform(self, samples):
 
         # Transform either samples or samplesets
+        logger.info(f"Transforming Sample/SampleSet: {self}")
+
         if isinstance(samples[0], Sample) or isinstance(samples[0], DelayedSample):
             kwargs = _make_kwargs_from_samples(samples, self.transform_extra_arguments)
             features = super().transform([s.data for s in samples], **kwargs)
@@ -239,6 +244,8 @@ class SampleMixin:
             raise ValueError("Type for sample not supported %s" % type(samples))
 
     def fit(self, samples, y=None):
+
+        logger.info(f"Fitting {self}")
 
         # See: https://scikit-learn.org/stable/developers/develop.html
         # if the estimator does not require fit or is stateless don't call fit
@@ -293,10 +300,7 @@ class CheckpointMixin:
         if not isinstance(samples, list):
             raise ValueError("It's expected a list, not %s" % type(samples))
 
-        # If there's no samples, not fit/transform
-        if len(samples) == 0:
-            return []
-
+        logger.info(f"Checkpointing Sample/SampleSet: {self}")
         if isinstance(samples[0], Sample) or isinstance(samples[0], DelayedSample):
             return [self.transform_one_sample(s) for s in samples]
         elif isinstance(samples[0], SampleSet):
