@@ -81,7 +81,7 @@ class SampleSet(MutableSet):
     """
 
     def __init__(self, samples, parent=None, **kwargs):
-        self.samples = set(samples)
+        self.samples = samples
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
@@ -100,12 +100,12 @@ class SampleSet(MutableSet):
             raise ValueError(f"item should be of type Sample, not {item}")
 
         if not item in self.samples:
-            self.samples.add(item)
+            self.samples.append(item)
 
     def discard(self, item):
 
         if isinstance(item, Sample):
-            self.samples.discard(item)
+            self.samples.remove(item)
 
         selected_sample = None
         for sample in self:
@@ -113,4 +113,4 @@ class SampleSet(MutableSet):
                 selected_sample = sample
                 break
 
-        self.samples.discard(selected_sample)
+        self.samples.remove(selected_sample)
