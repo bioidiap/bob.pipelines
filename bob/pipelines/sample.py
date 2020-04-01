@@ -72,14 +72,45 @@ class Sample:
         _copy_attributes(self, kwargs)
 
 
-class SampleSet:
-    """A set of samples with extra attributes"""
+from collections.abc import MutableSet
+
+
+class SampleSet(MutableSet):
+    """A set of samples with extra attributes
+    https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes
+    """
 
     def __init__(self, samples, parent=None, **kwargs):
-        self.samples = samples
+        self.samples = set(samples)
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
 
     def __len__(self):
         return len(self.samples)
+
+    def __iter__(self):
+        return self.samples.__iter__()
+
+    def __contains__(self, item):
+        return str(item) in [str(sample.key) for sample in self]
+
+    def add(self, item):
+        if not isinstance(item, Sample):
+            raise ValueError(f"item should be of type Sample, not {item}")
+
+        if not item in self.samples:
+            self.samples.add(item)
+
+    def discard(self, item):
+
+        if isinstance(item, Sample):
+            self.samples.discard(item)
+
+        selected_sample = None
+        for sample in self:
+            if str(item) == str(sample.key):
+                selected_sample = sample
+                break
+
+        self.samples.discard(selected_sample)
