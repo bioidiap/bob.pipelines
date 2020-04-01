@@ -13,7 +13,7 @@ from dask import delayed
 import dask.bag
 import logging
 
-logger = logging.getLogger("bob.pipelines")
+logger = logging.getLogger(__name__)
 
 
 def estimator_dask_it(
