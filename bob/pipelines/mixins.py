@@ -293,7 +293,7 @@ class CheckpointMixin:
         return new_sample
 
     def transform_one_sample_set(self, sample_set):
-        samples = [self.transform_one_sample(s) for s in sample_set.samples]
+        samples = [self.transform_one_sample(s) for s in sample_set]
         return SampleSet(samples, parent=sample_set)
 
     def transform(self, samples):
@@ -332,7 +332,7 @@ class CheckpointMixin:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             return self.save_func(sample.data, path)
         elif isinstance(sample, SampleSet):
-            for s in sample.samples:
+            for s in sample:
                 path = self.make_path(s)
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 return self.save_func(s.data, path)

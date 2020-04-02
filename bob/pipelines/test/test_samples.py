@@ -2,6 +2,7 @@ from bob.pipelines.sample import Sample, SampleSet, DelayedSample
 import numpy
 
 from nose.tools import assert_raises
+import copy
 
 
 def test_sampleset_collection():
@@ -13,28 +14,26 @@ def test_sampleset_collection():
     )
     assert len(sampleset) == n_samples
 
-    # Testing __iter__
-    for s in sampleset:
-        assert hasattr(s, "key")
-
-    # Testing __contains__
-    for i in range(n_samples):
-        assert i in sampleset
-    assert 120 not in sampleset
-
-    # Testing add
+    # Testing insert
     sample = Sample(X, key=100)
-    sampleset.add(sample)
+    sampleset.insert(1, sample)
     assert len(sampleset) == n_samples + 1
 
-    # adding again, doesn't change
-    sampleset.add(sample)
-    assert len(sampleset) == n_samples + 1
+    # Testing delete
+    del sampleset[0]
+    assert len(sampleset) == n_samples
 
     # Testing exception
     with assert_raises(ValueError):
-        sampleset.add(10)
+        sampleset.insert(1, 10)
 
-    # Testing discard
-    sampleset.discard(100)
-    assert len(sampleset) == n_samples
+    # Testing set
+    sampleset[0] = copy.deepcopy(sample)
+
+    # Testing exception
+    with assert_raises(ValueError):
+        sampleset[0] = "xuxa"
+
+    # Testing iterator
+    for i in sampleset:
+        assert isinstance(i, Sample)
