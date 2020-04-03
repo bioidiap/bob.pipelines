@@ -14,6 +14,8 @@ from dask_jobqueue.sge import SGEJob
 from distributed.scheduler import Scheduler
 from distributed import SpecCluster
 import dask
+from distributed.scheduler import Scheduler
+from distributed.deploy import Adaptive
 
 
 class SGEIdiapJob(Job):
@@ -55,7 +57,17 @@ class SGEIdiapJob(Job):
         # Amending the --resources in the `distributed.cli.dask_worker` CLI command
         if "resources" in kwargs and kwargs["resources"]:
             resources = kwargs["resources"]
-            self._command_template += f" --resources {resources}"
+
+            # Preparing the string to be sent to `dask-worker` command
+            def _resource_to_str(resources):
+                resources_str = ""
+                for k in resources:
+                    resources_str += f"{k}={resources[k]}"
+                return resources_str
+
+            resources_str = _resource_to_str(resources)
+
+            self._command_template += f" --resources {resources_str}"
 
         header_lines = []
         if self.job_name is not None:
@@ -86,25 +98,144 @@ class SGEIdiapJob(Job):
         logger.debug("Job script: \n %s" % self.job_script())
 
 
+Q_ALL_SPEC = {
+    "default": {
+        "queue": "all.q",
+        "memory": "4GB",
+        "io_big": False,
+        "resource_spec": "",
+        "resources": "",
+    }
+}
+
+Q_1DAY_IO_BIG_SPEC = {
+    "default": {
+        "queue": "q_1day",
+        "memory": "8GB",
+        "io_big": True,
+        "resource_spec": "",
+        "resources": "",
+    }
+}
+
+Q_1DAY_GPU_SPEC = {
+    "default": {
+        "queue": "q_1day",
+        "memory": "8GB",
+        "io_big": True,
+        "resource_spec": "",
+        "resources": "",
+    },
+    "gpu": {
+        "queue": "q_gpu",
+        "memory": "12GB",
+        "io_big": False,
+        "resource_spec": "",
+        "resources": "GPU",
+    },
+}
+
+
 class SGEIdiapCluster(JobQueueCluster):
     """ Launch Dask jobs in the IDIAP SGE cluster
 
+    Parameters
+    ----------
+     log_directory: str
+        Default directory for the SGE logs
+
+      protocol: str
+        Scheduler communication protocol
+
+      dashboard_address: str
+        Default port for the dask dashboard,
+      
+      env_extra: str,
+        Extra environment variables to send to the workers
+
+      sge_job_spec: dict
+        Dictionary containing a minimum specification for the qsub command.
+        It cosists of:
+
+          queue: SGE queue
+          memory: Memory requirement in GB (e.g. 4GB)
+          io_bio: set the io_big flag
+          resource_spec: Whatever extra argument to be sent to qsub (qsub -l)
+          tag: Mark this worker with an specific tag so dask scheduler can place specific tasks to it (https://distributed.dask.org/en/latest/resources.html)
+
+
+
+    Below follow a vanilla-example that will create a set of jobs on all.q
+    >>> from bob.pipelines.distributed.sge import SGEIdiapCluster
+    >>> from dask.distributed import Client
+    >>> cluster = SGEIdiapCluster()
+    >>> cluster.scale_up(10)
+    >>> client = Client(cluster)
+
+
+    It's possible to demand a resource specification yourself:
+    >>> Q_1DAY_IO_BIG_SPEC = {
+            "default": {
+            "queue": "q_1day",
+            "memory": "8GB",
+            "io_big": True,
+            "resource_spec": "",
+            "resources": "",
+        }
+    }
+    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_IO_BIG_SPEC)
+    >>> cluster.scale_up(10)
+    >>> client = Client(cluster)
+
+
+    More than one jon spec can be set:
+    >>> Q_1DAY_GPU_SPEC = {
+            "default": {
+                "queue": "q_1day",
+                "memory": "8GB",
+                "io_big": True,
+                "resource_spec": "",
+                "resources": "",
+            },
+            "gpu": {
+                "queue": "q_gpu",
+                "memory": "12GB",
+                "io_big": False,
+                "resource_spec": "",
+                "resources": {"GPU":1},
+            },
+        }
+    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
+    >>> cluster.scale_up(10)
+    >>> cluster.scale_up(1, sge_job_spec_key="gpu")
+    >>> client = Client(cluster)
+
+
+    Adaptive job allocation can also be used via `AdaptiveIdiap` extension
+    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
+    >>> cluster.adapt(Adaptive=AdaptiveIdiap,minimum=2, maximum=10)
+    >>> client = Client(cluster)    
+
     """
 
-    def __init__(self, env_extra=None, **kwargs):
+    def __init__(
+        self,
+        log_directory="./logs",
+        protocol="tcp://",
+        dashboard_address=":8787",
+        env_extra=None,
+        sge_job_spec=Q_ALL_SPEC,
+        **kwargs,
+    ):
 
         # Defining the job launcher
         self.job_cls = SGEIdiapJob
+        self.sge_job_spec = sge_job_spec
 
-        # we could use self.workers to could the workers
-        # However, this variable works as async, hence we can't bootstrap
-        # several cluster.scale at once
-        self.n_workers_sync = 0
+        self.protocol = protocol
+        self.log_directory = log_directory
 
-        # Hard-coding some scheduler info from the time being
-        self.protocol = "tcp://"
         silence_logs = "error"
-        dashboard_address = ":8787"
         secutity = None
         interface = None
         host = None
@@ -117,7 +248,7 @@ class SGEIdiapCluster(JobQueueCluster):
         self.env_extra = env_extra + ["export PYTHONPATH=" + ":".join(sys.path)]
 
         scheduler = {
-            "cls": Scheduler,  # Use local scheduler for now
+            "cls": SchedulerIdiap,  # Use local scheduler for now
             "options": {
                 "protocol": self.protocol,
                 "interface": interface,
@@ -142,90 +273,204 @@ class SGEIdiapCluster(JobQueueCluster):
             name=name,
         )
 
-    def scale(self, n_jobs, queue=None, memory="4GB", io_big=True, resources=None):
+    def _get_worker_spec_options(self, job_spec):
+        """
+        Craft a dask worker_spec to be used in the qsub command
+
+        """
+
+        def _get_key_from_spec(spec, key):
+            return spec[key] if key in spec else ""
+
+        new_resource_spec = _get_key_from_spec(job_spec, "resource_spec")
+
+        # IO_BIG
+        new_resource_spec += (
+            "io_big=TRUE," if "io_big" in job_spec and job_spec["io_big"] else ""
+        )
+
+        queue = _get_key_from_spec(job_spec, "queue")
+        if queue != "all.q":
+            new_resource_spec += f"{queue}=TRUE"
+
+        new_resource_spec = None if new_resource_spec == "" else new_resource_spec
+
+        return {
+            "queue": queue,
+            "memory": _get_key_from_spec(job_spec, "memory"),
+            "cores": 1,
+            "processes": 1,
+            "log_directory": self.log_directory,
+            "local_directory": self.log_directory,
+            "resource_spec": new_resource_spec,
+            "interface": None,
+            "protocol": self.protocol,
+            "security": None,
+            "resources": _get_key_from_spec(job_spec, "resources"),
+            "env_extra": self.env_extra,
+        }
+
+    def scale(self, n_jobs, sge_job_spec_key="default"):
         """
         Launch an SGE job in the Idiap SGE cluster
-
 
         Parameters
         ----------
 
           n_jobs: int
-            Number of jobs to be launched
+            Quantity of jobs to scale
 
-          queue: str
-            Name of the SGE queue
-
-          io_big: bool
-            Use the io_big? Note that this is only true for q_1day, q1week, q_1day_mth, q_1week_mth
-
-          resources: str
-            Tag your workers with meaningful name (e.g GPU=1). In this way, it's possible to redirect certain tasks to certain workers.
-
+          sge_job_spec_key: str
+             One of the specs :py:attr:`SGEIdiapCluster.sge_job_spec` 
         """
 
         if n_jobs == 0:
             # Shutting down all workers
             return super(JobQueueCluster, self).scale(0, memory=None, cores=0)
 
-        resource_spec = f"{queue}=TRUE"  # We have to set this at Idiap for some reason
-        resource_spec += ",io_big=TRUE" if io_big else ""
-        log_directory = "./logs"
+        job_spec = self.sge_job_spec[sge_job_spec_key]
+        worker_spec_options = self._get_worker_spec_options(job_spec)
         n_cores = 1
-        worker_spec = {
-            "cls": self.job_cls,
-            "options": {
-                "queue": queue,
-                "memory": memory,
-                "cores": n_cores,
-                "processes": n_cores,
-                "log_directory": log_directory,
-                "local_directory": log_directory,
-                "resource_spec": resource_spec,
-                "interface": None,
-                "protocol": self.protocol,
-                "security": None,
-                "resources": resources,
-                "env_extra": self.env_extra,
-            },
-        }
+        worker_spec = {"cls": self.job_cls, "options": worker_spec_options}
 
         # Defining a new worker_spec with some SGE characteristics
         self.new_spec = worker_spec
 
-        # Launching the jobs according to the new worker_spec
-        n_workers = self.n_workers_sync
-        self.n_workers_sync += n_jobs
-        return super(JobQueueCluster, self).scale(
-            n_workers + n_jobs, memory=None, cores=n_cores
+        return super(JobQueueCluster, self).scale(n_jobs, memory=None, cores=n_cores)
+
+    def scale_up(self, n_jobs, sge_job_spec_key=None):
+        """
+        Scale cluster up. This is supposed to be used by the scheduler while dynamically allocating resources
+        """
+        return self.scale(n_jobs, sge_job_spec_key)
+
+    async def scale_down(self, workers, sge_job_spec_key=None):
+        """
+        Scale cluster down. This is supposed to be used by the scheduler while dynamically allocating resources
+        """
+        await super().scale_down(workers)
+
+    def adapt(self, *args, **kwargs):
+        super().adapt(*args, Adaptive=AdaptiveIdiap, **kwargs)
+
+
+
+class AdaptiveIdiap(Adaptive):
+    """
+    Custom mechanism to adaptively allocate workers based on scheduler load
+    
+    This custom implementation extends the :py:meth:`Adaptive.recommendations` by looking
+    at the :py:meth:`distributed.scheduler.TaskState.resource_restrictions`.
+
+    The heristics is:
+
+    .. note ::
+        If a certain task has the status `no-worker` and it has resource_restrictions, the scheduler should
+        request a job matching those resource restrictions
+
+    """
+
+    async def recommendations(self, target: int) -> dict:
+        """
+        Make scale up/down recommendations based on current state and target
+        """
+
+        plan = self.plan
+        requested = self.requested
+        observed = self.observed
+
+        # Get tasks with no worker associated due to
+        # resource restrictions
+        resource_restrictions = (
+            await self.scheduler.get_no_worker_tasks_resource_restrictions()
         )
 
+        # If the amount of resources requested is bigger
+        # than what available and those jobs has restrictions
+        if target > len(plan):
+            self.close_counts.clear()
+            if len(resource_restrictions) > 0:
+                return {
+                    "status": "up",
+                    "n": target,
+                    "sge_job_spec_key": list(resource_restrictions[0].keys())[0],
+                }
+            else:
+                return {"status": "up", "n": target}
 
-def sge_iobig_client(
-    n_jobs,
-    queue="q_1day",
-    queue_resource_spec="q_1day=TRUE,io_big=TRUE",
-    memory="8GB",
-    sge_log="./logs",
-):
+        # If the amount of resources requested is lower
+        # than what is available, is time to downscale
+        elif target < len(plan):
+            to_close = set()
 
-    from dask_jobqueue import SGECluster
-    from dask.distributed import Client
+            # Get the worksers that can be closed.
+            if target < len(plan) - len(to_close):
+                L = await self.workers_to_close(target=target)
+                to_close.update(L)
 
-    env_extra = ["export PYTHONPATH=" + ":".join(sys.path)]
+            firmly_close = set()
+            # COUNTING THE AMOUNT OF SCHEDULER CYCLES THAT WE SHOULD KEEP
+            # THIS WORKER BEFORE DESTROYING IT
+            for w in to_close:
+                self.close_counts[w] += 1
+                if self.close_counts[w] >= self.wait_count:
+                    firmly_close.add(w)
 
-    cluster = SGECluster(
-        queue=queue,
-        memory=memory,
-        cores=1,
-        processes=1,
-        log_directory=sge_log,
-        local_directory=sge_log,
-        resource_spec=queue_resource_spec,
-        env_extra=env_extra,
-    )
+            for k in list(self.close_counts):  # clear out unseen keys
+                if k in firmly_close or k not in to_close:
+                    del self.close_counts[k]
 
-    cluster.scale_up(n_jobs)
-    client = Client(cluster)  # start local workers as threads
+            # Send message to destroy workers
+            if firmly_close:
+                return {"status": "down", "workers": list(firmly_close)}
 
-    return client
+        # If the amount of available workers is ok
+        # for the current demand, BUT
+        # there are tasks that need some special worker:
+        # SCALE EVERYTHING UP
+        if target == len(plan) and len(resource_restrictions) > 0:
+            return {
+                "status": "up",
+                "n": target + 1,
+                "sge_job_spec_key": list(resource_restrictions[0].keys())[0],
+            }
+        else:
+            return {"status": "same"}
+
+    async def scale_up(self, n, sge_job_spec_key="default"):
+        await self.cluster.scale(n, sge_job_spec_key=sge_job_spec_key)
+
+    async def scale_down(self, workers, sge_job_spec_key="default"):
+        await super().scale_down(workers)
+
+
+
+class SchedulerIdiap(Scheduler):
+    """
+    Idiap extended distributed scheduler
+
+    This scheduler extends :py:class:`Scheduler` by just adding a handler
+    that fetches, at every scheduler cycle, the resource restrictions of 
+    a task that has status `no-worker`
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(SchedulerIdiap, self).__init__(*args, **kwargs)
+        self.handlers[
+            "get_no_worker_tasks_resource_restrictions"
+        ] = self.get_no_worker_tasks_resource_restrictions
+
+    def get_no_worker_tasks_resource_restrictions(self, comm=None):
+        """
+        Get the a task resource restrictions for jobs that has the status 'no-worker'
+        """
+
+        resource_restrictions = []
+        for k in self.tasks:
+            if (
+                self.tasks[k].state == "no-worker"
+                and self.tasks[k].resource_restrictions is not None
+            ):
+                resource_restrictions.append(self.tasks[k].resource_restrictions)
+
+        return resource_restrictions

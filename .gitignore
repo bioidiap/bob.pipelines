@@ -18,3 +18,4 @@ build
 record.txt
 miniconda.sh
 miniconda/
+*.DS_Store
