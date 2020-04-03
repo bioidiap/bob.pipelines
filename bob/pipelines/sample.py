@@ -1,3 +1,5 @@
+from collections.abc import MutableSequence
+
 """Base definition of sample"""
 
 
@@ -72,11 +74,37 @@ class Sample:
         _copy_attributes(self, kwargs)
 
 
-class SampleSet:
-    """A set of samples with extra attributes"""
+
+class SampleSet(MutableSequence):
+    """A set of samples with extra attributes
+    https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes
+    """
 
     def __init__(self, samples, parent=None, **kwargs):
         self.samples = samples
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, item):
+        return self.samples.__getitem__(item)
+
+    def __setitem__(self, key, item):
+
+        if not isinstance(item, Sample):
+            raise ValueError(f"item should be of type Sample, not {item}")
+
+        return self.samples.__setitem__(key, item)
+
+    def __delitem__(self, item):
+        return self.samples.__delitem__(item)
+
+    def insert(self, index, item):
+        if not isinstance(item, Sample):
+            raise ValueError(f"item should be of type Sample, not {item}")
+
+        # if not item in self.samples:
+        self.samples.insert(index, item)

@@ -27,14 +27,13 @@ requirements:
     - setuptools {{ setuptools }}
     - bob.extension
     - bob.io.base
-    - dask
-    - dask-jobqueue
-    - numpy {{ numpy }}
-    - h5py
-    - scikit-learn >=0.22
   run:
     - python
     - setuptools
+    - dask
+    - dask-jobqueue
+    - numpy {{ numpy }}
+    - scikit-learn >=0.22
 
 test:
   imports:
