@@ -1,7 +1,6 @@
 from bob.pipelines.sample import Sample, SampleSet, DelayedSample
 import numpy
 
-from nose.tools import assert_raises
 import copy
 
 
@@ -23,16 +22,8 @@ def test_sampleset_collection():
     del sampleset[0]
     assert len(sampleset) == n_samples
 
-    # Testing exception
-    with assert_raises(ValueError):
-        sampleset.insert(1, 10)
-
     # Testing set
     sampleset[0] = copy.deepcopy(sample)
-
-    # Testing exception
-    with assert_raises(ValueError):
-        sampleset[0] = "xuxa"
 
     # Testing iterator
     for i in sampleset:
