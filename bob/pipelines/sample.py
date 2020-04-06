@@ -93,18 +93,11 @@ class SampleSet(MutableSequence):
         return self.samples.__getitem__(item)
 
     def __setitem__(self, key, item):
-
-        if not isinstance(item, Sample):
-            raise ValueError(f"item should be of type Sample, not {item}")
-
         return self.samples.__setitem__(key, item)
 
     def __delitem__(self, item):
         return self.samples.__delitem__(item)
 
     def insert(self, index, item):
-        if not isinstance(item, Sample):
-            raise ValueError(f"item should be of type Sample, not {item}")
-
         # if not item in self.samples:
         self.samples.insert(index, item)
