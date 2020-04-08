@@ -131,7 +131,7 @@ Q_1DAY_GPU_SPEC = {
         "memory": "12GB",
         "io_big": False,
         "resource_spec": "",
-        "resources": "GPU",
+        "resources": {"gpu":1},
     },
 }
 
