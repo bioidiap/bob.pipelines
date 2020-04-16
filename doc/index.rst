@@ -6,19 +6,46 @@
  Bob Pipelines
 ===============
 
-This is a temporary documentation on how this pipeline mechanism is going to work.
-This work is heavily based on `dask <https://dask.org/>`_. Hence, have a look in its documentation so see how this works.
-For now, we have standardized how:
+Easilly boost your `Scikit Learn Pipelines <https://scikit-learn.org/stable/index.html>`_ with powerfull features, such as:
 
- - Samples are defined
- - Pipelines are defined
- - The relation with the grid (that's for free using dask)
  
 
 
+.. figure:: img/dask.png
+    :width: 40%
+    :align: center
 
-Reference Manual
-==================
+    Scale them with Dask
+
+.. figure:: img/metadata.png
+   :width: 40%
+   :align: center
+
+   Wrap datapoints with metadata and pass them to the `estimator.fit` and `estimator.transform` methods
+    
+.. figure:: img/checkpoint.png
+   :width: 40%
+   :align: center
+
+   Checkpoint datapoints after each step of your pipeline
 
 
-.. include:: links.rst
+.. warning::
+    Before any investigation of this package is capable of, check the scikit learn `user guide <https://scikit-learn.org/stable/modules/compose.html#pipeline>`_. Several `tutorials <https://scikit-learn.org/stable/tutorial/index.html>`_ are available online.
+
+.. warning::
+    If you want to implement your own scikit-learn estimator, please, check it out this `link <https://scikit-learn.org/stable/developers/develop.html>`_
+
+
+
+User Guide
+==========
+
+.. toctree::
+   :maxdepth: 2
+
+   sample
+   checkpoint
+   dask
+   py_api
+
