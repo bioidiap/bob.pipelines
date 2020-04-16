@@ -48,7 +48,7 @@ todo_include_todos = True
 autosummary_generate = True
 
 # Create numbers on figures with captions
-numfig = True
+numfig = False
 
 # If we are on OSX, the 'dvipng' path maybe different
 dvipng_osx = "/Library/TeX/texbin/dvipng"
