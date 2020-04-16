@@ -8,14 +8,16 @@ Mechanism that allows checkpointing of :py:class:`bob.pipelines.sample.Sample` d
 
 Very often during the processing of :py:class:`sklearn.pipeline.Pipeline` with big chunks of data is useful to have checkpoints of some steps of the pipeline into the disk.
 This is useful for several purposes:
-  - Reuse samples that are expensive to be re-computed
-  - Inspection of algorithms  
+
+   - Reuse samples that are expensive to be re-computed
+
+   - Inspection of algorithms  
 
 
 Scikit learn has a caching mechanism that allows the caching of `estimators <https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline>`_ that can be used for such purpose.
 Althought useful, such structure is not user friendly.
 
-As in :ref:`sample`, this can be approached with the :py:class:`bob.pipelines.mixins.CheckpointMixin` mixin, where a new class can be created either dynamically with the :py:func:`bob.pipelines.mixings.mix_me_up` function:
+As in :ref:`sample`, this can be approached with the :py:class:`bob.pipelines.mixins.CheckpointMixin` mixin, where a new class can be created either dynamically with the :py:func:`bob.pipelines.mixins.mix_me_up` function:
 
 .. code:: python
 
@@ -63,4 +65,6 @@ Those can be checkpointed too as can be observed in the example below.
 The keyword argument `features_dir` and `model_payh` defined in lines 52 to 55 sets the absolute path where samples and the model trained after fit will be saved
 
 
+.. note::
+   SampleSets can be checkpointed in the exact same way as Samples.
 

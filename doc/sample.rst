@@ -49,7 +49,7 @@ The example below shows a simple snippet on how to build a scikit learn transfor
 .. literalinclude:: ./python/pipeline_example.py
    :linenos:
 
-As can be observed, `MyTransformer` supports one keyword argument called `metadata` that can't be used by :py:class:`scikit.pipeline.Pipeline`.
+As can be observed, `MyTransformer` supports one keyword argument called `metadata` that can't be used by :py:class:`sklearn.pipeline.Pipeline`.
 
 
 This can be approached with the mixing class :py:class:`bob.pipelines.mixins.SampleMixin`.

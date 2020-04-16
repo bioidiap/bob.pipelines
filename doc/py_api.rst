@@ -6,7 +6,21 @@ Python API for bob.pipelines
 Samples
 -----------------
 
-.. autosummary::
-   bob.pipelines.sample.Sample
-   bob.pipelines.sample.SampleSet
-   bob.pipelines.sample.DelayedSample
+.. automodule:: bob.pipelines.sample
+
+
+Mixins
+-----------------
+
+.. automodule:: bob.pipelines.mixins
+
+
+Idiap SGE Support
+-----------------
+
+.. automodule:: bob.pipelines.distributed.sge
+.. automodule:: bob.pipelines.distributed.local
+
+Transformers
+------------
+.. automodule:: bob.pipelines.transformers

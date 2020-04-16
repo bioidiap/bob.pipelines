@@ -20,27 +20,27 @@ def estimator_dask_it(
     o, fit_tag=None, transform_tag=None, npartitions=None,
 ):
     """
-    Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base` with
+    Mix up any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.base.BaseEstimator` with
     :py:class`DaskEstimatorMixin`
 
     Parameters
     ----------
 
-      o: :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base`
-        Any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.estimator.Base` to be dask mixed
+      o: :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.base.BaseEstimator`
+        Any :py:class:`sklearn.pipeline.Pipeline` or :py:class:`sklearn.base.BaseEstimator` to be dask mixed
 
       fit_tag: list(tuple()) or "str"
          Tag the `fit` method. This is useful to tag dask tasks to run in specific workers https://distributed.dask.org/en/latest/resources.html
          If `o` is :py:class:`sklearn.pipeline.Pipeline`, this parameter should contain a list of tuples
          containing the pipeline.step index and the `str` tag for `fit`.
-         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `fit`
+         If `o` is :py:class:`sklearn.base.BaseEstimator`, this parameter should contain just the tag for `fit`
 
 
       transform_tag: list(tuple()) or "str"
          Tag the `fit` method. This is useful to tag dask tasks to run in specific workers https://distributed.dask.org/en/latest/resources.html
          If `o` is :py:class:`sklearn.pipeline.Pipeline`, this parameter should contain a list of tuples
          containing the pipeline.step index and the `str` tag for `transform`.
-         If `o` is :py:class:`sklearn.estimator.Base`, this parameter should contain just the tag for `transform`
+         If `o` is :py:class:`sklearn.base.BaseEstimator`, this parameter should contain just the tag for `transform`
 
 
     Examples
@@ -254,8 +254,8 @@ class SampleMixin:
             return self
 
         # if the estimator needs to be fitted.
-        kwargs = _make_kwargs_from_samples(samples, self.fit_extra_arguments)
-        X = [s.data for s in samples]
+        kwargs = _make_kwargs_from_samples(samples, self.fit_extra_arguments)        
+        X = [s.data for s in samples]        
         return super().fit(X, **kwargs)
 
 
@@ -474,8 +474,8 @@ class DaskBagMixin(TransformerMixin):
     """Transform an arbitrary iterator into a :py:class:`dask.bag`
 
 
-    Paramters
-    ---------
+    Parameters
+    ----------
 
       npartitions: int
         Number of partitions used it :py:meth:`dask.bag.npartitions`

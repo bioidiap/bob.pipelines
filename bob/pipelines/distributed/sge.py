@@ -164,57 +164,63 @@ class SGEIdiapCluster(JobQueueCluster):
           tag: Mark this worker with an specific tag so dask scheduler can place specific tasks to it (https://distributed.dask.org/en/latest/resources.html)
 
 
+    Example
+    -------
 
-    Below follow a vanilla-example that will create a set of jobs on all.q
+    Below follow a vanilla-example that will create a set of jobs on all.q:
+
     >>> from bob.pipelines.distributed.sge import SGEIdiapCluster
     >>> from dask.distributed import Client
     >>> cluster = SGEIdiapCluster()
     >>> cluster.scale_up(10)
     >>> client = Client(cluster)
 
-
     It's possible to demand a resource specification yourself:
+    
     >>> Q_1DAY_IO_BIG_SPEC = {
-            "default": {
-            "queue": "q_1day",
-            "memory": "8GB",
-            "io_big": True,
-            "resource_spec": "",
-            "resources": "",
-        }
-    }
+    >>>        "default": {
+    >>>        "queue": "q_1day",
+    >>>        "memory": "8GB",
+    >>>        "io_big": True,
+    >>>        "resource_spec": "",
+    >>>        "resources": "",
+    >>>    }
+    >>> }
     >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_IO_BIG_SPEC)
     >>> cluster.scale_up(10)
     >>> client = Client(cluster)
 
 
+
     More than one jon spec can be set:
     >>> Q_1DAY_GPU_SPEC = {
-            "default": {
-                "queue": "q_1day",
-                "memory": "8GB",
-                "io_big": True,
-                "resource_spec": "",
-                "resources": "",
-            },
-            "gpu": {
-                "queue": "q_gpu",
-                "memory": "12GB",
-                "io_big": False,
-                "resource_spec": "",
-                "resources": {"GPU":1},
-            },
-        }
+    >>>         "default": {
+    >>>             "queue": "q_1day",
+    >>>             "memory": "8GB",
+    >>>             "io_big": True,
+    >>>             "resource_spec": "",
+    >>>             "resources": "",
+    >>>         },
+    >>>         "gpu": {
+    >>>             "queue": "q_gpu",
+    >>>             "memory": "12GB",
+    >>>             "io_big": False,
+    >>>             "resource_spec": "",
+    >>>             "resources": {"GPU":1},
+    >>>         },
+    >>>     }
     >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
     >>> cluster.scale_up(10)
     >>> cluster.scale_up(1, sge_job_spec_key="gpu")
     >>> client = Client(cluster)
 
 
-    Adaptive job allocation can also be used via `AdaptiveIdiap` extension
+    Adaptive job allocation can also be used via `AdaptiveIdiap` extension:
+
     >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
     >>> cluster.adapt(Adaptive=AdaptiveIdiap,minimum=2, maximum=10)
     >>> client = Client(cluster)    
+
 
     """
 
@@ -473,4 +479,4 @@ class SchedulerIdiap(Scheduler):
             ):
                 resource_restrictions.append(self.tasks[k].resource_restrictions)
 
-        return resource_restrictions
+        return resource_restrictions        
