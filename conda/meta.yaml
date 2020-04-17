@@ -33,7 +33,7 @@ requirements:
     - dask
     - dask-jobqueue
     - numpy {{ numpy }}
-    - scikit-learn >=0.22
+    - scikit-learn
 
 test:
   imports:
