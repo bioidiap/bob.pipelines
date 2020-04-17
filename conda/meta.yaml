@@ -25,14 +25,15 @@ requirements:
   host:
     - python {{ python }}
     - setuptools {{ setuptools }}
+    - numpy {{ numpy }}
     - bob.extension
     - bob.io.base
   run:
     - python
     - setuptools
+    - numpy
     - dask
-    - dask-jobqueue
-    - numpy {{ numpy }}
+    - dask-jobqueue    
     - scikit-learn
 
 test:
