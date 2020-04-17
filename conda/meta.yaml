@@ -33,7 +33,8 @@ requirements:
     - setuptools
     - numpy
     - dask
-    - dask-jobqueue    
+    - dask-jobqueue
+    - distributed
     - scikit-learn
 
 test:

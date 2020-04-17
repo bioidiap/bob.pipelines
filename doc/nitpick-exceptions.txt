@@ -1,0 +1,5 @@
+py:meth dask.distributed.Adaptive
+py:class dask_jobqueue.core.JobQueueCluster
+py:class distributed.deploy.adaptive.Adaptive
+py:class dask_jobqueue.core.Job
+py:class sklearn.preprocessing._function_transformer.FunctionTransformer

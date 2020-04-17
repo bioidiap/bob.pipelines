@@ -4,4 +4,5 @@ bob.extension
 bob.io.base
 scikit-learn
 dask
+distributed
 dask-jobqueue

@@ -15,7 +15,7 @@ What is a Sample ?
 ------------------
 
 A :py:class:`bob.pipelines.sample.Sample` is simple container that wraps a datapoint.
-The example below shows how this can be used to wrap a :py:class:`numpy.array`.
+The example below shows how this can be used to wrap a :py:func:`numpy.array`.
 
 .. code:: python
 
@@ -28,7 +28,7 @@ The example below shows how this can be used to wrap a :py:class:`numpy.array`.
 Sample and metadata
 -------------------
 
-Metadata can be added as keyword arguments in :py:meth:`bob.pipelines.sample.Sample.__init__.py`, like:
+Metadata can be added as keyword arguments in :py:class:`bob.pipelines.sample.Sample`, like:
 
 .. code:: python
 

@@ -47,23 +47,25 @@ def estimator_dask_it(
     --------
 
       Vanilla example
-
-      >>> pipeline = estimator_dask_it(pipeline) # Take some pipeline and make the methods `fit`and `transform` run over dask
-      >>> pipeline.fit(samples).compute()
+      >>> from bob.pipelines.mixins import estimator_dask_it
+      >>> pipeline = estimator_dask_it(pipeline) # Take some pipeline and make the methods `fit`and `transform` run over dask # doctest: +SKIP
+      >>> pipeline.fit(samples).compute() # doctest: +SKIP
 
 
       In this example we will "mark" the fit method with a particular tag
       Hence, we can set the `dask.delayed.compute` method to place some
       delayeds to be executed in particular resources
 
-      >>> pipeline = estimator_dask_it(pipeline, fit_tag=[(1, "GPU")]) # Take some pipeline and make the methods `fit`and `transform` run over dask
-      >>> fit = pipeline.fit(samples)
-      >>> fit.compute(resources=pipeline.dask_tags())
+      >>> from bob.pipelines.mixins import estimator_dask_it # doctest: +SKIP
+      >>> pipeline = estimator_dask_it(pipeline, fit_tag=[(1, "GPU")]) # Take some pipeline and make the methods `fit`and `transform` run over dask # doctest: +SKIP
+      >>> fit = pipeline.fit(samples) # doctest: +SKIP
+      >>> fit.compute(resources=pipeline.dask_tags()) # doctest: +SKIP
 
       Taging estimator
-      >>> estimator = estimator_dask_it(estimator)
-      >>> transf = estimator.transform(samples)
-      >>> transf.compute(resources=estimator.dask_tags())
+      >>> from bob.pipelines.mixins import estimator_dask_it # doctest: +SKIP
+      >>> estimator = estimator_dask_it(estimator) # doctest: +SKIP
+      >>> transf = estimator.transform(samples) # doctest: +SKIP
+      >>> transf.compute(resources=estimator.dask_tags()) # doctest: +SKIP
 
     """
 
@@ -122,25 +124,6 @@ def mix_me_up(bases, o):
     Dynamically creates a new class from :any:`object` or :any:`class`.
     For instance, mix_me_up((A,B), class_c) is equal to `class ABC(A,B,C) pass:`
 
-    Example
-    -------
-
-       >>> my_mixed_class = mix_me_up([MixInA, MixInB], OriginalClass)
-       >>> mixed_object = my_mixed_class(*args)
-
-    It's also possible to mix up an instance:
-
-    Example
-    -------
-
-       >>> instance = OriginalClass()
-       >>> mixed_object = mix_me_up([MixInA, MixInB], instance)
-
-    It's also possible to mix up a :py:class:`sklearn.pipeline.Pipeline`.
-    In this case, every estimator inside of :py:meth:`sklearn.pipeline.Pipeline.steps`
-    will be mixed up
-
-
     Parameters
     ----------
       bases:  or :any:`tuple`
@@ -148,6 +131,27 @@ def mix_me_up(bases, o):
 
       o: :any:`class`, :any:`object` or :py:class:`sklearn.pipeline.Pipeline`
         Base element to be extended
+
+    Example
+    -------
+       >>> from bob.pipelines.mixins import mix_me_up # doctest: +SKIP
+       >>> my_mixed_class = mix_me_up([MixInA, MixInB], OriginalClass) # doctest: +SKIP
+       >>> mixed_object = my_mixed_class(*args) # doctest: +SKIP
+
+    It's also possible to mix up an instance:
+
+    Example
+    -------
+
+       >>> instance = OriginalClass() # doctest: +SKIP
+       >>> mixed_object = mix_me_up([MixInA, MixInB], instance) # doctest: +SKIP
+
+    It's also possible to mix up a :py:class:`sklearn.pipeline.Pipeline`.
+    In this case, every estimator inside of `sklearn.pipeline.Pipeline.steps`
+    will be mixed up
+
+
+
 
     """
 
@@ -196,7 +200,7 @@ def _make_kwargs_from_samples(samples, arg_attr_list):
 
 
 class SampleMixin:
-    """Mixin class to make scikit-learn estimators work in :any:`Sample`-based
+    """Mixin class to make scikit-learn estimators work in :py:class:`bob.pipelines.sample.Sample`-based
     pipelines.
     Do not use this class except for scikit-learn estimators.
 
@@ -205,9 +209,9 @@ class SampleMixin:
         Also implement ``predict``, ``predict_proba``, and ``score``. See:
         https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects
 
-    Attributes
+    Parameters
     ----------
-    fit_extra_arguments : [tuple], optional
+    fit_extra_arguments : [tuple]
         Use this option if you want to pass extra arguments to the fit method of the
         mixed instance. The format is a list of two value tuples. The first value in
         tuples is the name of the argument that fit accepts, like ``y``, and the second
@@ -215,7 +219,8 @@ class SampleMixin:
         passing samples to the fit method and want to pass ``subject`` attributes of
         samples as the ``y`` argument to the fit method, you can provide ``[("y",
         "subject")]`` as the value for this attribute.
-    transform_extra_arguments : [tuple], optional
+
+    transform_extra_arguments : [tuple]
         Similar to ``fit_extra_arguments`` but for the transform method.
     """
 
@@ -260,7 +265,7 @@ class SampleMixin:
 
 
 class CheckpointMixin:
-    """Mixin class that allows :any:`Sample`-based estimators save their results into
+    """Mixin class that allows :py:class:`bob.pipelines.sample.Sample`-based estimators save their results into
     disk."""
 
     def __init__(
@@ -340,7 +345,7 @@ class CheckpointMixin:
             raise ValueError("Type for sample not supported %s" % type(sample))
 
     def load(self, sample, path):
-        # because we are checkpointing, we return a DelayedSample
+        # because we are checkpointing, we return a :py:class:`bob.pipelines.sample.DelayedSample`
         # instead of a normal (preloaded) sample. This allows the next
         # phase to avoid loading it would it be unnecessary (e.g. next
         # phase is already check-pointed)
@@ -367,7 +372,7 @@ class CheckpointMixin:
 
 class SampleFunctionTransformer(SampleMixin, FunctionTransformer):
     """Mixin class that transforms Scikit learn FunctionTransformer (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
-    work with :any:`Sample`-based pipelines.
+    work with :py:class:`bob.pipelines.sample.Sample`-based pipelines.
     """
 
     pass
@@ -377,7 +382,7 @@ class CheckpointSampleFunctionTransformer(
     CheckpointMixin, SampleMixin, FunctionTransformer
 ):
     """Mixin class that transforms Scikit learn FunctionTransformer (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
-    work with :any:`Sample`-based pipelines.
+    work with :py:class:`bob.pipelines.sample.Sample`-based pipelines.
 
     Furthermore, it makes it checkpointable
     """
@@ -388,22 +393,21 @@ class CheckpointSampleFunctionTransformer(
 class NonPicklableMixin:
     """Class that wraps estimators that are not picklable
 
-    Example
-    -------
-        >>> from bob.pipelines.processor import NonPicklableMixin
-        >>> wrapper = NonPicklableMixin(my_non_picklable_class_callable)
-
-    Example
-    -------
-        >>> from bob.pipelines.processor import NonPicklableMixin
-        >>> import functools
-        >>> wrapper = NonPicklableMixin(functools.partial(MyNonPicklableClass, arg1, arg2))
-
-
     Parameters
     ----------
-      callable: callable
+      callable:
          Calleble function that instantiates the scikit estimator
+
+    Example
+    -------
+        >>> from bob.pipelines.processor import NonPicklableMixin # doctest: +SKIP
+        >>> wrapper = NonPicklableMixin(my_non_picklable_class_callable) # doctest: +SKIP
+
+    Example
+    -------
+        >>> from bob.pipelines.processor import NonPicklableMixin # doctest: +SKIP
+        >>> import functools # doctest: +SKIP
+        >>> wrapper = NonPicklableMixin(functools.partial(MyNonPicklableClass, arg1, arg2)) # doctest: +SKIP
 
     """
 
@@ -471,22 +475,22 @@ class DaskEstimatorMixin:
 
 
 class DaskBagMixin(TransformerMixin):
-    """Transform an arbitrary iterator into a :py:class:`dask.bag`
+    """Transform an arbitrary iterator into a `dask.bag`
 
 
     Parameters
     ----------
 
       npartitions: int
-        Number of partitions used it :py:meth:`dask.bag.npartitions`
+        Number of partitions used it `dask.bag.npartitions`
 
 
     Example
     -------
-
-    >>> transformer = DaskBagMixin()
-    >>> dask_bag = transformer.transform([1,2,3])
-    >>> dask_bag.map_partitions.....
+    
+    >>> transformer = DaskBagMixin() # doctest: +SKIP
+    >>> dask_bag = transformer.transform([1,2,3]) # doctest: +SKIP
+    >>> dask_bag.map_partitions # doctest: +SKIP
 
     """
 
