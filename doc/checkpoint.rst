@@ -51,8 +51,11 @@ The code below is a repetition of the example from :ref:`sample`, but now `MyTra
 The keyword argument `features_dir` defined in lines 34 and 38 sets the absolute path where those samples will be saved
 
 
-Checkpointing an statfull transformers
---------------------------------------
+.. _checkpoint_statefull:
+
+Checkpointing an statefull transformers
+---------------------------------------
+
 
 Statefull transformers, are transformers that implement the methods `fit` and `transform`.
 Those can be checkpointed too as can be observed in the example below.

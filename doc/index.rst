@@ -6,9 +6,8 @@
  Bob Pipelines
 ===============
 
-Easilly boost your `Scikit Learn Pipelines <https://scikit-learn.org/stable/index.html>`_ with powerfull features, such as:
+Easilly boost your :doc:`Scikit Learn Pipelines <modules/generated/sklearn.pipeline.Pipeline>` with powerfull features, such as:
 
- 
 
 
 .. figure:: img/dask.png
@@ -31,10 +30,10 @@ Easilly boost your `Scikit Learn Pipelines <https://scikit-learn.org/stable/inde
 
 
 .. warning::
-    Before any investigation of this package is capable of, check the scikit learn `user guide <https://scikit-learn.org/stable/modules/compose.html#pipeline>`_. Several `tutorials <https://scikit-learn.org/stable/tutorial/index.html>`_ are available online.
+    Before any investigation of this package is capable of, check the scikit learn :ref:`user guide <scikit-learn:pipeline>`. Several :ref:`tutorials <scikit-learn:tutorial_menu>` are available online.
 
 .. warning::
-    If you want to implement your own scikit-learn estimator, please, check it out this `link <https://scikit-learn.org/stable/developers/develop.html>`_
+    If you want to implement your own scikit-learn estimator, please, check it out this :doc:`link <scikit-learn:developers/develop>`
 
 
 

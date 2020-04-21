@@ -193,6 +193,7 @@ class SGEIdiapCluster(JobQueueCluster):
 
 
     More than one jon spec can be set:
+
     >>> Q_1DAY_GPU_SPEC = {
     ...         "default": {
     ...             "queue": "q_1day",
