@@ -21,11 +21,11 @@ class DelayedSample:
     Parameters
     ----------
 
-        load : function
+        load:
             A python function that can be called parameterlessly, to load the
             sample in question from whatever medium
 
-        parent : :py:class:`DelayedSample`, :py:class:`Sample`, None
+        parent : :py:class:`bob.pipelines.sample.DelayedSample`, :py:class:`bob.pipelines.sample.Sample`, None
             If passed, consider this as a parent of this sample, to copy
             information
 

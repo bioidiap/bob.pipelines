@@ -2,6 +2,7 @@ setuptools
 numpy
 bob.extension
 bob.io.base
-scikit-learn >=0.22
+scikit-learn
 dask
+distributed
 dask-jobqueue

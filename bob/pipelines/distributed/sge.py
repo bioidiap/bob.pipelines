@@ -164,57 +164,64 @@ class SGEIdiapCluster(JobQueueCluster):
           tag: Mark this worker with an specific tag so dask scheduler can place specific tasks to it (https://distributed.dask.org/en/latest/resources.html)
 
 
+    Example
+    -------
 
-    Below follow a vanilla-example that will create a set of jobs on all.q
-    >>> from bob.pipelines.distributed.sge import SGEIdiapCluster
-    >>> from dask.distributed import Client
-    >>> cluster = SGEIdiapCluster()
-    >>> cluster.scale_up(10)
-    >>> client = Client(cluster)
+    Below follow a vanilla-example that will create a set of jobs on all.q:
 
+    >>> from bob.pipelines.distributed.sge import SGEIdiapCluster  # doctest: +SKIP
+    >>> from dask.distributed import Client # doctest: +SKIP
+    >>> cluster = SGEIdiapCluster() # doctest: +SKIP
+    >>> cluster.scale_up(10) # doctest: +SKIP
+    >>> client = Client(cluster) # doctest: +SKIP
 
     It's possible to demand a resource specification yourself:
+        
     >>> Q_1DAY_IO_BIG_SPEC = {
-            "default": {
-            "queue": "q_1day",
-            "memory": "8GB",
-            "io_big": True,
-            "resource_spec": "",
-            "resources": "",
-        }
-    }
-    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_IO_BIG_SPEC)
-    >>> cluster.scale_up(10)
-    >>> client = Client(cluster)
+    ...        "default": {
+    ...        "queue": "q_1day",
+    ...        "memory": "8GB",
+    ...        "io_big": True,
+    ...        "resource_spec": "",
+    ...        "resources": "",
+    ...    }
+    ... }
+    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_IO_BIG_SPEC) # doctest: +SKIP
+    >>> cluster.scale_up(10) # doctest: +SKIP
+    >>> client = Client(cluster) # doctest: +SKIP
+
 
 
     More than one jon spec can be set:
+
     >>> Q_1DAY_GPU_SPEC = {
-            "default": {
-                "queue": "q_1day",
-                "memory": "8GB",
-                "io_big": True,
-                "resource_spec": "",
-                "resources": "",
-            },
-            "gpu": {
-                "queue": "q_gpu",
-                "memory": "12GB",
-                "io_big": False,
-                "resource_spec": "",
-                "resources": {"GPU":1},
-            },
-        }
-    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
-    >>> cluster.scale_up(10)
-    >>> cluster.scale_up(1, sge_job_spec_key="gpu")
-    >>> client = Client(cluster)
+    ...         "default": {
+    ...             "queue": "q_1day",
+    ...             "memory": "8GB",
+    ...             "io_big": True,
+    ...             "resource_spec": "",
+    ...             "resources": "",
+    ...         },
+    ...         "gpu": {
+    ...             "queue": "q_gpu",
+    ...             "memory": "12GB",
+    ...             "io_big": False,
+    ...             "resource_spec": "",
+    ...             "resources": {"GPU":1},
+    ...         },
+    ...     }
+    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC) # doctest: +SKIP
+    >>> cluster.scale_up(10) # doctest: +SKIP
+    >>> cluster.scale_up(1, sge_job_spec_key="gpu") # doctest: +SKIP
+    >>> client = Client(cluster) # doctest: +SKIP
 
 
-    Adaptive job allocation can also be used via `AdaptiveIdiap` extension
-    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
-    >>> cluster.adapt(Adaptive=AdaptiveIdiap,minimum=2, maximum=10)
-    >>> client = Client(cluster)    
+    Adaptive job allocation can also be used via `AdaptiveIdiap` extension:
+
+    >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)  # doctest: +SKIP
+    >>> cluster.adapt(Adaptive=AdaptiveIdiap,minimum=2, maximum=10) # doctest: +SKIP
+    >>> client = Client(cluster)     # doctest: +SKIP
+
 
     """
 
@@ -321,7 +328,7 @@ class SGEIdiapCluster(JobQueueCluster):
             Quantity of jobs to scale
 
           sge_job_spec_key: str
-             One of the specs :py:attr:`SGEIdiapCluster.sge_job_spec` 
+             One of the specs `SGEIdiapCluster.sge_job_spec` 
         """
 
         if n_jobs == 0:
@@ -359,8 +366,8 @@ class AdaptiveIdiap(Adaptive):
     """
     Custom mechanism to adaptively allocate workers based on scheduler load
     
-    This custom implementation extends the :py:meth:`Adaptive.recommendations` by looking
-    at the :py:meth:`distributed.scheduler.TaskState.resource_restrictions`.
+    This custom implementation extends the `Adaptive.recommendations` by looking
+    at the `distributed.scheduler.TaskState.resource_restrictions`.
 
     The heristics is:
 
@@ -449,7 +456,7 @@ class SchedulerIdiap(Scheduler):
     """
     Idiap extended distributed scheduler
 
-    This scheduler extends :py:class:`Scheduler` by just adding a handler
+    This scheduler extends `Scheduler` by just adding a handler
     that fetches, at every scheduler cycle, the resource restrictions of 
     a task that has status `no-worker`
     """
@@ -473,4 +480,4 @@ class SchedulerIdiap(Scheduler):
             ):
                 resource_restrictions.append(self.tasks[k].resource_restrictions)
 
-        return resource_restrictions
+        return resource_restrictions        

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 :
 
-
 def is_picklable(obj):
     """
     Test if an object is picklable or not
