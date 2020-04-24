@@ -75,11 +75,11 @@ Q_1DAY_GPU_SPEC = {
     },
 }
 
-from bob.pipelines.distributed.sge import SGEIdiapCluster
+from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
 from dask.distributed import Client
 
-cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
-cluster.scale(1, sge_job_spec_key="gpu")  # Submitting 1 job in the q_gpu queue
+cluster = SGEMultipleQueuesCluster()
+cluster.scale(1, sge_job_spec_key="q_gpu")  # Submitting 1 job in the q_gpu queue
 cluster.scale(10)  # Submitting 9 jobs in the q_1day queue
 client = Client(cluster)  # Creating the scheduler
 

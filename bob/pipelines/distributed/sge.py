@@ -17,6 +17,8 @@ import dask
 from distributed.scheduler import Scheduler
 from distributed.deploy import Adaptive
 
+from .sge_queues import QUEUE_DEFAULT
+
 
 class SGEIdiapJob(Job):
     """
@@ -98,46 +100,18 @@ class SGEIdiapJob(Job):
         logger.debug("Job script: \n %s" % self.job_script())
 
 
-Q_ALL_SPEC = {
-    "default": {
-        "queue": "all.q",
-        "memory": "4GB",
-        "io_big": False,
-        "resource_spec": "",
-        "resources": "",
-    }
-}
+def get_max_jobs(queue_dict):
+    """
+    Given a queue list, get the max number of possible jobs
+    """
 
-Q_1DAY_IO_BIG_SPEC = {
-    "default": {
-        "queue": "q_1day",
-        "memory": "8GB",
-        "io_big": True,
-        "resource_spec": "",
-        "resources": "",
-    }
-}
-
-Q_1DAY_GPU_SPEC = {
-    "default": {
-        "queue": "q_1day",
-        "memory": "8GB",
-        "io_big": True,
-        "resource_spec": "",
-        "resources": "",
-    },
-    "gpu": {
-        "queue": "q_gpu",
-        "memory": "12GB",
-        "io_big": False,
-        "resource_spec": "",
-        "resources": {"gpu":1},
-    },
-}
+    return max(
+        [queue_dict[r]["max_jobs"] for r in queue_dict if "max_jobs" in queue_dict[r]]
+    )
 
 
-class SGEIdiapCluster(JobQueueCluster):
-    """ Launch Dask jobs in the IDIAP SGE cluster
+class SGEMultipleQueuesCluster(JobQueueCluster):
+    """ Launch Dask jobs in the SGE cluster allowing the request of multiple queus
 
     Parameters
     ----------
@@ -162,6 +136,10 @@ class SGEIdiapCluster(JobQueueCluster):
           io_bio: set the io_big flag
           resource_spec: Whatever extra argument to be sent to qsub (qsub -l)
           tag: Mark this worker with an specific tag so dask scheduler can place specific tasks to it (https://distributed.dask.org/en/latest/resources.html)
+          max_jobs: Maximum number of jobs in the queue
+
+      min_jobs: int
+         Lower bound for the number of jobs for `self.adapt`
 
 
     Example
@@ -231,7 +209,8 @@ class SGEIdiapCluster(JobQueueCluster):
         protocol="tcp://",
         dashboard_address=":8787",
         env_extra=None,
-        sge_job_spec=Q_ALL_SPEC,
+        sge_job_spec=QUEUE_DEFAULT,
+        min_jobs=10,
         **kwargs,
     ):
 
@@ -255,7 +234,7 @@ class SGEIdiapCluster(JobQueueCluster):
         self.env_extra = env_extra + ["export PYTHONPATH=" + ":".join(sys.path)]
 
         scheduler = {
-            "cls": SchedulerIdiap,  # Use local scheduler for now
+            "cls": SchedulerResourceRestriction,  # Use local scheduler for now
             "options": {
                 "protocol": self.protocol,
                 "interface": interface,
@@ -279,6 +258,16 @@ class SGEIdiapCluster(JobQueueCluster):
             asynchronous=asynchronous,
             name=name,
         )
+
+        max_jobs = get_max_jobs(sge_job_spec)
+        self.scale(min_jobs)
+        # Adapting to minimim 1 job to maximum 48 jobs
+        # interval: Milliseconds between checks from the scheduler
+        # wait_count: Number of consecutive times that a worker should be suggested for
+        #             removal before we remove it.
+        #             Here the goal is to wait 2 minutes before scaling down since
+        #             it is very expensive to get jobs on the SGE grid
+        self.adapt(minimum=min_jobs, maximum=max_jobs, wait_count=60, interval=1000)
 
     def _get_worker_spec_options(self, job_spec):
         """
@@ -358,11 +347,10 @@ class SGEIdiapCluster(JobQueueCluster):
         await super().scale_down(workers)
 
     def adapt(self, *args, **kwargs):
-        super().adapt(*args, Adaptive=AdaptiveIdiap, **kwargs)
+        super().adapt(*args, Adaptive=AdaptiveMultipleQueue, **kwargs)
 
 
-
-class AdaptiveIdiap(Adaptive):
+class AdaptiveMultipleQueue(Adaptive):
     """
     Custom mechanism to adaptively allocate workers based on scheduler load
     
@@ -451,8 +439,7 @@ class AdaptiveIdiap(Adaptive):
         await super().scale_down(workers)
 
 
-
-class SchedulerIdiap(Scheduler):
+class SchedulerResourceRestriction(Scheduler):
     """
     Idiap extended distributed scheduler
 
@@ -462,7 +449,7 @@ class SchedulerIdiap(Scheduler):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SchedulerIdiap, self).__init__(*args, **kwargs)
+        super(SchedulerResourceRestriction, self).__init__(*args, **kwargs)
         self.handlers[
             "get_no_worker_tasks_resource_restrictions"
         ] = self.get_no_worker_tasks_resource_restrictions
@@ -480,4 +467,4 @@ class SchedulerIdiap(Scheduler):
             ):
                 resource_restrictions.append(self.tasks[k].resource_restrictions)
 
-        return resource_restrictions        
+        return resource_restrictions

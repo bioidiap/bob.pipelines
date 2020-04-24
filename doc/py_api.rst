@@ -19,7 +19,6 @@ Idiap SGE Support
 -----------------
 
 .. automodule:: bob.pipelines.distributed.sge
-.. automodule:: bob.pipelines.distributed.local
 
 Transformers
 ------------
