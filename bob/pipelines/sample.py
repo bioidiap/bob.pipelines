@@ -7,7 +7,11 @@ def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self
     """
     s.__dict__.update(
-        dict([k, v] for k, v in d.items() if k not in ("data", "load", "samples"))
+        dict(
+            (k, v)
+            for k, v in d.items()
+            if k not in ("data", "load", "samples", "_data")
+        )
     )
 
 
@@ -40,11 +44,14 @@ class DelayedSample:
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
+        self._data = None
 
     @property
     def data(self):
         """Loads the data from the disk file"""
-        return self.load()
+        if self._data is None:
+            self._data = self.load()
+        return self._data
 
 
 class Sample:
@@ -72,7 +79,6 @@ class Sample:
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
-
 
 
 class SampleSet(MutableSequence):

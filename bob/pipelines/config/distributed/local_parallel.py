@@ -1,6 +1,7 @@
 from dask.distributed import Client, LocalCluster
+from multiprocessing import cpu_count
 
-n_nodes = 4
+n_nodes = cpu_count()
 threads_per_worker = 1
 
 cluster = LocalCluster(

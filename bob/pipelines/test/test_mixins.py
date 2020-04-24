@@ -11,7 +11,7 @@ from bob.pipelines.mixins import (
     CheckpointMixin,
     CheckpointSampleFunctionTransformer,
     NonPicklableMixin,
-    DaskEstimatorMixin,
+    DaskMixin,
     DaskBagMixin,
     mix_me_up,
     estimator_dask_it,
