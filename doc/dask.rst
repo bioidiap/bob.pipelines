@@ -76,10 +76,9 @@ The snippet below shows how to deploy the exact same pipeline from the previous 
 
 .. code:: python
 
-   >>> from bob.pipelines.distributed.sge import SGEIdiapCluster
+   >>> from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
    >>> from dask.distributed import Client
-   >>> cluster = SGEIdiapCluster() # Creates the SGE launcher that launches jobs in the q_all
-   >>> cluster.scale(10) # Submite 10 jobs in q_all
+   >>> cluster = SGEMultipleQueuesCluster() # Creates the SGE launcher that launches jobs in the q_1day   
    >>> client = Client(cluster) # Creates the scheduler and attaching it to the SGE job queue system
    >>> dask_pipeline.fit_transform(....).compute(scheduler=client) # Runs my graph in the Idiap SGE
 
@@ -92,7 +91,7 @@ Dask provides generic :doc:`deployment <dask-jobqueue:examples>` mechanism for S
 
   2. As a result of 1., the mechanism of :doc:`adaptive deployment <dask:setup/adaptive>` is not able to handle job submissions of two or more queues.
 
-For this reason the generic SGE laucher was extended to this one :py:class:`bob.pipelines.distributed.sge.SGEIdiapCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.   
+For this reason the generic SGE laucher was extended to this one :py:class:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.   
 
 
 Launching jobs in different SGE queues
@@ -114,6 +113,7 @@ SGE queue specs are defined in python dictionary as in the example below, where,
     ...             "memory": "8GB",
     ...             "io_big": True,
     ...             "resource_spec": "",
+    ...             "max_jobs": 48,
     ...             "resources": "",
     ...         },
     ...         "gpu": {
@@ -121,6 +121,7 @@ SGE queue specs are defined in python dictionary as in the example below, where,
     ...             "memory": "12GB",
     ...             "io_big": False,
     ...             "resource_spec": "",
+    ...             "max_jobs": 48,
     ...             "resources": {"GPU":1},
     ...         },
     ...     }
@@ -130,11 +131,9 @@ Now that the queue specifications are set, let's trigger some jobs.
 
 .. code:: python
    
-   >>> from bob.pipelines.distributed.sge import SGEIdiapCluster
+   >>> from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
    >>> from dask.distributed import Client
-   >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
-   >>> cluster.scale(1, sge_job_spec_key="gpu") # Submitting 1 job in the q_gpu queue
-   >>> cluster.scale(10) # Submitting 9 jobs in the q_1day queue
+   >>> cluster = SGEMultipleQueuesCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
    >>> client = Client(cluster) # Creating the scheduler
 
 .. note::
@@ -167,7 +166,7 @@ Every time` cluster.scale` is executed to increase the amount of available SGE j
 Note that in `MyBoostedFitTransformer.fit` a delay of `120s`was introduced to fake "processing" in the GPU queue.
 During the execution of `MyBoostedFitTransformer.fit` in `q_gpu`, other resources are idle, which is a waste of resources (imagined a CNN training of 2 days instead of the 2 minutes from our example).
 
-For this reason there's the method adapt in :py:class:`bob.pipelines.distributed.sge.SGEIdiapCluster` that will adjust the SGE jobs available according to the needs of a :doc:`dask graph <graphs>`.
+For this reason there's the method adapt in :py:class:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster` that will adjust the SGE jobs available according to the needs of a :doc:`dask graph <graphs>`.
 
 Its usage is pretty simple.
 The code below determines that to run a :doc:`dask graph <graphs>`, the :py:class`distributed.scheduler.Scheduler` can demand a maximum of 10 SGE jobs. A lower bound was also set, in this case, two SGE jobs.
