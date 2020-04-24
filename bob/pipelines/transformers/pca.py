@@ -1,23 +1,16 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-# @author: Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
-
-
-from bob.pipelines.mixins import CheckpointMixin, SampleMixin
 from sklearn.decomposition import PCA
+from ..wrappers import wrap
 
 
-class SamplePCA(SampleMixin, PCA):
+def SamplePCA(**kwargs):
     """
-    Enables SAMPLE handling for https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    Enables SAMPLE handling for :any:`sklearn.decomposition.PCA`
     """
+    return wrap([PCA, "sample"], **kwargs)
 
-    pass
 
-
-class CheckpointSamplePCA(CheckpointMixin, SampleMixin, PCA):
+def CheckpointSamplePCA(**kwargs):
     """
-    Enables SAMPLE and CHECKPOINTIN handling for https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    Enables SAMPLE and CHECKPOINTIN handling for :any:`sklearn.decomposition.PCA`
     """
-
-    pass
+    return wrap([PCA, "sample", "checkpoint"], **kwargs)

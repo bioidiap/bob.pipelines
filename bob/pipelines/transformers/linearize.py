@@ -1,11 +1,6 @@
-#!/usr/bin/env python
-# vim: set fileencoding=utf-8 :
-# @author: Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
-
-
-from bob.pipelines.mixins import CheckpointMixin, SampleMixin
 from sklearn.preprocessing import FunctionTransformer
 import numpy as np
+from ..wrappers import wrap
 
 
 def linearize(X):
@@ -16,14 +11,13 @@ def linearize(X):
 class Linearize(FunctionTransformer):
     """Extracts features by simply concatenating all elements of the data into one long vector.
     """
-
     def __init__(self, **kwargs):
         super().__init__(func=linearize, **kwargs)
 
 
-class SampleLinearize(SampleMixin, Linearize):
-    pass
+def SampleLinearize(**kwargs):
+    return wrap([Linearize, "sample"], **kwargs)
 
 
-class CheckpointSampleLinearize(CheckpointMixin, SampleMixin, Linearize):
-    pass
+def CheckpointSampleLinearize(**kwargs):
+    return wrap([Linearize, "sample", "checkpoint"], **kwargs)

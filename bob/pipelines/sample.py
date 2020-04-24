@@ -1,6 +1,6 @@
-from collections.abc import MutableSequence
-
 """Base definition of sample"""
+
+from collections.abc import MutableSequence
 
 
 def _copy_attributes(s, d):
@@ -15,7 +15,43 @@ def _copy_attributes(s, d):
     )
 
 
-class DelayedSample:
+class _ReprMixin:
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            + ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+            + ")"
+        )
+
+
+class Sample(_ReprMixin):
+    """Representation of sample that is sufficient for the blocks in this module
+
+    Each sample must have the following attributes:
+
+        * attribute ``data``: Contains the data for this sample
+
+
+    Parameters
+    ----------
+
+        data : object
+            Object representing the data to initialize this sample with.
+
+        parent : object
+            A parent object from which to inherit all other attributes (except
+            ``data``)
+
+    """
+
+    def __init__(self, data, parent=None, **kwargs):
+        self.data = data
+        if parent is not None:
+            _copy_attributes(self, parent.__dict__)
+        _copy_attributes(self, kwargs)
+
+
+class DelayedSample(_ReprMixin):
     """Representation of sample that can be loaded via a callable
 
     The optional ``**kwargs`` argument allows you to attach more attributes to
@@ -54,34 +90,7 @@ class DelayedSample:
         return self._data
 
 
-class Sample:
-    """Representation of sample that is sufficient for the blocks in this module
-
-    Each sample must have the following attributes:
-
-        * attribute ``data``: Contains the data for this sample
-
-
-    Parameters
-    ----------
-
-        data : object
-            Object representing the data to initialize this sample with.
-
-        parent : object
-            A parent object from which to inherit all other attributes (except
-            ``data``)
-
-    """
-
-    def __init__(self, data, parent=None, **kwargs):
-        self.data = data
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
-
-
-class SampleSet(MutableSequence):
+class SampleSet(MutableSequence, _ReprMixin):
     """A set of samples with extra attributes
     https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes
     """

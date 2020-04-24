@@ -2,25 +2,15 @@ import numpy as np
 import os
 import tempfile
 import shutil
-import dask.bag
 
-from bob.pipelines.sample import Sample, SampleSet, DelayedSample
-from bob.pipelines.mixins import (
-    SampleMixin,
-    SampleFunctionTransformer,
-    CheckpointMixin,
-    CheckpointSampleFunctionTransformer,
-    NonPicklableMixin,
-    DaskMixin,
-    DaskBagMixin,
-    mix_me_up,
-    estimator_dask_it,
-)
-from bob.pipelines.mixins import _is_estimator_stateless
 from sklearn.base import TransformerMixin, BaseEstimator
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
+
+# import skpipes as skp
+import bob.pipelines as skp
 
 
 def _offset_add_func(X, offset=1):
@@ -58,8 +48,10 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
     """See https://scikit-learn.org/stable/developers/develop.html and
     https://github.com/scikit-learn-contrib/project-template/blob/master/skltemplate/_template.py"""
 
-    def __init__(self, picklable=True, **kwargs):
+    def __init__(self, picklable=True, i=None, **kwargs):
         super().__init__(**kwargs)
+        self.picklable = picklable
+        self.i = i
 
         if not picklable:
             import bob.core
@@ -76,6 +68,9 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
         # Check that the input is of the same shape as the one passed
         # during fit.
         return _offset_add_func(X)
+
+    def _more_tags(self):
+        return {"stateless": True, "requires_fit": False}
 
 
 def _assert_all_close_numpy_array(oracle, result):
@@ -94,10 +89,13 @@ def test_sklearn_compatible_estimator():
 def test_function_sample_transfomer():
 
     X = np.zeros(shape=(10, 2), dtype=int)
-    samples = [Sample(data) for data in X]
+    samples = [skp.Sample(data) for data in X]
 
-    transformer = SampleFunctionTransformer(
-        func=_offset_add_func, kw_args=dict(offset=3), validate=True
+    transformer = skp.wrap(
+        [FunctionTransformer, "sample"],
+        func=_offset_add_func,
+        kw_args=dict(offset=3),
+        validate=True,
     )
 
     features = transformer.transform(samples)
@@ -110,10 +108,10 @@ def test_function_sample_transfomer():
 def test_fittable_sample_transformer():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data) for data in X]
+    samples = [skp.Sample(data) for data in X]
 
     # Mixing up with an object
-    transformer = mix_me_up([SampleMixin], DummyWithFit)()
+    transformer = skp.wrap([DummyWithFit, "sample"])
     features = transformer.fit(samples).transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
 
@@ -134,22 +132,24 @@ def _assert_checkpoints(features, oracle, model_path, features_dir, stateless):
 
 def _assert_delayed_samples(samples):
     for s in samples:
-        assert isinstance(s, DelayedSample)
+        assert isinstance(s, skp.DelayedSample)
 
 
 def test_checkpoint_function_sample_transfomer():
 
     X = np.arange(20, dtype=int).reshape(10, 2)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    oracle = X + 3
+    samples = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    offset = 3
+    oracle = X + offset
 
     with tempfile.TemporaryDirectory() as d:
         model_path = os.path.join(d, "model.pkl")
         features_dir = os.path.join(d, "features")
 
-        transformer = CheckpointSampleFunctionTransformer(
+        transformer = skp.wrap(
+            [FunctionTransformer, "sample", "checkpoint"],
             func=_offset_add_func,
-            kw_args=dict(offset=3),
+            kw_args=dict(offset=offset),
             validate=True,
             model_path=model_path,
             features_dir=features_dir,
@@ -167,20 +167,32 @@ def test_checkpoint_function_sample_transfomer():
         features = transformer.fit_transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, True)
 
+    # test when both model_path and features_dir is None
+    transformer = skp.wrap(
+        [FunctionTransformer, "sample", "checkpoint"],
+        func=_offset_add_func,
+        kw_args=dict(offset=offset),
+        validate=True,
+    )
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(oracle, [s.data for s in features])
+
 
 def test_checkpoint_fittable_sample_transformer():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
     oracle = X + 1
 
     with tempfile.TemporaryDirectory() as d:
         model_path = os.path.join(d, "model.pkl")
         features_dir = os.path.join(d, "features")
 
-        transformer = mix_me_up((CheckpointMixin, SampleMixin), DummyWithFit)(
-            model_path=model_path, features_dir=features_dir
+        transformer = skp.wrap(
+            [DummyWithFit, "sample", "checkpoint"],
+            model_path=model_path,
+            features_dir=features_dir,
         )
-        assert not _is_estimator_stateless(transformer)
+        assert not skp.utils.is_estimator_stateless(transformer)
         features = transformer.fit(samples).transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
@@ -200,35 +212,28 @@ def _build_estimator(path, i):
     model_path = os.path.join(base_dir, "model.pkl")
     features_dir = os.path.join(base_dir, "features")
 
-    return mix_me_up((CheckpointMixin, SampleMixin), DummyWithFit)(
-        model_path=model_path, features_dir=features_dir
+    transformer = skp.wrap(
+        [DummyWithFit, "sample", "checkpoint"],
+        model_path=model_path,
+        features_dir=features_dir,
     )
+    return transformer
 
 
-def _build_transformer(path, i, picklable=True, dask_enabled=True):
+def _build_transformer(path, i, picklable=True):
 
     features_dir = os.path.join(path, f"transformer{i}")
-    estimator_cls = mix_me_up((CheckpointMixin, SampleMixin), DummyTransformer)
-    if picklable:
-        return estimator_cls(features_dir=features_dir, picklable=picklable)
-    else:
-        import functools
-
-        if dask_enabled:
-            estimator_cls = estimator_dask_it(estimator_cls)
-
-        return NonPicklableMixin(
-            functools.partial(
-                estimator_cls, features_dir=features_dir, picklable=picklable
-            )
-        )
+    estimator = skp.wrap(
+        [DummyTransformer, "sample", "checkpoint"], i=i, features_dir=features_dir
+    )
+    return estimator
 
 
 def test_checkpoint_fittable_pipeline():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-    samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    samples = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [skp.Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
     oracle = X + 3
 
     with tempfile.TemporaryDirectory() as d:
@@ -244,7 +249,7 @@ def test_checkpoint_transform_pipeline():
     def _run(dask_enabled):
 
         X = np.ones(shape=(10, 2), dtype=int)
-        samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples_transform = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
         offset = 2
         oracle = X + offset
 
@@ -253,7 +258,7 @@ def test_checkpoint_transform_pipeline():
                 [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
             )
             if dask_enabled:
-                pipeline = estimator_dask_it(pipeline)
+                pipeline = skp.wrap(["dask"], pipeline)
                 transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler="single-threaded"
                 )
@@ -269,8 +274,10 @@ def test_checkpoint_transform_pipeline():
 def test_checkpoint_fit_transform_pipeline():
     def _run(dask_enabled):
         X = np.ones(shape=(10, 2), dtype=int)
-        samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-        samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+        samples = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples_transform = [
+            skp.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+        ]
         oracle = X + 2
 
         with tempfile.TemporaryDirectory() as d:
@@ -278,11 +285,11 @@ def test_checkpoint_fit_transform_pipeline():
             transformer = ("1", _build_transformer(d, 1))
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
-                pipeline = estimator_dask_it(pipeline, fit_tag=[(1, "GPU")])
+                pipeline = skp.wrap(["dask"], pipeline, fit_tag=[(1, "GPU")])
                 pipeline = pipeline.fit(samples)
-                tags = pipeline.dask_tags()
+                tags = skp.dask_tags(pipeline)
 
-                assert len(tags) == 1
+                assert len(tags) == 1, tags
                 transformed_samples = pipeline.transform(samples_transform)
 
                 transformed_samples = transformed_samples.compute(
@@ -301,9 +308,6 @@ def test_checkpoint_fit_transform_pipeline():
 def _get_local_client():
     from dask.distributed import Client, LocalCluster
 
-    n_nodes = 1
-    threads_per_worker = 1
-
     cluster = LocalCluster(
         nanny=False, processes=False, n_workers=1, threads_per_worker=1
     )
@@ -314,21 +318,23 @@ def _get_local_client():
 def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
     def _run(dask_enabled):
         X = np.ones(shape=(10, 2), dtype=int)
-        samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
-        samples_transform = [Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+        samples = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples_transform = [
+            skp.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+        ]
         oracle = X + 2
 
         with tempfile.TemporaryDirectory() as d:
             fitter = ("0", _build_estimator(d, 0))
             transformer = (
                 "1",
-                _build_transformer(d, 1, picklable=False, dask_enabled=dask_enabled),
+                _build_transformer(d, 1, picklable=False),
             )
 
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
                 dask_client = _get_local_client()
-                pipeline = estimator_dask_it(pipeline)
+                pipeline = skp.wrap(["dask"], pipeline)
                 pipeline = pipeline.fit(samples)
                 transformed_samples = pipeline.transform(samples_transform).compute(
                     scheduler=dask_client
@@ -345,12 +351,12 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
 
 def test_dask_checkpoint_transform_pipeline():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples_transform = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [skp.Sample(data, key=str(i)) for i, data in enumerate(X)]
     with tempfile.TemporaryDirectory() as d:
-        bag_transformer = DaskBagMixin()
-        estimator = estimator_dask_it(_build_transformer(d, 0), transform_tag="CPU")
+        bag_transformer = skp.ToDaskBag()
+        estimator = skp.wrap(["dask"], _build_transformer(d, 0), transform_tag="CPU")
         X_tr = estimator.transform(bag_transformer.transform(samples_transform))
-        assert len(estimator.dask_tags()) == 1
+        assert len(skp.dask_tags(estimator)) == 1
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
 
 
@@ -358,8 +364,8 @@ def test_checkpoint_transform_pipeline_with_sampleset():
     def _run(dask_enabled):
 
         X = np.ones(shape=(10, 2), dtype=int)
-        samples_transform = SampleSet(
-            [Sample(data, key=str(i)) for i, data in enumerate(X)], key="1"
+        samples_transform = skp.SampleSet(
+            [skp.Sample(data, key=str(i)) for i, data in enumerate(X)], key="1"
         )
         offset = 2
         oracle = X + offset
@@ -369,7 +375,7 @@ def test_checkpoint_transform_pipeline_with_sampleset():
                 [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
             )
             if dask_enabled:
-                pipeline = estimator_dask_it(pipeline)
+                pipeline = skp.wrap(["dask"], pipeline)
                 transformed_samples = pipeline.transform([samples_transform]).compute(
                     scheduler="single-threaded"
                 )
@@ -378,11 +384,7 @@ def test_checkpoint_transform_pipeline_with_sampleset():
 
             _assert_all_close_numpy_array(
                 oracle,
-                [
-                    s.data
-                    for sampleset in transformed_samples
-                    for s in sampleset.samples
-                ],
+                [s.data for sample_set in transformed_samples for s in sample_set],
             )
             assert np.all([len(s) == 10 for s in transformed_samples])
 

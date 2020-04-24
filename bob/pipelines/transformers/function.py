@@ -1,24 +1,24 @@
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.pipeline import Pipeline
-from ..mixins import SampleMixin, CheckpointMixin
+from ..wrappers import wrap
 
 
-class SampleFunctionTransformer(SampleMixin, FunctionTransformer):
+def SampleFunctionTransformer(**kwargs):
     """Class that transforms Scikit learn FunctionTransformer
     (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
     work with :any:`Sample`-based pipelines.
     """
+    return wrap([FunctionTransformer, "sample"], **kwargs)
 
 
-class CheckpointSampleFunctionTransformer(
-    CheckpointMixin, SampleMixin, FunctionTransformer
-):
+def CheckpointSampleFunctionTransformer(**kwargs):
     """Class that transforms Scikit learn FunctionTransformer
     (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
     work with :any:`Sample`-based pipelines.
 
     Furthermore, it makes it checkpointable
     """
+    return wrap([FunctionTransformer, "sample", "checkpoint"], **kwargs)
 
 
 class StatelessPipeline(Pipeline):
