@@ -6,7 +6,7 @@
  Bob Pipelines
 ===============
 
-Easilly boost your :doc:`Scikit Learn Pipelines <modules/generated/sklearn.pipeline.Pipeline>` with powerfull features, such as:
+Easily boost your :doc:`Scikit Learn Pipelines <modules/generated/sklearn.pipeline.Pipeline>` with powerful features, such as:
 
 
 
@@ -21,7 +21,7 @@ Easilly boost your :doc:`Scikit Learn Pipelines <modules/generated/sklearn.pipel
    :align: center
 
    Wrap datapoints with metadata and pass them to the `estimator.fit` and `estimator.transform` methods
-    
+
 .. figure:: img/checkpoint.png
    :width: 40%
    :align: center

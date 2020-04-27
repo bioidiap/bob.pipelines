@@ -110,10 +110,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(
-                        method, sset.samples, self.transform_extra_arguments
-                    ),
-                    parent=sset,
+                    self._samples_transform(sset.samples, method_name), parent=sset,
                 )
                 for sset in samples
             ]

@@ -1,23 +1,25 @@
-.. _checkpoint:
+.. _bob.pipelines.checkpoint:
 
 =======================
 Checkpointing Samples
 =======================
 
-Mechanism that allows checkpointing of :py:class:`bob.pipelines.sample.Sample` during the processing of :py:class:`sklearn.pipeline.Pipeline` using `HDF5 <https://www.hdfgroup.org/solutions/hdf5/>`_ files.
+Here, we detail a mechanism that allows saving of :any:`bob.pipelines.Sample`s
+during the processing of estimators into the disk.
 
-Very often during the processing of :py:class:`sklearn.pipeline.Pipeline` with big chunks of data is useful to have checkpoints of some steps of the pipeline into the disk.
-This is useful for several purposes:
+Very often during the processing of :any:`sklearn.pipeline.Pipeline` with big chunks of
+data is useful to have checkpoints of some steps of the pipeline into the disk. This is
+useful for several purposes:
 
    - Reuse samples that are expensive to be re-computed
 
-   - Inspection of algorithms  
+   - Inspection of algorithms
 
 
-Scikit learn has a caching mechanism that allows the caching of `estimators <https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline>`_ that can be used for such purpose.
-Althought useful, such structure is not user friendly.
+Scikit-learn has a caching mechanism that allows the caching of `estimators <https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline>`_ that can be used for such purpose.
+Although useful, such structure is not user friendly.
 
-As in :ref:`sample`, this can be approached with the :py:class:`bob.pipelines.mixins.CheckpointMixin` mixin, where a new class can be created either dynamically with the :py:func:`bob.pipelines.mixins.mix_me_up` function:
+As in :ref:`bob.pipelines.sample`, this can be approached with the :any:`bob.pipelines.mixins.CheckpointMixin` mixin, where a new class can be created either dynamically with the :py:func:`bob.pipelines.mixins.mix_me_up` function:
 
 .. code:: python
 
@@ -36,7 +38,7 @@ or explicitly:
 Checkpointing a transformer
 ---------------------------
 
-The code below is a repetition of the example from :ref:`sample`, but now `MyTransformer` is checkpointable once `MyTransformer.transform` is executed.
+The code below is a repetition of the example from :ref:`bob.pipelines.sample`, but now `MyTransformer` is checkpointable once `MyTransformer.transform` is executed.
 
 .. literalinclude:: ./python/pipeline_example_boosted_checkpoint.py
    :linenos:
@@ -45,7 +47,7 @@ The code below is a repetition of the example from :ref:`sample`, but now `MyTra
 
 .. warning::
 
-    In line 28, samples are created with the keyword argument, `key`. The :py:class:`bob.pipelines.mixins.CheckpointMixin` uses this information for saving.
+    In line 28, samples are created with the keyword argument, `key`. The :any:`bob.pipelines.mixins.CheckpointMixin` uses this information for saving.
 
 
 The keyword argument `features_dir` defined in lines 34 and 38 sets the absolute path where those samples will be saved

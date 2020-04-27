@@ -1,7 +1,7 @@
 import nose
 import numpy as np
 import os
-import bob.pipelines as skblocks
+import bob.pipelines as mario
 from tempfile import NamedTemporaryFile
 
 
@@ -50,7 +50,7 @@ def test_io_vstack():
         reader_same_size_C2,
         reader_same_size_F2,
     ]:
-        np.all(skblocks.utils.vstack_features(reader, paths) == oracle(reader, paths))
+        np.all(mario.utils.vstack_features(reader, paths) == oracle(reader, paths))
 
     # when same_size is True
     for reader in [
@@ -60,11 +60,11 @@ def test_io_vstack():
         reader_same_size_F2,
     ]:
         np.all(
-            skblocks.utils.vstack_features(reader, paths, True) == oracle(reader, paths)
+            mario.utils.vstack_features(reader, paths, True) == oracle(reader, paths)
         )
 
     with nose.tools.assert_raises(AssertionError):
-        skblocks.utils.vstack_features(reader_wrong_size, paths)
+        mario.utils.vstack_features(reader_wrong_size, paths)
 
     # test actual files
     suffix = ".npy"
@@ -88,12 +88,12 @@ def test_io_vstack():
                 np.save(path, reader(i + 1), allow_pickle=False)
             # test when all data is present
             reference = oracle(np.load, paths)
-            np.all(skblocks.utils.vstack_features(np.load, paths) == reference)
+            np.all(mario.utils.vstack_features(np.load, paths) == reference)
             try:
                 os.remove(paths[0])
                 # Check if RuntimeError is raised when one of the files is missing
                 with nose.tools.assert_raises(FileNotFoundError):
-                    skblocks.utils.vstack_features(np.load, paths)
+                    mario.utils.vstack_features(np.load, paths)
             finally:
                 # create the file back so NamedTemporaryFile does not complain
                 np.save(paths[0], reader(i + 1))
