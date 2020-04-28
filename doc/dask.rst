@@ -1,4 +1,4 @@
-.. _dask:
+.. _bob.pipelines.dask:
 
 ========================================
  Dask: Scale your scikit.learn pipelines
@@ -12,7 +12,7 @@ Moreover, there are plenty of tutorials online.
 For instance, `this official one <https://github.com/dask/dask-tutorial>`_; a nice overview was presented in `AnacondaCon 2018 <https://www.youtube.com/watch?v=tQBovBvSDvA>`_ and there's even one crafted for `Idiap <https://github.com/tiagofrepereira2012/tam-dask>`_.
 
 The purpose of this guide is to describe:
- 
+
     1. The integration of dask with scikit learn pipelines and samples
     2. The specificities of `Dask` under the Idiap SGE
 
@@ -67,9 +67,9 @@ This is achieved via :doc:`Dask-Jobqueue <dask-jobqueue:index>`.
 Below follow a nice video explaining what is the :doc:`Dask-Jobqueue <dask-jobqueue:index>`, some of its features and how to use it to run :doc:`dask graphs <graphs>`.
 
  .. raw:: html
-     
+
      <iframe width="560" height="315" src="https://www.youtube.com/embed/FXsgmwpRExM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-     
+
 
 The snippet below shows how to deploy the exact same pipeline from the previous section in the Idiap SGE cluster
 
@@ -78,7 +78,7 @@ The snippet below shows how to deploy the exact same pipeline from the previous 
 
    >>> from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
    >>> from dask.distributed import Client
-   >>> cluster = SGEMultipleQueuesCluster() # Creates the SGE launcher that launches jobs in the q_1day   
+   >>> cluster = SGEMultipleQueuesCluster() # Creates the SGE launcher that launches jobs in the q_1day
    >>> client = Client(cluster) # Creates the scheduler and attaching it to the SGE job queue system
    >>> dask_pipeline.fit_transform(....).compute(scheduler=client) # Runs my graph in the Idiap SGE
 
@@ -91,7 +91,7 @@ Dask provides generic :doc:`deployment <dask-jobqueue:examples>` mechanism for S
 
   2. As a result of 1., the mechanism of :doc:`adaptive deployment <dask:setup/adaptive>` is not able to handle job submissions of two or more queues.
 
-For this reason the generic SGE laucher was extended to this one :py:class:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.   
+For this reason the generic SGE laucher was extended to this one :py:class:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.
 
 
 Launching jobs in different SGE queues
@@ -130,7 +130,7 @@ SGE queue specs are defined in python dictionary as in the example below, where,
 Now that the queue specifications are set, let's trigger some jobs.
 
 .. code:: python
-   
+
    >>> from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
    >>> from dask.distributed import Client
    >>> cluster = SGEMultipleQueuesCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
@@ -144,7 +144,7 @@ Now that the queue specifications are set, let's trigger some jobs.
 
 
 
-Running estimator operations in specific SGE queues 
+Running estimator operations in specific SGE queues
 ===================================================
 
 Sometimes it's necessary to run parts of a :doc:`pipeline <modules/generated/sklearn.pipeline.Pipeline>`  in specific SGE queues (e.g. q_1day IO_BIG or q_gpu).

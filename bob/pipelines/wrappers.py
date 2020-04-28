@@ -263,7 +263,13 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         if self.features_dir is None:
             return None
 
-        return os.path.join(self.features_dir, str(sample.key) + self.extension)
+        key = str(sample.key)
+        if key.startswith(os.sep) or ".." in key:
+            raise ValueError(
+                "Sample.key values should be relative paths with no "
+                f"reference to upper folders. Got: {key}"
+            )
+        return os.path.join(self.features_dir, key + self.extension)
 
     def save(self, sample):
         path = self.make_path(sample)
