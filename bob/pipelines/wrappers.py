@@ -28,6 +28,8 @@ def _frmt(estimator, limit=40):
 
 
 class BaseWrapper(BaseEstimator):
+    """The base class for all wrappers"""
+
     def _more_tags(self):
         return self.estimator._more_tags()
 
@@ -75,7 +77,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
     Attributes
     ----------
-    fit_extra_arguments : [tuple], optional
+    fit_extra_arguments : [tuple]
         Use this option if you want to pass extra arguments to the fit method of the
         mixed instance. The format is a list of two value tuples. The first value in
         tuples is the name of the argument that fit accepts, like ``y``, and the second
@@ -83,7 +85,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         passing samples to the fit method and want to pass ``subject`` attributes of
         samples as the ``y`` argument to the fit method, you can provide ``[("y",
         "subject")]`` as the value for this attribute.
-    transform_extra_arguments : [tuple], optional
+    transform_extra_arguments : [tuple]
         Similar to ``fit_extra_arguments`` but for the transform and other similar methods.
     """
 
@@ -379,22 +381,19 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
 
 class ToDaskBag(TransformerMixin, BaseEstimator):
-    """Transform an arbitrary iterator into a :py:class:`dask.bag`
-
-    Paramters
-    ---------
-
-      npartitions: int
-        Number of partitions used in :py:meth:`dask.bag.from_sequence`
-
+    """Transform an arbitrary iterator into a :any:`dask.bag.Bag`
 
     Example
     -------
-
-    >>> transformer = DaskBagMixin()
+    >>> import bob.pipelines as mario
+    >>> transformer = mario.ToDaskBag()
     >>> dask_bag = transformer.transform([1,2,3])
-    >>> dask_bag.map_partitions.....
+    >>> # dask_bag.map_partitions(...)
 
+    Attributes
+    ----------
+    npartitions : int
+        Number of partitions used in :any:`dask.bag.from_sequence`
     """
 
     def __init__(self, npartitions=None, **kwargs):
@@ -422,7 +421,7 @@ def wrap(bases, estimator=None, **kwargs):
     ----------
     bases : list
         A list of classes to be used
-    estimator : None, optional
+    estimator : :any:`object`, optional
         An initial estimator to be wrapped inside other wrappers. If None, the first class will be used to initialize the estimator.
     **kwargs
         Extra parameters passed to the init of classes.

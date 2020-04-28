@@ -136,3 +136,86 @@ checkpoint exists.
    ...    # call .fit again. This time it should not print anything
    ...    __ = checkpointing_transformer.fit(samples)
    Fit was called!
+
+
+.. _bob.pipelines.wrap:
+
+Convenience wrapper function
+----------------------------
+
+We provide a :any:`wrap` function to wrap estimators in several layers easily. So far we
+learned that we need to wrap our estimators with :any:`SampleWrapper` and
+:any:`CheckpointWrapper`. There is also a Dask wrapper: :any:`DaskWrapper` which you'll
+learn about in :ref:`bob.pipelines.dask`. Below, is an example on how to use it.
+Instead of:
+
+.. doctest::
+
+   >>> transformer = MyTransformer()
+
+   >>> transform_extra_arguments=[("sample_specific_offsets", "offset")]
+   >>> transformer = mario.SampleWrapper(transformer, transform_extra_arguments)
+
+   >>> transformer = mario.CheckpointWrapper(
+   ...     transformer, features_dir="features", model_path="model.pkl")
+
+   >>> transformer = mario.DaskWrapper(transformer)
+
+You can write:
+
+.. doctest::
+
+   >>> transformer = mario.wrap(
+   ...     [MyTransformer, "sample", "checkpoint", "dask"],
+   ...     transform_extra_arguments=transform_extra_arguments,
+   ...     features_dir="features",
+   ...     model_path="model.pkl",
+   ... )
+   >>> # or if your estimator is already created.
+   >>> transformer = mario.wrap(
+   ...     ["sample", "checkpoint", "dask"],
+   ...     MyTransformer(),
+   ...     transform_extra_arguments=transform_extra_arguments,
+   ...     features_dir="features",
+   ...     model_path="model.pkl",
+   ... )
+
+Much simpler, no? Internally ``"sample"`` string will be replaced by
+:any:`SampleWrapper`. You provide a list of classes to wrap as the first argument,
+optionally provide an estimator to be wrapped as the second argument. If the second
+argument is missing, the first class will be used to create the estimator. Then, you
+provide the ``__init__`` parameters of all classes as kwargs.
+Internally, :any:`wrap` will pass kwargs to classes that accept it.
+
+.. note::
+
+   :any:`wrap` is a convenience function but it might be limited in what it can do. You
+   can always use the wrapper classes directly.
+
+:any:`wrap` recognizes :any:`sklearn.pipeline.Pipeline` objects and when pipelines are
+passed, it wraps the steps inside them instead. For example, instead of:
+
+.. doctest::
+
+   >>> transformer1 = mario.wrap(
+   ...     [MyTransformer, "sample"],
+   ...     transform_extra_arguments=transform_extra_arguments,
+   ... )
+   >>> transformer2 = mario.wrap(
+   ...     [MyTransformer, "sample"],
+   ...     transform_extra_arguments=transform_extra_arguments,
+   ... )
+   >>> from sklearn.pipeline import make_pipeline
+   >>> pipeline = make_pipeline(transformer1, transformer2)
+
+you can write:
+
+.. doctest::
+
+   >>> pipeline = make_pipeline(MyTransformer(), MyTransformer())
+   >>> pipeline = mario.wrap(["sample"], pipeline, transform_extra_arguments=transform_extra_arguments)
+
+It will pass ``transform_extra_arguments`` to all steps when wrapping them with the
+:any:`SampleWrapper`. You cannot pass specific arguments to one of the steps. Wrapping
+pipelines with :any:`wrap`, while limited, becomes useful when we are wrapping them
+with Dask as we will see in :ref:`bob.pipelines.dask`.

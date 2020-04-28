@@ -11,6 +11,7 @@ def linearize(X):
 class Linearize(FunctionTransformer):
     """Extracts features by simply concatenating all elements of the data into one long vector.
     """
+
     def __init__(self, **kwargs):
         super().__init__(func=linearize, **kwargs)
 

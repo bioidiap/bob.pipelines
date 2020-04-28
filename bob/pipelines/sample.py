@@ -65,7 +65,7 @@ class DelayedSample(_ReprMixin):
             A python function that can be called parameterlessly, to load the
             sample in question from whatever medium
 
-        parent : :py:class:`bob.pipelines.sample.DelayedSample`, :py:class:`bob.pipelines.sample.Sample`, None
+        parent : :any:`DelayedSample`, :any:`Sample`, None
             If passed, consider this as a parent of this sample, to copy
             information
 

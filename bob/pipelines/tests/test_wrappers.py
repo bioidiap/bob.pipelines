@@ -232,7 +232,9 @@ def test_checkpoint_fittable_pipeline():
 
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
-    samples_transform = [mario.Sample(data, key=str(i + 10)) for i, data in enumerate(X)]
+    samples_transform = [
+        mario.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+    ]
     oracle = X + 3
 
     with tempfile.TemporaryDirectory() as d:
