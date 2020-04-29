@@ -414,8 +414,6 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
 def wrap(bases, estimator=None, **kwargs):
     """Wraps several estimators inside each other.
 
-    Example
-    -------
 
     Parameters
     ----------
