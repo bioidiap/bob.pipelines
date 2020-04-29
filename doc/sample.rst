@@ -186,9 +186,8 @@ transparently:
 .. note::
 
    Actually, :any:`SampleWrapper` always returns
-   :any:`DelayedSample`'s. This becomes useful when the data in returned
-   samples are not used which we will see that happen in :ref:`bob.pipelines.checkpoint`.
-
+   :any:`DelayedSample`'s. This becomes useful when the data returned
+   is not used. We will see that happening in :ref:`bob.pipelines.checkpoint`.
 
 Sample Set
 ----------
