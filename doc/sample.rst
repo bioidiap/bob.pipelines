@@ -14,7 +14,7 @@ To support scikit-learn based estimators with such requirement task, this packag
 What is a Sample ?
 ------------------
 
-A :any:`Sample` is simple container that wraps a data-point.
+A :any:`Sample` is a simple container that wraps a data-point.
 The example below shows how this can be used to wrap a :any:`numpy.array`.
 
 .. doctest::
