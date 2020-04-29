@@ -3,52 +3,6 @@ import nose
 import numpy as np
 
 
-class NonPicklableMixin:
-    """Class that wraps objects that are not picklable
-
-    Example
-    -------
-        >>> from bob.pipelines.processor import NonPicklableMixin
-        >>> wrapper = NonPicklableMixin(my_non_picklable_class_callable)
-
-    Example
-    -------
-        >>> from bob.pipelines.processor import NonPicklableMixin
-        >>> import functools
-        >>> wrapper = NonPicklableMixin(functools.partial(MyNonPicklableClass, arg1, arg2))
-
-
-    Parameters
-    ----------
-      callable: callable
-         Calleble function that instantiates the non-pickalbe function
-    """
-
-    def __init__(self, callable, **kwargs):
-        super().__init__(**kwargs)
-        self.callable = callable
-        self._instance = None
-
-    @property
-    def instance(self):
-        if self._instance is None:
-            self._instance = self.callable()
-        return self._instance
-
-    def __getstate__(self):
-        d = dict(self.__dict__)
-        d.pop("_instance")
-        d["_NonPicklableMixin_instance_was_None"] = self._instance is None
-        return d
-
-    def __setstate__(self, d):
-        instance_was_None = d.pop("_NonPicklableMixin_instance_was_None")
-        self.__dict__ = d
-        self._instance = None
-        if not instance_was_None:
-            # access self.instance to create the instance
-            self.instance
-
 
 def is_picklable(obj):
     """
