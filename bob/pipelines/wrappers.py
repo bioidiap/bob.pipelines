@@ -1,4 +1,4 @@
-"""Scikit-learn Estimator Wrappers"""
+"""Scikit-learn Estimator Wrappers."""
 from .sample import DelayedSample, SampleSet
 from .utils import is_estimator_stateless, samples_to_np_array
 import dask.bag
@@ -28,7 +28,7 @@ def _frmt(estimator, limit=40):
 
 
 class BaseWrapper(BaseEstimator):
-    """The base class for all wrappers"""
+    """The base class for all wrappers."""
 
     def _more_tags(self):
         return self.estimator._more_tags()
@@ -66,7 +66,8 @@ class DelayedSamplesCall:
 
 
 class SampleWrapper(BaseWrapper, TransformerMixin):
-    """Wraps scikit-learn estimators to work with :any:`Sample`-based pipelines.
+    """Wraps scikit-learn estimators to work with :any:`Sample`-based
+    pipelines.
 
     Do not use this class except for scikit-learn estimators.
 
@@ -164,7 +165,8 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
 
 class CheckpointWrapper(BaseWrapper, TransformerMixin):
-    """Wraps :any:`Sample`-based estimators so the results are saved in disk."""
+    """Wraps :any:`Sample`-based estimators so the results are saved in
+    disk."""
 
     def __init__(
         self,
@@ -303,7 +305,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
 
 class DaskWrapper(BaseWrapper, TransformerMixin):
-    """Wraps Scikit estimators to handle Dask Bags as input
+    """Wraps Scikit estimators to handle Dask Bags as input.
 
     Parameters
     ----------
@@ -319,7 +321,6 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
            a future delayed(self.transform).compute(resources=resource_tape) so
            dask scheduler can place this task in a particular resource
            (e.g GPU)
-
     """
 
     def __init__(
@@ -414,7 +415,6 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
 def wrap(bases, estimator=None, **kwargs):
     """Wraps several estimators inside each other.
 
-
     Parameters
     ----------
     bases : list
@@ -480,9 +480,7 @@ def wrap(bases, estimator=None, **kwargs):
 
 
 def dask_tags(estimator):
-    """
-    Recursively collects resource_tags in dasked estimators
-    """
+    """Recursively collects resource_tags in dasked estimators."""
     tags = {}
 
     if hasattr(estimator, "estimator"):

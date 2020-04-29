@@ -21,15 +21,13 @@ from .sge_queues import QUEUE_DEFAULT
 
 
 class SGEIdiapJob(Job):
-    """
-    Launches a SGE Job in the IDIAP cluster.
-    This class basically encodes the CLI command that bootstrap the worker 
-    in a SGE job. Check here `https://distributed.dask.org/en/latest/resources.html#worker-resources` for more information
-    
+    """Launches a SGE Job in the IDIAP cluster. This class basically encodes
+    the CLI command that bootstrap the worker in a SGE job. Check here
+    `https://distributed.dask.org/en/latest/resources.html#worker-resources`
+    for more information.
+
     ..note: This is class is temporary. It's basically a copy from SGEJob from dask_jobqueue.
             The difference is that here I'm also handling the dask job resources tag (which is not handled anywhere). This has to be patched in the Job class. Please follow here `https://github.com/dask/dask-jobqueue/issues/378` to get news about this patch
-           
-
     """
 
     submit_command = "qsub"
@@ -101,9 +99,7 @@ class SGEIdiapJob(Job):
 
 
 def get_max_jobs(queue_dict):
-    """
-    Given a queue list, get the max number of possible jobs
-    """
+    """Given a queue list, get the max number of possible jobs."""
 
     return max(
         [queue_dict[r]["max_jobs"] for r in queue_dict if "max_jobs" in queue_dict[r]]
@@ -111,7 +107,8 @@ def get_max_jobs(queue_dict):
 
 
 class SGEMultipleQueuesCluster(JobQueueCluster):
-    """ Launch Dask jobs in the SGE cluster allowing the request of multiple queus
+    """Launch Dask jobs in the SGE cluster allowing the request of multiple
+    queus.
 
     Parameters
     ----------
@@ -199,8 +196,6 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
     >>> cluster = SGEIdiapCluster(sge_job_spec=Q_1DAY_GPU_SPEC)  # doctest: +SKIP
     >>> cluster.adapt(Adaptive=AdaptiveIdiap,minimum=2, maximum=10) # doctest: +SKIP
     >>> client = Client(cluster)     # doctest: +SKIP
-
-
     """
 
     def __init__(
@@ -270,10 +265,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         self.adapt(minimum=min_jobs, maximum=max_jobs, wait_count=60, interval=1000)
 
     def _get_worker_spec_options(self, job_spec):
-        """
-        Craft a dask worker_spec to be used in the qsub command
-
-        """
+        """Craft a dask worker_spec to be used in the qsub command."""
 
         def _get_key_from_spec(spec, key):
             return spec[key] if key in spec else ""
@@ -307,8 +299,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         }
 
     def scale(self, n_jobs, sge_job_spec_key="default"):
-        """
-        Launch an SGE job in the Idiap SGE cluster
+        """Launch an SGE job in the Idiap SGE cluster.
 
         Parameters
         ----------
@@ -317,7 +308,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             Quantity of jobs to scale
 
           sge_job_spec_key: str
-             One of the specs `SGEIdiapCluster.sge_job_spec` 
+             One of the specs `SGEIdiapCluster.sge_job_spec`
         """
 
         if n_jobs == 0:
@@ -335,14 +326,18 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         return super(JobQueueCluster, self).scale(n_jobs, memory=None, cores=n_cores)
 
     def scale_up(self, n_jobs, sge_job_spec_key=None):
-        """
-        Scale cluster up. This is supposed to be used by the scheduler while dynamically allocating resources
+        """Scale cluster up.
+
+        This is supposed to be used by the scheduler while dynamically
+        allocating resources
         """
         return self.scale(n_jobs, sge_job_spec_key)
 
     async def scale_down(self, workers, sge_job_spec_key=None):
-        """
-        Scale cluster down. This is supposed to be used by the scheduler while dynamically allocating resources
+        """Scale cluster down.
+
+        This is supposed to be used by the scheduler while dynamically
+        allocating resources
         """
         await super().scale_down(workers)
 
@@ -351,9 +346,8 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
 
 class AdaptiveMultipleQueue(Adaptive):
-    """
-    Custom mechanism to adaptively allocate workers based on scheduler load
-    
+    """Custom mechanism to adaptively allocate workers based on scheduler load.
+
     This custom implementation extends the `Adaptive.recommendations` by looking
     at the `distributed.scheduler.TaskState.resource_restrictions`.
 
@@ -362,13 +356,11 @@ class AdaptiveMultipleQueue(Adaptive):
     .. note ::
         If a certain task has the status `no-worker` and it has resource_restrictions, the scheduler should
         request a job matching those resource restrictions
-
     """
 
     async def recommendations(self, target: int) -> dict:
-        """
-        Make scale up/down recommendations based on current state and target
-        """
+        """Make scale up/down recommendations based on current state and
+        target."""
 
         plan = self.plan
         requested = self.requested
@@ -440,12 +432,11 @@ class AdaptiveMultipleQueue(Adaptive):
 
 
 class SchedulerResourceRestriction(Scheduler):
-    """
-    Idiap extended distributed scheduler
+    """Idiap extended distributed scheduler.
 
-    This scheduler extends `Scheduler` by just adding a handler
-    that fetches, at every scheduler cycle, the resource restrictions of 
-    a task that has status `no-worker`
+    This scheduler extends `Scheduler` by just adding a handler that
+    fetches, at every scheduler cycle, the resource restrictions of a
+    task that has status `no-worker`
     """
 
     def __init__(self, *args, **kwargs):
@@ -455,9 +446,8 @@ class SchedulerResourceRestriction(Scheduler):
         ] = self.get_no_worker_tasks_resource_restrictions
 
     def get_no_worker_tasks_resource_restrictions(self, comm=None):
-        """
-        Get the a task resource restrictions for jobs that has the status 'no-worker'
-        """
+        """Get the a task resource restrictions for jobs that has the status
+        'no-worker'."""
 
         resource_restrictions = []
         for k in self.tasks:

@@ -1,11 +1,10 @@
-"""Base definition of sample"""
+"""Base definition of sample."""
 
 from collections.abc import MutableSequence
 
 
 def _copy_attributes(s, d):
-    """Copies attributes from a dictionary to self
-    """
+    """Copies attributes from a dictionary to self."""
     s.__dict__.update(
         dict(
             (k, v)
@@ -25,7 +24,8 @@ class _ReprMixin:
 
 
 class Sample(_ReprMixin):
-    """Representation of sample. A Sample is a simple container that wraps a data-point (see :ref:`bob.pipelines.sample`)
+    """Representation of sample. A Sample is a simple container that wraps a
+    data-point (see :ref:`bob.pipelines.sample`)
 
     Each sample must have the following attributes:
 
@@ -41,7 +41,6 @@ class Sample(_ReprMixin):
         parent : object
             A parent object from which to inherit all other attributes (except
             ``data``)
-
     """
 
     def __init__(self, data, parent=None, **kwargs):
@@ -52,7 +51,7 @@ class Sample(_ReprMixin):
 
 
 class DelayedSample(_ReprMixin):
-    """Representation of sample that can be loaded via a callable
+    """Representation of sample that can be loaded via a callable.
 
     The optional ``**kwargs`` argument allows you to attach more attributes to
     this sample instance.
@@ -72,7 +71,6 @@ class DelayedSample(_ReprMixin):
         kwargs : dict
             Further attributes of this sample, to be stored and eventually
             transmitted to transformed versions of the sample
-
     """
 
     def __init__(self, load, parent=None, **kwargs):
@@ -84,7 +82,7 @@ class DelayedSample(_ReprMixin):
 
     @property
     def data(self):
-        """Loads the data from the disk file"""
+        """Loads the data from the disk file."""
         if self._data is None:
             self._data = self.load()
         return self._data
@@ -92,8 +90,8 @@ class DelayedSample(_ReprMixin):
 
 class SampleSet(MutableSequence, _ReprMixin):
     """A set of samples with extra attributes
-    https://docs.python.org/3/library/collections.abc.html#collections-abstract-base-classes
-    """
+    https://docs.python.org/3/library/collections.abc.html#collections-
+    abstract-base-classes."""
 
     def __init__(self, samples, parent=None, **kwargs):
         self.samples = samples

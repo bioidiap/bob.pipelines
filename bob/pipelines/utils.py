@@ -3,11 +3,8 @@ import nose
 import numpy as np
 
 
-
 def is_picklable(obj):
-    """
-    Test if an object is picklable or not
-    """
+    """Test if an object is picklable or not."""
     try:
         pickle.dumps(obj)
     except TypeError:
@@ -19,9 +16,7 @@ def is_picklable(obj):
 
 
 def assert_picklable(obj):
-    """
-    Test if an object is picklable or not
-    """
+    """Test if an object is picklable or not."""
 
     string = pickle.dumps(obj)
     new_obj = pickle.loads(string)
@@ -50,8 +45,8 @@ def is_estimator_stateless(estimator):
 
 
 def _generate_features(reader, paths, same_size=False):
-    """Load and stack features in a memory efficient way. This function is meant
-    to be used inside :py:func:`vstack_features`.
+    """Load and stack features in a memory efficient way. This function is
+    meant to be used inside :py:func:`vstack_features`.
 
     Parameters
     ----------

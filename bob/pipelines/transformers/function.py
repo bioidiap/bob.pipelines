@@ -4,17 +4,16 @@ from ..wrappers import wrap
 
 
 def SampleFunctionTransformer(**kwargs):
-    """Class that transforms Scikit learn FunctionTransformer
-    (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
-    work with :any:`Sample`-based pipelines.
-    """
+    """Class that transforms Scikit learn FunctionTransformer (https://scikit-l
+    earn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer
+    .html) work with :any:`Sample`-based pipelines."""
     return wrap([FunctionTransformer, "sample"], **kwargs)
 
 
 def CheckpointSampleFunctionTransformer(**kwargs):
-    """Class that transforms Scikit learn FunctionTransformer
-    (https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html)
-    work with :any:`Sample`-based pipelines.
+    """Class that transforms Scikit learn FunctionTransformer (https://scikit-l
+    earn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer
+    .html) work with :any:`Sample`-based pipelines.
 
     Furthermore, it makes it checkpointable
     """

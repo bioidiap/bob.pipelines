@@ -18,7 +18,8 @@ def _offset_add_func(X, offset=1):
 
 class DummyWithFit(TransformerMixin, BaseEstimator):
     """See https://scikit-learn.org/stable/developers/develop.html and
-    https://github.com/scikit-learn-contrib/project-template/blob/master/skltemplate/_template.py"""
+    https://github.com/scikit-learn-contrib/project-
+    template/blob/master/skltemplate/_template.py."""
 
     def fit(self, X, y=None):
         X = check_array(X)
@@ -45,7 +46,8 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
 
 class DummyTransformer(TransformerMixin, BaseEstimator):
     """See https://scikit-learn.org/stable/developers/develop.html and
-    https://github.com/scikit-learn-contrib/project-template/blob/master/skltemplate/_template.py"""
+    https://github.com/scikit-learn-contrib/project-
+    template/blob/master/skltemplate/_template.py."""
 
     def __init__(self, picklable=True, i=None, **kwargs):
         super().__init__(**kwargs)
