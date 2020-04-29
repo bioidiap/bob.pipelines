@@ -1,128 +1,219 @@
-.. _sample:
+.. _bob.pipelines.sample:
 
-==============================================================
+=========================================================
 Samples, a way to enhance scikit pipelines with metadata
-==============================================================
+=========================================================
 
 Some tasks in pattern recognition demands the usage of metadata to support some processing (e.g. face cropping, audio segmentation).
 To support scikit-learn based estimators with such requirement task, this package provides two mechanisms that:
 
-    1. Wraps input data in a layer called `:py:class:Sample` that allows you to append some metadata to  your original input data.
-    
-    2. A mixin class (:py:class:`bob.pipelines.mixins.SampleMixin`) that interplay between :py:class:`bob.pipelines.sample.Sample` and your estimator.
+    1. Wraps input data in a layer called :any:`Sample` that allows you to append some metadata to your original input data.
+
+    2. A wrapper class (:any:`SampleWrapper`) that interplay between :any:`Sample` and your estimator.
 
 What is a Sample ?
 ------------------
 
-A :py:class:`bob.pipelines.sample.Sample` is simple container that wraps a datapoint.
-The example below shows how this can be used to wrap a :py:func:`numpy.array`.
+A :any:`Sample` is a simple container that wraps a data-point.
+The example below shows how this can be used to wrap a :any:`numpy.array`.
 
-.. code:: python
+.. doctest::
 
-   >>> import numpy
-   >>> from bob.pipelines.sample import Sample
-   >>> X = numpy.array([1,3])
-   >>> sample = Sample(X)
-   
+   >>> # by convention, we import bob.pipelines as mario, because mario works with pipes ;)
+   >>> import bob.pipelines as mario
+   >>> import numpy as np
+   >>> data = np.array([1, 3])
+   >>> sample = mario.Sample(data)
+   >>> sample
+   Sample(data=array([1, 3]))
+   >>> sample.data is data
+   True
+
 
 Sample and metadata
 -------------------
 
-Metadata can be added as keyword arguments in :py:class:`bob.pipelines.sample.Sample`, like:
+Metadata can be added as keyword arguments in :any:`Sample`, like:
 
-.. code:: python
+.. doctest::
 
-   >>> import numpy
-   >>> from bob.pipelines.sample import Sample
-   >>> X = numpy.array([1,3])
-   >>> sample = Sample(X, gender="Male")
-   >>> print(sample.gender)
-   Male
-
+   >>> sample = mario.Sample(data, gender="Male")
+   >>> sample
+   Sample(data=array([1, 3]), gender='Male')
+   >>> sample.gender
+   'Male'
 
 
 Transforming Samples
 --------------------
 
-The example below shows a simple snippet on how to build a scikit learn transformer and use it in a Pipeline.
+Imagine that we have the following transformer that requires some metadata to actually
+work:
 
-.. literalinclude:: ./python/pipeline_example.py
-   :linenos:
+.. doctest::
 
-As can be observed, `MyTransformer` supports one keyword argument called `metadata` that can't be used by :py:class:`sklearn.pipeline.Pipeline`.
+   >>> from sklearn.base import TransformerMixin, BaseEstimator
+   >>>
+   >>> class MyTransformer(TransformerMixin, BaseEstimator):
+   ...     def transform(self, X, sample_specific_offsets):
+   ...         return np.array(X) + np.array(sample_specific_offsets)
+   ...
+   ...     def fit(self, X):
+   ...         pass
+   ...
+   ...     def _more_tags(self):
+   ...         return {"stateless": True, "requires_fit": False}
+   >>>
+   >>>
+   >>> # Creating X: 3 samples, 2 features
+   >>> X = np.zeros((3, 2))
+   >>> # 3 offsets: one for each sample
+   >>> offsets = np.arange(3).reshape((3, 1))
+   >>> transformer = MyTransformer()
+   >>>
+   >>> transformer.transform(X, offsets)
+   array([[0., 0.],
+          [1., 1.],
+          [2., 2.]])
 
+While this transformer works well by itself, it can't be used by
+:any:`sklearn.pipeline.Pipeline`:
 
-This can be approached with the mixing class :py:class:`bob.pipelines.mixins.SampleMixin`.
-By extending `MyTransform` with this mixin class allows you to use instance of `Samples` in the methods `estimator.fit` and `estimator.transform` without having to touch the original implementation of `MyTranformer`.
+.. doctest::
 
-The example below shows the same example, but now wrapping datapoints in to :py:class:`bob.pipelines.sample.Sample`
+   >>> from sklearn.pipeline import make_pipeline
+   >>> pipeline = make_pipeline(transformer)
+   >>> pipeline.transform(X, offsets)
+   Traceback (most recent call last):
+      ...
+   TypeError: _transform() takes 2 positional arguments but 3 were given
 
-.. literalinclude:: ./python/pipeline_example_boosted.py
-   :linenos:
-   :emphasize-lines: 22
+To approach this issue, :any:`SampleWrapper` can be used. This class wraps
+other estimators and accepts as input samples and passes the data with metadata inside
+samples to the wrapped estimator:
 
-The magic happens in line 22, where `MyTransformer` is "mixed" with the function :py:class:`bob.pipelines.mixins.SampleMixin` to create a new class called `MyBoostedTransformer` that is able to:  i-) handle samples, ii-) handle the original operations of `MyTransformer`, and iii-) pass metadata through the pipeline.
-This can be carried out at runtime by the function :py:func:`bob.pipelines.mixins.mix_me_up`.
-Another possibility would be to carry this out at development time by explicitly create this new class, like in the example below.
+.. doctest::
 
-.. code:: python
+   >>> # construct a list of samples from the data we had before
+   >>> samples = [mario.Sample(x, offset=o) for x, o in zip(X, offsets)]
+   >>> samples[1]
+   Sample(data=array([0., 0.]), offset=array([1]))
 
-    >>> from bob.pipelines.mixins import SampleMixin
-    >>> class MyBoostedTransformer(SampleMixin, MyTransformer):
-    >>>     pass
+Now we need to tell :any:`SampleWrapper` to pass the ``offset`` inside
+samples as an extra argument to our transformer as ``sample_specific_offsets``. This is
+accommodated by the ``transform_extra_arguments`` parameter. It accepts a list of tuples
+that maps sample metadata to arguments of the transformer:
+
+.. doctest::
+
+   >>> transform_extra_arguments=[("sample_specific_offsets", "offset")]
+   >>> sample_transformer = mario.SampleWrapper(transformer, transform_extra_arguments)
+   >>> transformed_samples = sample_transformer.transform(samples)
+   >>> # transformed values will be stored in sample.data
+   >>> np.array([s.data for s in transformed_samples])
+   array([[0., 0.],
+          [1., 1.],
+          [2., 2.]])
+
+Note that wrapped estimators accept samples as input and return samples. Also, they keep
+the sample's metadata around in transformed samples.
+
+.. doctest::
+
+   >>> transformed_samples[1].data
+   array([1., 1.])
+   >>> transformed_samples[1].offset  # the `offset` metadata is available here too.
+   array([1])
+
+Now that our transformer is wrapped, we can also use it inside a pipeline:
+
+.. doctest::
+
+   >>> sample_pipeline = make_pipeline(sample_transformer)
+   >>> np.array([s.data for s in sample_pipeline.transform(samples)])
+   array([[0., 0.],
+          [1., 1.],
+          [2., 2.]])
 
 
 Delayed Sample
 --------------
 
-Sometimes keeping several samples into memory and transfer them over the network can be very memory and band demanding.
-For these cases, there is :py:class:`bob.pipelines.sample.DelayedSample`.
+Sometimes keeping several samples into memory and transferring them over the network can
+be very memory and bandwidth demanding. For these cases, there is
+:any:`DelayedSample`.
 
-A `DelayedSample` acts like a `Sample`, but its `data` attribute is implemented as a function that can load the respective data from its permanent storage representation.
-To create a `DelayedSample`, you pass a `load()` function that must be called **parameterlessly** to load the required data (see implementation of the `data` attribute of this class).
+A :any:`DelayedSample` acts like a :any:`Sample`, but its `data` attribute is implemented as a
+function that can load the respective data from its permanent storage representation. To
+create a :any:`DelayedSample`, you pass a ``load()`` function that when called without any
+parameter, it must load and return the required data.
 
-Below follow an example of how to use :py:class:`bob.pipelines.sample.DelayedSample`.
+Below, follow an example on how to use :any:`DelayedSample`.
 
-.. code:: python
+.. doctest::
 
-    >>> from bob.pipelines.sample import DelayedSample
-    >>> import pickle
-    >>> import functools
-    >>> f = open("my_sample_in_disk", "rb")
-    >>> delayed_sample = DelayedSample(functools.partial(pickle.load, X), metadata=1)
+   >>> def load():
+   ...     # load data (usually from disk) and return
+   ...     print("Loading data from disk!")
+   ...     return np.zeros((2,))
+   >>> delayed_sample = mario.DelayedSample(load, metadata=1)
+   >>> delayed_sample
+   DelayedSample(load=<function load at ...>, metadata=1, _data=None)
 
-This can be used transparently with the :py:class:`bob.pipelines.mixins.SampleMixin` as can be observed in the example below.
+As soon as you access the ``.data`` attribute, the data is loaded and kept in memory:
 
+.. doctest::
 
-.. literalinclude:: ./python/pipeline_example_boosted_delayed.py
-   :linenos:
-   :emphasize-lines: 30
+   >>> delayed_sample.data
+   Loading data from disk!
+   array([0., 0.])
 
-Observe in line 30, a :py:class:`bob.pipelines.sample.DelayedSample` is used instead of :py:class:`bob.pipelines.sample.Sample`.
+:any:`DelayedSample` can be used instead of :any:`Sample`
+transparently:
 
+.. doctest::
+
+   >>> from functools import partial
+   >>> def load_ith_data(i):
+   ...     return np.zeros((2,)) + i
+   >>>
+   >>> delayed_samples = [mario.DelayedSample(partial(load_ith_data, i), offset=[i]) for i in range(3)]
+   >>> np.array([s.data for s in sample_pipeline.transform(delayed_samples)])
+   array([[0., 0.],
+          [2., 2.],
+          [4., 4.]])
+
+.. note::
+
+   Actually, :any:`SampleWrapper` always returns
+   :any:`DelayedSample`'s. This becomes useful when the data returned
+   is not used. We will see that happening in :ref:`bob.pipelines.checkpoint`.
 
 Sample Set
 ----------
 
-A :py:class:`bob.pipelines.sample.SampleSet`, as the name sugests, represents a set of samples.
+A :any:`SampleSet`, as the name suggests, represents a set of samples.
 Such set of samples can represent the samples that belongs to a class.
 
-Below follow an snippet on how to use :py:class:`bob.pipelines.sample.SampleSet`.
+Below, follow an snippet on how to use :any:`SampleSet`.
 
-.. code:: python
+.. doctest::
 
-   >>> import numpy
-   >>> from bob.pipelines.sample import Sample, SampleSet
-   >>> X = numpy.array([1,3])
-   >>> sample = SampletSet([Sample(X)], class_name="A")
-
-
-As can be observed, :py:class:`bob.pipelines.sample.SampleSet` allows you to set any type of metadata (`class_name` in the example).
-
-
-This can be used transparently with the :py:class:`bob.pipelines.mixins.SampleMixin` as can be observed in the example below.
+   >>> sample_sets = [
+   ...     mario.SampleSet(samples, class_name="A"),
+   ...     mario.SampleSet(delayed_samples, class_name="B"),
+   ... ]
+   >>> sample_sets[0]
+   SampleSet(samples=[Sample(data=array([0., 0.]), offset=array([0])), Sample(data=array([0., 0.]), offset=array([1])), Sample(data=array([0., 0.]), offset=array([2]))], class_name='A')
 
 
-.. literalinclude:: ./python/pipeline_example_boosted_sample_set.py
-   :linenos:
-   :emphasize-lines: 32
+:any:`SampleWrapper` works transparently with :any:`SampleSet`'s as well. It will
+transform each sample inside and returns the same SampleSets with new data.
+
+.. doctest::
+
+   >>> transformed_sample_sets = sample_pipeline.transform(sample_sets)
+   >>> transformed_sample_sets[0].samples[1]
+   DelayedSample(load=..., offset=array([1]), _data=None)
+   >>> transformed_sample_sets[0].samples[1].data
+   array([1., 1.])

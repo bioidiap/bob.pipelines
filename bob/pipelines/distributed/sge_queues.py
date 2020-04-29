@@ -3,10 +3,10 @@
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
 
-"""
-This queue setup has a DEMANDING arrangement.
-For CPU jobs, it prioritizes q_1day and io_big
-This HAS to be the default
+"""This queue setup has a DEMANDING arrangement.
+
+For CPU jobs, it prioritizes q_1day and io_big This HAS to be the
+default
 """
 QUEUE_DEFAULT = {
     "default": {

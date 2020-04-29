@@ -21,7 +21,6 @@ class MyTransformer(TransformerMixin, BaseEstimator):
 
 
 class MyFitTranformer(TransformerMixin, BaseEstimator):
-
     def __init__(self, *args, **kwargs):
         self._fit_model = None
         super().__init__(*args, **kwargs)
@@ -31,7 +30,7 @@ class MyFitTranformer(TransformerMixin, BaseEstimator):
         return [x @ self._fit_model for x in X]
 
     def fit(self, X):
-        self._fit_model = numpy.array([[1,2],[3,4]])
+        self._fit_model = numpy.array([[1, 2], [3, 4]])
         return self
 
 
@@ -51,8 +50,7 @@ pipeline = make_pipeline(
         features_dir="./checkpoint_1",
     ),
     MyBoostedFitTransformer(
-        features_dir="./checkpoint_2",
-        model_path="./checkpoint_2/model.pkl",
+        features_dir="./checkpoint_2", model_path="./checkpoint_2/model.pkl",
     ),
 )
 
@@ -60,4 +58,6 @@ pipeline = make_pipeline(
 dasked_pipeline = estimator_dask_it(pipeline, npartitions=5)
 
 # Run the task graph in the local computer in a single tread
-X_transformed = dasked_pipeline.fit_transform(X_as_sample).compute(scheduler="single-threaded")
+X_transformed = dasked_pipeline.fit_transform(X_as_sample).compute(
+    scheduler="single-threaded"
+)

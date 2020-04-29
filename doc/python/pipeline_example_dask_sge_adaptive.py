@@ -87,8 +87,10 @@ client = Client(cluster)  # Creating the scheduler
 # and tagging the the fit method of the second estimator to run in the GPU
 dasked_pipeline = estimator_dask_it(pipeline, npartitions=5, fit_tag=[(1, "gpu")])
 
-dasked_pipeline.fit(X_as_sample) # Create the dask-graph for fitting
-X_transformed = dasked_pipeline.transform(X_as_sample) # Create the dask graph for transform and returns a dask bag
-X_transformed = X_transformed.compute(scheduler=client) # RUN THE GRAPH
+dasked_pipeline.fit(X_as_sample)  # Create the dask-graph for fitting
+X_transformed = dasked_pipeline.transform(
+    X_as_sample
+)  # Create the dask graph for transform and returns a dask bag
+X_transformed = X_transformed.compute(scheduler=client)  # RUN THE GRAPH
 
 client.shutdown()

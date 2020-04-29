@@ -1,18 +1,18 @@
-.. _dask:
+.. _bob.pipelines.dask:
 
 ========================================
  Dask: Scale your scikit.learn pipelines
 ========================================
 
 
-"`Dask is <dask:index>`_ a flexible library for parallel computing in Python.".
+`Dask <https://dask.org/>`_  is a flexible library for parallel computing in Python.
 The purpose of this guide is not to describe how dask works.
 For that, go to its documentation.
 Moreover, there are plenty of tutorials online.
 For instance, `this official one <https://github.com/dask/dask-tutorial>`_; a nice overview was presented in `AnacondaCon 2018 <https://www.youtube.com/watch?v=tQBovBvSDvA>`_ and there's even one crafted for `Idiap <https://github.com/tiagofrepereira2012/tam-dask>`_.
 
 The purpose of this guide is to describe:
- 
+
     1. The integration of dask with scikit learn pipelines and samples
     2. The specificities of `Dask` under the Idiap SGE
 
@@ -24,12 +24,12 @@ The purpose of :doc:`scikit learn pipelines <modules/generated/sklearn.pipeline.
 Then, it is possible to use the methods `fit` and `transform` to create models and transform your data respectivelly.
 
 Any :doc:`pipeline <modules/generated/sklearn.pipeline.Pipeline>` can be transformed in a :doc:`Dask Graph <graphs>` to be further executed by any :doc:`Dask Client <client>`.
-This is carried out via the :py:func:`bob.pipelines.mixins.estimator_dask_it` function.
-Such fuction does two things:
+This is carried out via the :any:`wrap` function when used like ``wrap(["dask"], estimator)`` (see :ref:`bob.pipelines.wrap`).
+Such function does two things:
 
-   1. Edit the current :py:class:`sklearn.pipeline.Pipeline` by adding a new first step, where input samples are transformed in :doc:`Dask Bag <bag>`. This allows the usage of :py:func:`dask.bag.map` for further transformations.
+   1. Edit the current :any:`sklearn.pipeline.Pipeline` by adding a new first step, where input samples are transformed in :doc:`Dask Bag <bag>`. This allows the usage of :any:`dask.bag.map` for further transformations.
 
-   2. Mix all :doc:`estimators <modules/generated/sklearn.base.BaseEstimator>` in the pipeline with the :py:class:`bob.pipelines.mixins.DaskEstimatorMixin`. Such mixin is reponsible for the creation of the task graph for the methods `.fit` and `.transform`.
+   2. Wrap all :doc:`estimators <modules/generated/sklearn.base.BaseEstimator>` in the pipeline with :any:`DaskWrapper`. This wrapper is responsible for the creation of the task graph for the methods `.fit` and `.transform`.
 
 
 The code snippet below enables such feature for an arbitrary :doc:`pipeline <modules/generated/sklearn.pipeline.Pipeline>`.
@@ -37,13 +37,15 @@ The code snippet below enables such feature for an arbitrary :doc:`pipeline <mod
 
 .. code:: python
 
-   >>> from bob.pipelines.mixins import estimator_dask_it
-   >>> dask_pipeline = estimator_dask_it(make_pipeline(...)) # Create a dask graph
+   >>> import bob.pipelines as mario
+   >>> from sklearn.pipeline import make_pipeline
+   >>> pipeline = make_pipeline(...)
+   >>> dask_pipeline = mario.wrap(["dask"], pipeline) # Create a dask graph
    >>> dask_pipeline.fit_transform(....).compute() # Run the task graph using the default client
 
 
-The code below is the same as the one presented in :ref:`checkpoint example <checkpoint_statefull>`.
-However, lines 59-63 convert such pipeline in a :doc:`Dask Graph <graphs>` and runs it in a local computer.
+The code below is an example. Especially lines 59-63 where we convert such pipeline in a
+:doc:`Dask Graph <graphs>` and runs it in a local computer.
 
 
 .. literalinclude:: ./python/pipeline_example_dask.py
@@ -67,9 +69,9 @@ This is achieved via :doc:`Dask-Jobqueue <dask-jobqueue:index>`.
 Below follow a nice video explaining what is the :doc:`Dask-Jobqueue <dask-jobqueue:index>`, some of its features and how to use it to run :doc:`dask graphs <graphs>`.
 
  .. raw:: html
-     
+
      <iframe width="560" height="315" src="https://www.youtube.com/embed/FXsgmwpRExM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-     
+
 
 The snippet below shows how to deploy the exact same pipeline from the previous section in the Idiap SGE cluster
 
@@ -78,7 +80,7 @@ The snippet below shows how to deploy the exact same pipeline from the previous 
 
    >>> from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
    >>> from dask.distributed import Client
-   >>> cluster = SGEMultipleQueuesCluster() # Creates the SGE launcher that launches jobs in the q_1day   
+   >>> cluster = SGEMultipleQueuesCluster() # Creates the SGE launcher that launches jobs in the q_1day
    >>> client = Client(cluster) # Creates the scheduler and attaching it to the SGE job queue system
    >>> dask_pipeline.fit_transform(....).compute(scheduler=client) # Runs my graph in the Idiap SGE
 
@@ -91,7 +93,7 @@ Dask provides generic :doc:`deployment <dask-jobqueue:examples>` mechanism for S
 
   2. As a result of 1., the mechanism of :doc:`adaptive deployment <dask:setup/adaptive>` is not able to handle job submissions of two or more queues.
 
-For this reason the generic SGE laucher was extended to this one :py:class:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.   
+For this reason the generic SGE laucher was extended to this one :any:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.
 
 
 Launching jobs in different SGE queues
@@ -130,7 +132,7 @@ SGE queue specs are defined in python dictionary as in the example below, where,
 Now that the queue specifications are set, let's trigger some jobs.
 
 .. code:: python
-   
+
    >>> from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
    >>> from dask.distributed import Client
    >>> cluster = SGEMultipleQueuesCluster(sge_job_spec=Q_1DAY_GPU_SPEC)
@@ -144,7 +146,7 @@ Now that the queue specifications are set, let's trigger some jobs.
 
 
 
-Running estimator operations in specific SGE queues 
+Running estimator operations in specific SGE queues
 ===================================================
 
 Sometimes it's necessary to run parts of a :doc:`pipeline <modules/generated/sklearn.pipeline.Pipeline>`  in specific SGE queues (e.g. q_1day IO_BIG or q_gpu).
@@ -166,10 +168,10 @@ Every time` cluster.scale` is executed to increase the amount of available SGE j
 Note that in `MyBoostedFitTransformer.fit` a delay of `120s`was introduced to fake "processing" in the GPU queue.
 During the execution of `MyBoostedFitTransformer.fit` in `q_gpu`, other resources are idle, which is a waste of resources (imagined a CNN training of 2 days instead of the 2 minutes from our example).
 
-For this reason there's the method adapt in :py:class:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster` that will adjust the SGE jobs available according to the needs of a :doc:`dask graph <graphs>`.
+For this reason there's the method adapt in :any:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster` that will adjust the SGE jobs available according to the needs of a :doc:`dask graph <graphs>`.
 
 Its usage is pretty simple.
-The code below determines that to run a :doc:`dask graph <graphs>`, the :py:class`distributed.scheduler.Scheduler` can demand a maximum of 10 SGE jobs. A lower bound was also set, in this case, two SGE jobs.
+The code below determines that to run a :doc:`dask graph <graphs>`, the :any`distributed.scheduler.Scheduler` can demand a maximum of 10 SGE jobs. A lower bound was also set, in this case, two SGE jobs.
 
 
 .. code:: python

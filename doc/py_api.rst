@@ -3,19 +3,12 @@
 Python API for bob.pipelines
 ============================
 
-Samples
------------------
+Main module
+-----------
 
-.. automodule:: bob.pipelines.sample
+.. automodule:: bob.pipelines
 
-
-Mixins
------------------
-
-.. automodule:: bob.pipelines.mixins
-
-
-Idiap SGE Support
+Heterogeneous SGE
 -----------------
 
 .. automodule:: bob.pipelines.distributed.sge
