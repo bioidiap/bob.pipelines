@@ -25,7 +25,7 @@ class _ReprMixin:
 
 
 class Sample(_ReprMixin):
-    """Representation of sample that is sufficient for the blocks in this module
+    """Representation of sample. A Sample is a simple container that wraps a data-point (see :ref:`bob.pipelines.sample`)
 
     Each sample must have the following attributes:
 
