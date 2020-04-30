@@ -1,17 +1,13 @@
 .. -*- coding: utf-8 -*-
 
-.. image:: https://img.shields.io/badge/docs-stable-yellow.svg
-   :target: https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/stable/index.html
-.. image:: https://img.shields.io/badge/docs-latest-orange.svg
-   :target: http://beatubulatest.lab.idiap.ch/private/docs/bob/bob.pipelines/master/index.html
-.. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/build.svg
+.. image:: https://img.shields.io/badge/docs-available-orange.svg
+   :target: https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/index.html
+.. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/pipeline.svg
    :target: https://gitlab.idiap.ch/bob/bob.pipelines/commits/master
 .. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/coverage.svg
    :target: https://gitlab.idiap.ch/bob/bob.pipelines/commits/master
 .. image:: https://img.shields.io/badge/gitlab-project-0000c0.svg
    :target: https://gitlab.idiap.ch/bob/bob.pipelines
-.. image:: https://img.shields.io/pypi/v/bob.pipelines.svg
-   :target: https://pypi.python.org/pypi/bob.pipelines
 
 
 ===========================================================================
