@@ -46,6 +46,7 @@ def test_csv_loading():
             )
 
     dataset = CSVDataset(subsets, fieldnames, _raw_data_loader)
+    dataset.check()
 
     data = dataset.subsets()
 
@@ -81,6 +82,7 @@ def test_json_loading():
     dataset = JSONDataset(protocols, fieldnames, _raw_data_loader)
 
     data = dataset.subsets("default")
+    dataset.check()
 
     nose.tools.eq_(len(data["train"]), 75)
     for k in data["train"]:

@@ -114,14 +114,15 @@ class JSONDataset:
                     samples = samples[:limit]
                 for pos, sample in enumerate(samples):
                     try:
-                        assert len(sample) == len(self.fieldnames), (
-                            f"Entry {pos} in subset {name} of protocol "
-                            f"{proto} has {len(sample)} entries instead of "
-                            f"{len(self.fieldnames)} (expected). Fix file "
-                            f"'{self._protocols[proto]}'"
-                        )
-                        sample.data  # check data can be loaded
+                        sample.data  # may trigger data loading
                         logger.info(f"{sample.key}: OK")
+                    except Exception as e:
+                        logger.error(
+                            f"Found error loading entry {pos} in subset {name} "
+                            f"of protocol {proto} from file "
+                            f"'{self._protocols[proto]}': {e}"
+                            )
+                        errors += 1
                     except Exception as e:
                         logger.error(f"{sample.key}: {e}")
                         errors += 1
