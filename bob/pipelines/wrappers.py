@@ -2,7 +2,7 @@
 from .sample import DelayedSample, SampleSet
 from .utils import is_estimator_stateless, samples_to_np_array
 import dask.bag
-from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.base import TransformerMixin, BaseEstimator, MetaEstimatorMixin
 import os
 import cloudpickle
 from functools import partial
@@ -27,7 +27,13 @@ def _frmt(estimator, limit=40):
     return name
 
 
-class BaseWrapper(BaseEstimator):
+def copy_learned_attributes(from_estimator, to_estimator):
+    attrs = {k: v for k, v in vars(from_estimator).items() if k.endswith("_")}
+
+    for k, v in attrs.items():
+        setattr(to_estimator, k, v)
+
+class BaseWrapper(MetaEstimatorMixin, BaseEstimator):
     """The base class for all wrappers."""
 
     def _more_tags(self):
@@ -148,7 +154,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
     def fit(self, samples, y=None):
 
-        if is_estimator_stateless(self):
+        if is_estimator_stateless(self.estimator):
             return self
 
         # if the estimator needs to be fitted.
@@ -161,6 +167,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
             X = [s.data for s in samples]
 
         self.estimator = self.estimator.fit(X, **kwargs)
+        copy_learned_attributes(self.estimator, self)
         return self
 
 
@@ -250,7 +257,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
     def fit(self, samples, y=None):
 
-        if is_estimator_stateless(self):
+        if is_estimator_stateless(self.estimator):
             return self
 
         # if the estimator needs to be fitted.
@@ -261,6 +268,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             return self.load_model()
 
         self.estimator = self.estimator.fit(samples, y=y)
+        copy_learned_attributes(self.estimator, self)
         return self.save_model()
 
     def make_path(self, sample):
@@ -288,7 +296,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         return DelayedSample(partial(self.load_func, path), parent=sample)
 
     def load_model(self):
-        if is_estimator_stateless(self):
+        if is_estimator_stateless(self.estimator):
             return self
         with open(self.model_path, "rb") as f:
             model = cloudpickle.load(f)
@@ -296,7 +304,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             return self
 
     def save_model(self):
-        if is_estimator_stateless(self) or self.model_path is None:
+        if is_estimator_stateless(self.estimator) or self.model_path is None:
             return self
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         with open(self.model_path, "wb") as f:
@@ -364,13 +372,15 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         return self._dask_transform(samples, "score")
 
     def fit(self, X, y=None, **fit_params):
-        if is_estimator_stateless(self):
+        if is_estimator_stateless(self.estimator):
             return self
 
         logger.debug(f"{_frmt(self)}.fit")
 
         def _fit(X, y, **fit_params):
-            return self.estimator.fit(X, y, **fit_params)
+            self.estimator = self.estimator.fit(X, y, **fit_params)
+            copy_learned_attributes(self.estimator, self)
+            return self.estimator
 
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
