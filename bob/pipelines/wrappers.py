@@ -463,13 +463,15 @@ def wrap(bases, estimator=None, **kwargs):
             trans, leftover = _wrap(trans, **kwargs)
             estimator.steps[idx] = (name, trans)
 
+        # Using the leftovers as new kwargs to be consumed further
+        kwargs = leftover
         # if being wrapped with DaskWrapper, add ToDaskBag to the steps
         if DaskWrapper in bases:
             valid_params = ToDaskBag._get_param_names()
             params = {k: kwargs.pop(k) for k in valid_params if k in kwargs}
             dask_bag = ToDaskBag(**params)
             estimator.steps.insert(0, ("ToDaskBag", dask_bag))
-
+            leftover = kwargs
     else:
         estimator, leftover = _wrap(estimator, **kwargs)
 

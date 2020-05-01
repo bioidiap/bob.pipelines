@@ -288,7 +288,7 @@ def test_checkpoint_fit_transform_pipeline():
             transformer = ("1", _build_transformer(d, 1))
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
-                pipeline = mario.wrap(["dask"], pipeline, fit_tag=[(1, "GPU")])
+                pipeline = mario.wrap(["dask"], pipeline, fit_tag=[(1, "GPU")], npartitions=1)
                 pipeline = pipeline.fit(samples)
                 tags = mario.dask_tags(pipeline)
 
