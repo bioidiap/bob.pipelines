@@ -9,36 +9,42 @@ def test_io_vstack():
 
     paths = [1, 2, 3, 4, 5]
 
+    def asser_(actual, desired, dtype=None):
+        np.testing.assert_allclose(actual, desired)
+        if dtype is not None:
+            assert actual.dtype == dtype, (actual.dtype, dtype)
+
     def oracle(reader, paths):
         return np.vstack([reader(p) for p in paths])
 
     def reader_same_size_C(path):
-        return np.arange(10).reshape(5, 2)
+        return np.arange(10).reshape(5, 2) + path
 
     def reader_different_size_C(path):
-        return np.arange(2 * path).reshape(path, 2)
+        return np.arange(2 * path).reshape(path, 2) + path
 
     def reader_same_size_F(path):
-        return np.asfortranarray(np.arange(10).reshape(5, 2))
+        return np.asfortranarray(np.arange(10).reshape(5, 2)) + path
 
     def reader_different_size_F(path):
-        return np.asfortranarray(np.arange(2 * path).reshape(path, 2))
+        return np.asfortranarray(np.arange(2 * path).reshape(path, 2)) + path
 
     def reader_same_size_C2(path):
-        return np.arange(30).reshape(5, 2, 3)
+        return np.arange(30).reshape(5, 2, 3) + path
 
     def reader_different_size_C2(path):
-        return np.arange(6 * path).reshape(path, 2, 3)
+        return np.arange(6 * path).reshape(path, 2, 3) + path
 
     def reader_same_size_F2(path):
-        return np.asfortranarray(np.arange(30).reshape(5, 2, 3))
+        return np.asfortranarray(np.arange(30).reshape(5, 2, 3)) + path
 
     def reader_different_size_F2(path):
-        return np.asfortranarray(np.arange(6 * path).reshape(path, 2, 3))
+        return np.asfortranarray(np.arange(6 * path).reshape(path, 2, 3)) + path
 
     def reader_wrong_size(path):
-        return np.arange(2 * path).reshape(2, path)
+        return np.arange(2 * path).reshape(2, path) + path
 
+    dtype = "float32"
     # when same_size is False
     for reader in [
         reader_different_size_C,
@@ -50,7 +56,12 @@ def test_io_vstack():
         reader_same_size_C2,
         reader_same_size_F2,
     ]:
-        np.all(mario.utils.vstack_features(reader, paths) == oracle(reader, paths))
+        asser_(mario.utils.vstack_features(reader, paths), oracle(reader, paths))
+        asser_(
+            mario.utils.vstack_features(reader, paths, dtype=dtype),
+            oracle(reader, paths),
+            dtype,
+        )
 
     # when same_size is True
     for reader in [
@@ -59,8 +70,11 @@ def test_io_vstack():
         reader_same_size_C2,
         reader_same_size_F2,
     ]:
-        np.all(
-            mario.utils.vstack_features(reader, paths, True) == oracle(reader, paths)
+        asser_(mario.utils.vstack_features(reader, paths, True), oracle(reader, paths))
+        asser_(
+            mario.utils.vstack_features(reader, paths, True, dtype=dtype),
+            oracle(reader, paths),
+            dtype,
         )
 
     with nose.tools.assert_raises(AssertionError):
@@ -88,7 +102,12 @@ def test_io_vstack():
                 np.save(path, reader(i + 1), allow_pickle=False)
             # test when all data is present
             reference = oracle(np.load, paths)
-            np.all(mario.utils.vstack_features(np.load, paths) == reference)
+            asser_(mario.utils.vstack_features(np.load, paths), reference)
+            asser_(
+                mario.utils.vstack_features(np.load, paths, dtype=dtype),
+                reference,
+                dtype,
+            )
             try:
                 os.remove(paths[0])
                 # Check if RuntimeError is raised when one of the files is missing

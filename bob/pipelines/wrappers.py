@@ -1,6 +1,6 @@
 """Scikit-learn Estimator Wrappers."""
-from .sample import DelayedSample, SampleSet
-from .utils import is_estimator_stateless, samples_to_np_array
+from .sample import DelayedSample, SampleSet, SampleBatch
+from .utils import is_estimator_stateless
 import dask.bag
 from sklearn.base import TransformerMixin, BaseEstimator, MetaEstimatorMixin
 import os
@@ -14,7 +14,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _frmt(estimator, limit=40):
+def _frmt(estimator, limit=30):
+    # default value of limit is chosen so the log can be seen in dask graphs
     def _n(e):
         return e.__class__.__name__.replace("Wrapper", "")
 
@@ -48,24 +49,20 @@ def _make_kwargs_from_samples(samples, arg_attr_list):
 def _check_n_input_output(samples, output, func_name):
     ls, lo = len(samples), len(output)
     if ls != lo:
-        raise RuntimeError(f"{func_name} got {ls} samples but returned {lo} features!")
+        raise RuntimeError(f"{func_name} got {ls} samples but returned {lo} samples!")
 
 
 class DelayedSamplesCall:
-    def __init__(self, func, func_name, samples, input_is_np_array=False, **kwargs):
+    def __init__(self, func, func_name, samples, **kwargs):
         super().__init__(**kwargs)
         self.func = func
         self.func_name = func_name
         self.samples = samples
         self.output = None
-        self.input_is_np_array = input_is_np_array
 
     def __call__(self, index):
         if self.output is None:
-            if self.input_is_np_array:
-                X = samples_to_np_array(self.samples)
-            else:
-                X = [s.data for s in self.samples]
+            X = SampleBatch(self.samples)
             self.output = self.func(X)
             _check_n_input_output(self.samples, self.output, self.func_name)
         return self.output[index]
@@ -101,14 +98,12 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         estimator,
         transform_extra_arguments=None,
         fit_extra_arguments=None,
-        input_is_np_array=False,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
         self.transform_extra_arguments = transform_extra_arguments or tuple()
         self.fit_extra_arguments = fit_extra_arguments or tuple()
-        self.input_is_np_array = input_is_np_array
 
     def _samples_transform(self, samples, method_name):
         # Transform either samples or samplesets
@@ -129,7 +124,6 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
                 partial(method, **kwargs),
                 func_name,
                 samples,
-                input_is_np_array=self.input_is_np_array,
             )
             new_samples = [
                 DelayedSample(partial(delayed, index=i), parent=s)
@@ -161,10 +155,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         logger.debug(f"{_frmt(self)}.fit")
         kwargs = _make_kwargs_from_samples(samples, self.fit_extra_arguments)
 
-        if self.input_is_np_array:
-            X = samples_to_np_array(samples)
-        else:
-            X = [s.data for s in samples]
+        X = SampleBatch(samples)
 
         self.estimator = self.estimator.fit(X, **kwargs)
         copy_learned_attributes(self.estimator, self)
@@ -476,10 +467,9 @@ def wrap(bases, estimator=None, **kwargs):
         # if being wrapped with DaskWrapper, add ToDaskBag to the steps
         if DaskWrapper in bases:
             valid_params = ToDaskBag._get_param_names()
-            params = {k: kwargs.pop(k) for k in valid_params if k in kwargs}
+            params = {k: leftover.pop(k) for k in valid_params if k in leftover}
             dask_bag = ToDaskBag(**params)
             estimator.steps.insert(0, ("ToDaskBag", dask_bag))
-
     else:
         estimator, leftover = _wrap(estimator, **kwargs)
 

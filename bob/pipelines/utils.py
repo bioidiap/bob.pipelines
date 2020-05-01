@@ -83,11 +83,14 @@ def _generate_features(reader, paths, same_size=False):
                 assert shape[1:] == list(feature.shape[1:])
             assert dtype == feature.dtype
 
-        for value in feature.flat:
-            yield value
+        if same_size:
+            yield (feature.ravel(),)
+        else:
+            for feat in feature:
+                yield (feat.ravel(), )
 
 
-def vstack_features(reader, paths, same_size=False):
+def vstack_features(reader, paths, same_size=False, dtype=None):
     """Stacks all features in a memory efficient way.
 
     Parameters
@@ -107,6 +110,8 @@ def vstack_features(reader, paths, same_size=False):
       If ``True``, it assumes that arrays inside all the paths are the same
       shape. If you know the features are the same size in all paths, set this
       to ``True`` to improve the performance.
+    dtype : :py:class:`numpy.dtype`, optional
+      If provided, the data will be casted to this format.
 
     Returns
     -------
@@ -164,18 +169,21 @@ def vstack_features(reader, paths, same_size=False):
       This function runs very slowly. Only use it when RAM is precious.
     """
     iterable = _generate_features(reader, paths, same_size)
-    dtype, shape = next(iterable)
+    data_dtype, shape = next(iterable)
+    if dtype is None:
+        dtype = data_dtype
     if same_size:
-        total_size = int(len(paths) * np.prod(shape))
-        all_features = np.fromiter(iterable, dtype, total_size)
+        # numpy black magic: https://stackoverflow.com/a/12473478/1286165
+        field_dtype = [("", (dtype, (np.prod(shape),)))]
+        total_size = len(paths)
+        all_features = np.fromiter(iterable, field_dtype, total_size)
     else:
-        all_features = np.fromiter(iterable, dtype)
+        field_dtype = [("", (dtype, (np.prod(shape[1:]),)))]
+        all_features = np.fromiter(iterable, field_dtype)
 
+    # go from a field array to a normal array
+    all_features = all_features.view(dtype)
     # the shape is assumed to be (n_samples, ...) it can be (5, 2) or (5, 3, 4).
     shape = list(shape)
     shape[0] = -1
     return np.reshape(all_features, shape, order="C")
-
-
-def samples_to_np_array(samples, same_size=True):
-    return vstack_features(lambda s: s.data, samples, same_size=same_size)

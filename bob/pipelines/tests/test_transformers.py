@@ -5,7 +5,7 @@ import bob.pipelines as mario
 import numpy as np
 
 
-def test_linearize_processor():
+def test_linearize():
 
     def _assert(Xt, oracle):
         assert np.allclose(Xt, oracle), (Xt, oracle)
@@ -32,7 +32,7 @@ def test_linearize_processor():
         assert os.path.exists(os.path.join(d, "1.h5"))
 
 
-def test_pca_processor():
+def test_pca():
 
     # Test wrapped in to a Sample
     X = np.random.rand(100, 10)
