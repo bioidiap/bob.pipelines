@@ -1,6 +1,8 @@
 """Base definition of sample."""
 
-from collections.abc import MutableSequence
+from collections.abc import MutableSequence, Sequence
+from .utils import vstack_features
+import numpy as np
 
 
 def _copy_attributes(s, d):
@@ -89,9 +91,7 @@ class DelayedSample(_ReprMixin):
 
 
 class SampleSet(MutableSequence, _ReprMixin):
-    """A set of samples with extra attributes
-    https://docs.python.org/3/library/collections.abc.html#collections-
-    abstract-base-classes."""
+    """A set of samples with extra attributes"""
 
     def __init__(self, samples, parent=None, **kwargs):
         self.samples = samples
@@ -114,3 +114,27 @@ class SampleSet(MutableSequence, _ReprMixin):
     def insert(self, index, item):
         # if not item in self.samples:
         self.samples.insert(index, item)
+
+
+class SampleBatch(Sequence, _ReprMixin):
+    """A batch of samples that looks like [s.data for s in samples]
+
+    However, when you call np.array(SampleBatch), it will construct a numpy array from
+    sample.data attributes in a memory efficient way.
+    """
+
+    def __init__(self, samples):
+        self.samples = samples
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, item):
+        return self.samples[item].data
+
+    def __array__(self, dtype=None, *args, **kwargs):
+        def _reader(s):
+            # adding one more dimension to data so they get stacked sample-wise
+            return s.data[None, ...]
+        arr = vstack_features(_reader, self.samples, dtype=dtype)
+        return np.asarray(arr, dtype, *args, **kwargs)
