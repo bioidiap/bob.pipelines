@@ -15,10 +15,17 @@ Heterogeneous SGE
 
 Transformers
 ------------
+
 .. automodule:: bob.pipelines.transformers
+
+xarray Wrapper
+--------------
+
+.. automodule:: bob.pipelines.xarray
 
 Filelist Datasets
 -----------------
+
 .. automodule:: bob.pipelines.datasets.csv
 
 .. automodule:: bob.pipelines.datasets.json

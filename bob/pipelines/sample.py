@@ -4,6 +4,8 @@ from collections.abc import MutableSequence, Sequence
 from .utils import vstack_features
 import numpy as np
 
+SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
+
 
 def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self."""
@@ -11,7 +13,7 @@ def _copy_attributes(s, d):
         dict(
             (k, v)
             for k, v in d.items()
-            if k not in ("data", "load", "samples", "_data")
+            if k not in SAMPLE_DATA_ATTRS
         )
     )
 

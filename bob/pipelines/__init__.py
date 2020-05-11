@@ -12,6 +12,7 @@ from .wrappers import (
 )
 from . import distributed
 from . import transformers
+from . import xarray as xr
 
 
 def __appropriate__(*args):

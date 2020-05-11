@@ -159,7 +159,7 @@ html_favicon = "img/bob-favicon.ico"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
@@ -236,3 +236,9 @@ if os.path.exists(sphinx_requirements):
     )
 else:
     intersphinx_mapping = link_documentation()
+
+def setup(app):
+    # Add `>>>` button to toggle visibility of prompts in code blocks.
+    # see https://github.com/readthedocs/sphinx_rtd_theme/issues/167 and
+    # https://raw.githubusercontent.com/python/python-docs-theme/master/python_docs_theme/static/copybutton.js
+    app.add_javascript('copybutton.js')
