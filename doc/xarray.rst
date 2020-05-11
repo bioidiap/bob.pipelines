@@ -19,7 +19,7 @@ In this guide we are interested in several things:
 #. Scalability: we want to use dask-ml estimators to handle larger than memory
    datasets for training.
 
-This guide builds upon ``scikit-learn``, ``dask``, and ``xarray``. If you are
+This guide builds upon `scikit-learn`_, `dask`_, and `xarray`_. If you are
 not familiar with those libraries, you may want to get familiar with those
 libraries first.
 
@@ -80,7 +80,7 @@ to convert our dataset to a list of samples first:
 
 You may be already familiar with our sample concept. If not, please read more on
 :ref:`bob.pipelines.sample`. Now, to optimize our process, we will represent our
-samples in an ``xarray.Dataset`` using ``dask.array.Array``’s:
+samples in an :any:`xarray.Dataset` using :any:`dask.array.Array`’s:
 
 .. doctest::
 
@@ -102,7 +102,7 @@ efficient and parallel processing of our data. Read up on dask arrays to become
 more familiar with the idea of chunks.
 
 If you want to give a name to ``dim_0``, you can provide a ``meta``
-parameter which should a ``xarray.DataArray`` providing information
+parameter which should a :any:`xarray.DataArray` providing information
 about ``data`` in our samples:
 
 .. doctest::
@@ -126,11 +126,11 @@ dataset instead. We can do that with our :any:`DatasetPipeline`. A dataset
 pipeline is made of scikit-learn estimators but instead of working on numpy
 arrays, it works on xarray datasets with dask arrays inside them. We will build
 our pipeline using again PCA and LDA. To build a dataset pipeline, we need to
-tell ``DatasetPipeline`` which variables to pass to our estimators. By default,
-``DatasetPipeline`` will pass the ``data`` variable to our transformer. This
+tell :any:`DatasetPipeline` which variables to pass to our estimators. By default,
+:any:`DatasetPipeline` will pass the ``data`` variable to our transformer. This
 will work for PCA since it only needs ``data`` in its ``.fit`` and
 ``.transform`` methods. However, for LDA, we also need to provide ``target``
-when fitting the estimator. ``DatasetPipeline`` as input takes a list of
+when fitting the estimator. :any:`DatasetPipeline` as input takes a list of
 estimators. If you have to give more information about an estimator, you pass a
 dictionary instead.
 
@@ -151,7 +151,7 @@ The dictionaries are used to construct :any:`Block`’s. You can checkout
 that class to see what options are possible.
 
 Now let’s fit our pipeline with our xarray dataset. Ideally, we want
-this fit step be postponed until the we call ``dask.compute`` on our
+this fit step be postponed until the we call :any:`dask.compute` on our
 results. But this does not happen here which we will explain later.
 
 .. doctest::
@@ -192,8 +192,8 @@ Our operations were not lazy here (you can't see in the docs that it was not
 lazy but if you increase logging's verbosity in your code, you will see) because
 we had unknown dimensions. Whenever :any:`DatasetPipeline` is faced with an
 unknown dimension, it will compute all the computations till then (using
-`dask.persist`) and then continues with valid size dimensions. A workaround to
-this is to provide the feature size of each estimator to ``DatasetPipeline``.
+:any:`dask.persist`) and then continues with valid size dimensions. A workaround to
+this is to provide the feature size of each estimator to :any:`DatasetPipeline`.
 You have to provide a list of size 2 tuples of ``(dim_name, dim_size)``. The
 ``dim_name`` must not overlap with what is already in the dataset unless it has
 the same size. If your estimator does not change the dimension sizes, you can
@@ -402,7 +402,7 @@ Training on datasets larger than memory
 
 Sometimes your dataset is larger than your machine's memory and this prevents
 you to train (``.fit``) your estimator(s). Luckily since our data are already
-dask arrays, we can use ``dask-ml`` estimators to overcome this. When you
+dask arrays, we can use `dask-ml`_ estimators to overcome this. When you
 provide dask-ml estimators, set ``input_dask_array`` as ``True``.
 
 .. doctest::
@@ -449,3 +449,5 @@ provide dask-ml estimators, set ``input_dask_array`` as ``True``.
    True
    >>> ds.dims == {"sample": 150}
    True
+
+.. include:: links.rst
