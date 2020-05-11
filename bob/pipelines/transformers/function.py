@@ -25,4 +25,5 @@ class StatelessPipeline(Pipeline):
         return {"stateless": True, "requires_fit": False}
 
     def fit(self, X, y=None, **fit_params):
+        """Does nothing"""
         return self

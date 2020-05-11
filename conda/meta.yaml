@@ -36,6 +36,7 @@ requirements:
     - dask-jobqueue
     - distributed
     - scikit-learn
+    - xarray
 
 test:
   imports:
@@ -52,6 +53,7 @@ test:
     - coverage
     - sphinx
     - sphinx_rtd_theme
+    - dask-ml
 
 about:
   summary: bob.pipelines
