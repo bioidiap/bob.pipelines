@@ -21,18 +21,21 @@ build:
     - cp -R README.rst requirements.txt doc "${PREFIX}/share/doc/{{ name }}/"
 
 requirements:
-  # place your build dependencies before the 'host' section
   host:
-    - python {{ python }}
-    - setuptools {{ setuptools }}
+    - python
+    - setuptools
+    # bob dependencies
     - bob.extension
     - bob.io.base
+    # other libraries
     - numpy {{ numpy }}
-    - dask
-    - dask-jobqueue
-    - distributed
-    - scikit-learn
-    - xarray
+    - dask {{ dask }}
+    - dask-jobqueue {{ dask_jobqueue }}
+    - distributed {{ distributed }}
+    - scikit-learn {{ scikit_learn }}
+    - xarray {{ xarray }}
+    # test requirements
+    - dask-ml {{ dask_ml }}
   run:
     - python
     - setuptools
@@ -42,6 +45,8 @@ requirements:
     - {{ pin_compatible('distributed') }}
     - {{ pin_compatible('scikit-learn') }}
     - {{ pin_compatible('xarray') }}
+  run_constrained:
+    - {{ pin_compatible('dask-ml') }}
 
 test:
   imports:
@@ -61,7 +66,7 @@ test:
     - dask-ml
 
 about:
-  summary: bob.pipelines
+  summary: Tools to build robust and extensible pipelines
   home: https://www.idiap.ch/software/bob/
   license: BSD 3-Clause
   license_family: BSD
