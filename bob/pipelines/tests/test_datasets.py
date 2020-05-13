@@ -34,7 +34,7 @@ def test_csv_loading():
     # tests if we can build a simple CSV loader for the Iris Flower dataset
     subsets = {
             "train": _data_file("iris-train.csv"),
-            "test": _data_file("iris-train.csv")
+            "test": _data_file("iris-test.csv")
             }
 
     fieldnames = (
