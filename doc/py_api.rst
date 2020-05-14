@@ -16,3 +16,9 @@ Heterogeneous SGE
 Transformers
 ------------
 .. automodule:: bob.pipelines.transformers
+
+Filelist Datasets
+-----------------
+.. automodule:: bob.pipelines.datasets.csv
+
+.. automodule:: bob.pipelines.datasets.json
