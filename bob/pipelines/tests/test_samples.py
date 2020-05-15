@@ -2,7 +2,10 @@ import bob.pipelines as mario
 import numpy
 
 import copy
-
+import pickle
+import tempfile
+import functools
+import os
 
 def test_sampleset_collection():
 
@@ -28,3 +31,19 @@ def test_sampleset_collection():
     # Testing iterator
     for i in sampleset:
         assert isinstance(i, mario.Sample)
+
+
+    def _load(path):
+        return pickle.loads(open(path, "rb").read())
+
+    # Testing delayed sample in the sampleset
+    with tempfile.TemporaryDirectory() as dir_name:
+        
+        samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        filename = os.path.join(dir_name, "samples.pkl")
+        with open(filename, "wb") as f:
+            f.write(pickle.dumps(samples))
+
+        sampleset = mario.SampleSet(mario.DelayedSample(functools.partial(_load, filename)), key=1)
+
+        assert len(sampleset)==n_samples

@@ -99,19 +99,29 @@ class SampleSet(MutableSequence, _ReprMixin):
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
 
+
+    def _load(self):
+        if isinstance(self.samples, DelayedSample):
+            self.samples = self.samples.data
+
     def __len__(self):
+        self._load()
         return len(self.samples)
 
     def __getitem__(self, item):
+        self._load()
         return self.samples.__getitem__(item)
 
     def __setitem__(self, key, item):
+        self._load()
         return self.samples.__setitem__(key, item)
 
     def __delitem__(self, item):
+        self._load()
         return self.samples.__delitem__(item)
 
     def insert(self, index, item):
+        self._load()
         # if not item in self.samples:
         self.samples.insert(index, item)
 
