@@ -6,3 +6,4 @@ scikit-learn
 dask
 distributed
 dask-jobqueue
+h5py

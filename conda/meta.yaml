@@ -36,6 +36,7 @@ requirements:
     - dask-jobqueue
     - distributed
     - scikit-learn
+    - h5py
 
 test:
   imports:
