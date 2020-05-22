@@ -216,12 +216,13 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             features, com_feat_index = [], 0
             for s, p, should_compute in zip(samples, paths, should_compute_list):
                 if should_compute:
-                    feat = computed_features[com_feat_index]
-                    features.append(feat)
+                    feat = computed_features[com_feat_index]                    
                     com_feat_index += 1
                     # save the computed feature
                     if p is not None:
                         self.save(feat)
+                        feat = self.load(s, p)
+                    features.append(feat)
                 else:
                     features.append(self.load(s, p))
             return features
@@ -398,16 +399,20 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
         Number of partitions used in :any:`dask.bag.from_sequence`
     """
 
-    def __init__(self, npartitions=None, **kwargs):
+    def __init__(self, npartitions=None, partition_size=None, **kwargs):
         super().__init__(**kwargs)
         self.npartitions = npartitions
+        self.partition_size = partition_size
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
         logger.debug(f"{_frmt(self)}.transform")
-        return dask.bag.from_sequence(X, npartitions=self.npartitions)
+        if self.partition_size is None:
+            return dask.bag.from_sequence(X, npartitions=self.npartitions)
+        else:
+            return dask.bag.from_sequence(X, partition_size=self.partition_size)
 
     def _more_tags(self):
         return {"stateless": True, "requires_fit": False}
