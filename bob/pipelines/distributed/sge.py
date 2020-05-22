@@ -262,6 +262,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         #             removal before we remove it.
         #             Here the goal is to wait 2 minutes before scaling down since
         #             it is very expensive to get jobs on the SGE grid
+
         self.adapt(minimum=min_jobs, maximum=max_jobs, wait_count=60, interval=1000)
 
     def _get_worker_spec_options(self, job_spec):
@@ -276,6 +277,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         new_resource_spec += (
             "io_big=TRUE," if "io_big" in job_spec and job_spec["io_big"] else ""
         )
+
+        memory = _get_key_from_spec(job_spec, "memory")[:-1]
+        new_resource_spec += f"mem_free={memory},"
 
         queue = _get_key_from_spec(job_spec, "queue")
         if queue != "all.q":
@@ -440,7 +444,9 @@ class SchedulerResourceRestriction(Scheduler):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SchedulerResourceRestriction, self).__init__(*args, **kwargs)
+        super(SchedulerResourceRestriction, self).__init__(
+            allowed_failures=15, synchronize_worker_interval="240s", *args, **kwargs,
+        )
         self.handlers[
             "get_no_worker_tasks_resource_restrictions"
         ] = self.get_no_worker_tasks_resource_restrictions
