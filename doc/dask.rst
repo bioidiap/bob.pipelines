@@ -1,8 +1,7 @@
 .. _bob.pipelines.dask:
 
-========================================
- Dask: Scale your scikit.learn pipelines
-========================================
+Dask: Scale your scikit.learn pipelines
+=======================================
 
 
 `Dask <https://dask.org/>`_  is a flexible library for parallel computing in Python.
@@ -97,7 +96,7 @@ For this reason the generic SGE laucher was extended to this one :any:`bob.pipel
 
 
 Launching jobs in different SGE queues
-======================================
+--------------------------------------
 
 SGE queue specs are defined in python dictionary as in the example below, where, the root keys are the labels of the SGE queue and the other inner keys represents:
 
@@ -147,7 +146,7 @@ Now that the queue specifications are set, let's trigger some jobs.
 
 
 Running estimator operations in specific SGE queues
-===================================================
+---------------------------------------------------
 
 Sometimes it's necessary to run parts of a :doc:`pipeline <modules/generated/sklearn.pipeline.Pipeline>`  in specific SGE queues (e.g. q_1day IO_BIG or q_gpu).
 The example below shows how this is approached (lines 78 to 88).
@@ -161,7 +160,7 @@ In this example, the `fit` method of `MyBoostedFitTransformer` runs on `q_gpu`
 
 
 Adaptive SGE: Scale up/down SGE cluster according to the graph complexity
-=========================================================================
+-------------------------------------------------------------------------
 
 One note about the code from the last section.
 Every time` cluster.scale` is executed to increase the amount of available SGE jobs to run a :doc:`dask graph <graphs>`, such resources will be available until the end of its execution.

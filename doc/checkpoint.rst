@@ -1,6 +1,5 @@
 .. _bob.pipelines.checkpoint:
 
-=============
 Checkpointing
 =============
 

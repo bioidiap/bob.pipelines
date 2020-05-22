@@ -6,3 +6,7 @@
 .. _bob: http://www.idiap.ch/software/bob
 .. _installation: https://www.idiap.ch/software/bob/install
 .. _mailing list: https://www.idiap.ch/software/bob/discuss
+.. _scikit-learn: https://scikit-learn.org/
+.. _dask: https://dask.org/
+.. _xarray: https://xarray.pydata.org/
+.. _dask-ml: https://ml.dask.org/

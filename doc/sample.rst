@@ -1,6 +1,5 @@
 .. _bob.pipelines.sample:
 
-=========================================================
 Samples, a way to enhance scikit pipelines with metadata
 =========================================================
 
