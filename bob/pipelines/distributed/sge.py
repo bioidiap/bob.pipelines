@@ -251,7 +251,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             loop=loop,
             silence_logs=silence_logs,
             asynchronous=asynchronous,
-            name=name,
+            name=name,            
         )
 
         max_jobs = get_max_jobs(sge_job_spec)
@@ -279,7 +279,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         )
 
         memory = _get_key_from_spec(job_spec, "memory")[:-1]
-        new_resource_spec += f"mem_free={memory},"
+        new_resource_spec += (f"mem_free={memory},")
 
         queue = _get_key_from_spec(job_spec, "queue")
         if queue != "all.q":
@@ -289,7 +289,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
         return {
             "queue": queue,
-            "memory": _get_key_from_spec(job_spec, "memory"),
+            "memory": "0",
             "cores": 1,
             "processes": 1,
             "log_directory": self.log_directory,
@@ -299,7 +299,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             "protocol": self.protocol,
             "security": None,
             "resources": _get_key_from_spec(job_spec, "resources"),
-            "env_extra": self.env_extra,
+            "env_extra": self.env_extra,            
         }
 
     def scale(self, n_jobs, sge_job_spec_key="default"):
@@ -445,7 +445,11 @@ class SchedulerResourceRestriction(Scheduler):
 
     def __init__(self, *args, **kwargs):
         super(SchedulerResourceRestriction, self).__init__(
-            allowed_failures=15, synchronize_worker_interval="240s", *args, **kwargs,
+            idle_timeout=3600,
+            allowed_failures=500,
+            synchronize_worker_interval="240s",
+            *args,
+            **kwargs,
         )
         self.handlers[
             "get_no_worker_tasks_resource_restrictions"
