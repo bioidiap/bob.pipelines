@@ -7,3 +7,4 @@ dask
 distributed
 dask-jobqueue
 xarray
+h5py
