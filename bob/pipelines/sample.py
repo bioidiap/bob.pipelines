@@ -181,15 +181,14 @@ def sample_to_hdf5(sample, hdf5):
     """
     Saves the content of sample to hdf5 file
 
-    Paremeters:
-    -----------
+    Parameters
+    ----------
 
         sample: :any:`Sample` or :any:`DelayedSample` or :any:`list`
             Sample to be saved
 
-        hdf5: :any:`h5py.File`
+        hdf5: `h5py.File`
             Pointer to a HDF5 file for writing
-
     """
     if isinstance(sample, list):
         for i, s in enumerate(sample):
@@ -204,12 +203,11 @@ def hdf5_to_sample(hdf5):
     """
     Reads the content of a HDF5File and returns a :any:`Sample`
 
-    Paremeters:
-    -----------
+    Parameters
+    ----------
 
-        hdf5: :any:`h5py.File`
+        hdf5: `h5py.File`
             Pointer to a HDF5 file for reading
-
     """
 
     # Checking if it has groups
