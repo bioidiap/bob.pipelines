@@ -3,6 +3,18 @@
 from collections.abc import MutableSequence, Sequence
 from .utils import vstack_features
 import numpy as np
+from distributed.protocol.serialize import (
+    serialize,
+    deserialize,
+    dask_serialize,
+    dask_deserialize,
+    register_generic,
+)
+import cloudpickle
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _copy_attributes(s, d):
@@ -89,6 +101,15 @@ class DelayedSample(_ReprMixin):
             self._data = self.load()
         return self._data
 
+    #def __getstate__(self):        
+    #    d = dict(self.__dict__)
+    #    d.pop("_data", None)
+    #    return d
+
+    #def __setstate__(self, d):
+    #    self._data = d.pop("_data", None)
+    #    self.__dict__.update(d)
+
 
 class SampleSet(MutableSequence, _ReprMixin):
     """A set of samples with extra attributes"""
@@ -98,7 +119,6 @@ class SampleSet(MutableSequence, _ReprMixin):
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
-
 
     def _load(self):
         if isinstance(self.samples, DelayedSample):
@@ -146,5 +166,107 @@ class SampleBatch(Sequence, _ReprMixin):
         def _reader(s):
             # adding one more dimension to data so they get stacked sample-wise
             return s.data[None, ...]
+
         arr = vstack_features(_reader, self.samples, dtype=dtype)
         return np.asarray(arr, dtype, *args, **kwargs)
+
+
+def get_serialized_sample_header(sample):
+    
+    sample_header = dict(
+        (k, v)
+        for k, v in sample.__dict__.items()
+        if k not in ("data", "load", "samples", "_data")
+    )
+
+    return cloudpickle.dumps(sample_header)
+
+def deserialize_sample_header(sample):
+    return cloudpickle.loads(sample)
+
+@dask_serialize.register(SampleSet)
+def serialize_sampleset(sampleset):
+    
+    def serialize_delayed_sample(delayed_sample):        
+        header_sample = get_serialized_sample_header(delayed_sample)
+        frame_sample = cloudpickle.dumps(delayed_sample)
+        return header_sample, frame_sample
+
+    header = dict()
+
+    # Ship the header of the sampleset
+    # in the header of the message
+    key = sampleset.key
+    header["sampleset_header"] = get_serialized_sample_header(sampleset)
+
+    header["sample_header"] = []
+    frames = []
+    
+    # Checking first if our sampleset.samples are shipped as DelayedSample
+    if isinstance(sampleset.samples, DelayedSample):
+        header_sample, frame_sample = serialize_delayed_sample(sampleset.samples)
+        frames += [frame_sample]        
+        header["sample_header"].append(header_sample)
+        header["sample_type"] = "DelayedSampleList"
+    else:        
+        for sample in sampleset.samples:
+            if isinstance(sample, DelayedSample):
+                header_sample, frame_sample = serialize_delayed_sample(sample)
+                frame_sample = [frame_sample]
+            else:                
+                header_sample, frame_sample = serialize(sample)
+            frames += frame_sample
+            header["sample_header"].append(header_sample)
+
+        header["sample_type"] = "DelayedSample" if isinstance(sample, DelayedSample) else "Sample"
+
+    return header, frames
+
+
+@dask_deserialize.register(SampleSet)
+def deserialize_sampleset(header, frames):
+
+    if not "sample_header" in header:
+        raise ValueError("Problem with SampleSet serialization. `_sample_header` not found")
+
+    sampleset_header = deserialize_sample_header(header["sampleset_header"])
+    sampleset = SampleSet([], **sampleset_header)
+    
+
+    if header["sample_type"]=="DelayedSampleList":
+        sampleset.samples = cloudpickle.loads(frames[0])
+        return sampleset
+  
+    for h, f in zip(header["sample_header"], frames):        
+        if header["sample_type"] == "Sample":            
+            data = dask_deserialize.dispatch(Sample)(h, [f])
+            sampleset.samples.append(data)
+        else:
+            sampleset.samples.append( cloudpickle.loads(f) )
+
+    return sampleset
+
+
+@dask_serialize.register(Sample)
+def serialize_sample(sample):
+
+    header_sample = get_serialized_sample_header(sample)
+
+    # If data is numpy array, uses the dask serializer
+    header, frames = serialize(sample.data)
+    header["sample"] = header_sample
+
+    return header, frames
+
+
+@dask_deserialize.register(Sample)
+def deserialize_sample(header, frames):    
+
+    try:
+        data = dask_deserialize.dispatch(np.ndarray)(header, frames)
+    except KeyError:
+        data = cloudpickle.loads(frames)
+
+    sample_header = deserialize_sample_header(header["sample"])
+    sample = Sample(data, parent=None, **sample_header)
+    return sample
