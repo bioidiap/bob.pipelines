@@ -187,3 +187,34 @@ def vstack_features(reader, paths, same_size=False, dtype=None):
     shape = list(shape)
     shape[0] = -1
     return np.reshape(all_features, shape, order="C")
+
+
+def isinstance_nested(instance, attribute, isinstance_of):
+    """
+    Check if an object and its nested objects is an instance of a class.
+
+    This is useful while using aggregation and it's necessary to check if some
+    functionally was aggregated
+
+    Parameters
+    ----------
+        instance:
+           Object to be searched
+
+        attribute:
+           Attribute name to be recursively searched
+
+        isinstance_of:
+            Instance class to be searched
+
+    """
+
+    if not hasattr(instance, attribute):
+        return False
+
+    # Checking the current object and its immediate nested
+    if isinstance(instance,isinstance_of) or isinstance(getattr(instance, attribute), isinstance_of):
+        return True
+    else:
+        # Recursive search
+        return isinstance_nested(getattr(instance, attribute), attribute, isinstance_of)
