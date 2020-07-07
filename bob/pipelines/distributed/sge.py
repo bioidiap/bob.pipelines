@@ -37,7 +37,7 @@ class SGEIdiapJob(Job):
         self,
         *args,
         queue=None,
-        project=None,
+        project="biometric",
         resource_spec=None,
         job_extra=None,
         config_name="sge",
@@ -278,6 +278,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             "io_big=TRUE," if "io_big" in job_spec and job_spec["io_big"] else ""
         )
 
+
         memory = _get_key_from_spec(job_spec, "memory")[:-1]
         new_resource_spec += (f"mem_free={memory},")
 
@@ -289,7 +290,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
         return {
             "queue": queue,
-            "memory": "0",
+            "memory": _get_key_from_spec(job_spec, "memory"),
             "cores": 1,
             "processes": 1,
             "log_directory": self.log_directory,
@@ -445,9 +446,9 @@ class SchedulerResourceRestriction(Scheduler):
 
     def __init__(self, *args, **kwargs):
         super(SchedulerResourceRestriction, self).__init__(
-            idle_timeout=3600,
-            allowed_failures=500,
-            synchronize_worker_interval="240s",
+            idle_timeout=60,
+            allowed_failures=100,
+            synchronize_worker_interval="60s",
             *args,
             **kwargs,
         )
