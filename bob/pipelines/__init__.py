@@ -1,5 +1,5 @@
 from . import utils
-from .sample import Sample, DelayedSample, SampleSet, sample_to_hdf5, hdf5_to_sample
+from .sample import Sample, DelayedSample, SampleSet, DelayedSampleSet, sample_to_hdf5, hdf5_to_sample
 from .wrappers import (
     BaseWrapper,
     DelayedSamplesCall,
@@ -8,7 +8,7 @@ from .wrappers import (
     DaskWrapper,
     ToDaskBag,
     wrap,
-    dask_tags,    
+    dask_tags,
 )
 from . import distributed
 from . import transformers

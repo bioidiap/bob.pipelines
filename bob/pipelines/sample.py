@@ -3,7 +3,6 @@
 from collections.abc import MutableSequence, Sequence
 from .utils import vstack_features
 import numpy as np
-import os
 import h5py
 
 SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
@@ -11,13 +10,7 @@ SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
 
 def _copy_attributes(s, d):
     """Copies attributes from a dictionary to self."""
-    s.__dict__.update(
-        dict(
-            (k, v)
-            for k, v in d.items()
-            if k not in SAMPLE_DATA_ATTRS
-        )
-    )
+    s.__dict__.update(dict((k, v) for k, v in d.items() if k not in SAMPLE_DATA_ATTRS))
 
 
 class _ReprMixin:
@@ -128,30 +121,38 @@ class SampleSet(MutableSequence, _ReprMixin):
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
 
-    def _load(self):
-        if isinstance(self.samples, DelayedSample):
-            self.samples = self.samples.data
-
     def __len__(self):
-        self._load()
         return len(self.samples)
 
     def __getitem__(self, item):
-        self._load()
         return self.samples.__getitem__(item)
 
     def __setitem__(self, key, item):
-        self._load()
         return self.samples.__setitem__(key, item)
 
     def __delitem__(self, item):
-        self._load()
         return self.samples.__delitem__(item)
 
     def insert(self, index, item):
-        self._load()
         # if not item in self.samples:
         self.samples.insert(index, item)
+
+
+class DelayedSampleSet(SampleSet):
+    """A set of samples with extra attributes"""
+
+    def __init__(self, load, parent=None, **kwargs):
+        self._data = None
+        self.load = load
+        if parent is not None:
+            _copy_attributes(self, parent.__dict__)
+        _copy_attributes(self, kwargs)
+
+    @property
+    def samples(self):
+        if self._data is None:
+            self._data = self.load()
+        return self._data
 
 
 class SampleBatch(Sequence, _ReprMixin):
