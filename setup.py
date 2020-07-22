@@ -30,9 +30,6 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
-    entry_points={
-        "bob.cli": ["pipelines = bob.pipelines.scripts.pipelines:pipelines"],
-    },
     # check classifiers, add and remove as you see fit
     # full list here: https://pypi.org/classifiers/
     # don't remove the Bob framework unless it's not a bob package

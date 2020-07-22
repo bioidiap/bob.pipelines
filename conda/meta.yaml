@@ -34,9 +34,9 @@ requirements:
     - distributed {{ distributed }}
     - scikit-learn {{ scikit_learn }}
     - xarray {{ xarray }}
+    - h5py {{h5py}}
     # test requirements
     - dask-ml {{ dask_ml }}
-    - h5py {{h5py}}
   run:
     - python
     - setuptools
