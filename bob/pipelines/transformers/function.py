@@ -1,5 +1,6 @@
-from sklearn.preprocessing import FunctionTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
+
 from ..wrappers import wrap
 
 

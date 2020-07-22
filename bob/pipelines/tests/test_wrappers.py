@@ -1,13 +1,16 @@
-import numpy as np
 import os
-import tempfile
 import shutil
+import tempfile
 
-from sklearn.base import TransformerMixin, BaseEstimator
-from sklearn.utils.estimator_checks import check_estimator
-from sklearn.utils.validation import check_array, check_is_fitted
+import numpy as np
+
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
+from sklearn.utils.estimator_checks import check_estimator
+from sklearn.utils.validation import check_array
+from sklearn.utils.validation import check_is_fitted
 
 import bob.pipelines as mario
 

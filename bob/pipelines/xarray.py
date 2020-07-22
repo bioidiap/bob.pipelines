@@ -1,17 +1,22 @@
-from .sample import SAMPLE_DATA_ATTRS, _ReprMixin
-from .utils import is_estimator_stateless
-from functools import partial
-from sklearn.base import BaseEstimator
-from sklearn.pipeline import _name_estimators
-from sklearn.utils.metaestimators import _BaseComposition
-import cloudpickle
-import dask
 import logging
-import numpy as np
 import os
 import random
 import string
+
+from functools import partial
+
+import cloudpickle
+import dask
+import numpy as np
 import xarray as xr
+
+from sklearn.base import BaseEstimator
+from sklearn.pipeline import _name_estimators
+from sklearn.utils.metaestimators import _BaseComposition
+
+from .sample import SAMPLE_DATA_ATTRS
+from .sample import _ReprMixin
+from .utils import is_estimator_stateless
 
 logger = logging.getLogger(__name__)
 

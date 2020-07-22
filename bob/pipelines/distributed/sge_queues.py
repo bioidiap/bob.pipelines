@@ -1,13 +1,8 @@
 #!/usr/bin/env python
 # vim: set fileencoding=utf-8 :
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
+"""SGE QUEUES"""
 
-
-"""This queue setup has a DEMANDING arrangement.
-
-For CPU jobs, it prioritizes q_1day and io_big This HAS to be the
-default
-"""
 QUEUE_DEFAULT = {
     "default": {
         "queue": "q_1day",
@@ -48,12 +43,13 @@ QUEUE_DEFAULT = {
         "resources": {"q_long_gpu": 1},
     },
 }
+"""This queue setup has a DEMANDING arrangement.
+
+For CPU jobs, it prioritizes q_1day and io_big This HAS to be the
+default
+"""
 
 
-"""
-This queue setup has a light arrangement.
-For CPU jobs, it prioritizes all.q and not io_big
-"""
 QUEUE_LIGHT = {
     "default": {
         "queue": "q_1day",
@@ -101,13 +97,12 @@ QUEUE_LIGHT = {
         "resources": {"q_long_gpu": 1},
     },
 }
-
-
-
 """
 This queue setup has a light arrangement.
 For CPU jobs, it prioritizes all.q and not io_big
 """
+
+
 QUEUE_DEMANDING = {
     "default": {
         "queue": "q_1day",
@@ -155,3 +150,7 @@ QUEUE_DEMANDING = {
         "resources": {"q_long_gpu": 1},
     },
 }
+"""
+This queue setup has a light arrangement.
+For CPU jobs, it prioritizes all.q and not io_big
+"""

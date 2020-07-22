@@ -1,18 +1,17 @@
-from bob.pipelines import (
-    Sample,
-    SampleSet,
-    DelayedSampleSet,
-    sample_to_hdf5,
-    hdf5_to_sample,
-)
-import numpy as np
-
 import copy
-import pickle
-import tempfile
 import functools
 import os
+import pickle
+import tempfile
+
 import h5py
+import numpy as np
+
+from bob.pipelines import DelayedSampleSet
+from bob.pipelines import Sample
+from bob.pipelines import SampleSet
+from bob.pipelines import hdf5_to_sample
+from bob.pipelines import sample_to_hdf5
 
 
 def test_sampleset_collection():

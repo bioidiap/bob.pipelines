@@ -1,9 +1,12 @@
 """Base definition of sample."""
 
-from collections.abc import MutableSequence, Sequence
-from .utils import vstack_features
-import numpy as np
+from collections.abc import MutableSequence
+from collections.abc import Sequence
+
 import h5py
+import numpy as np
+
+from .utils import vstack_features
 
 SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
 

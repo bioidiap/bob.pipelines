@@ -1,15 +1,24 @@
 """Scikit-learn Estimator Wrappers."""
-from .sample import DelayedSample, SampleSet, SampleBatch
-from .utils import is_estimator_stateless
-import dask.bag
-from sklearn.base import TransformerMixin, BaseEstimator, MetaEstimatorMixin
-import os
-import cloudpickle
-from functools import partial
-import bob.io.base
-from dask import delayed
-from sklearn.pipeline import Pipeline
 import logging
+import os
+
+from functools import partial
+
+import cloudpickle
+import dask.bag
+
+from dask import delayed
+from sklearn.base import BaseEstimator
+from sklearn.base import MetaEstimatorMixin
+from sklearn.base import TransformerMixin
+from sklearn.pipeline import Pipeline
+
+import bob.io.base
+
+from .sample import DelayedSample
+from .sample import SampleBatch
+from .sample import SampleSet
+from .utils import is_estimator_stateless
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +42,7 @@ def copy_learned_attributes(from_estimator, to_estimator):
 
     for k, v in attrs.items():
         setattr(to_estimator, k, v)
+
 
 class BaseWrapper(MetaEstimatorMixin, BaseEstimator):
     """The base class for all wrappers."""
@@ -120,11 +130,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
             ]
         else:
             kwargs = _make_kwargs_from_samples(samples, self.transform_extra_arguments)
-            delayed = DelayedSamplesCall(
-                partial(method, **kwargs),
-                func_name,
-                samples,
-            )
+            delayed = DelayedSamplesCall(partial(method, **kwargs), func_name, samples,)
             new_samples = [
                 DelayedSample(partial(delayed, index=i), parent=s)
                 for i, s in enumerate(samples)
@@ -216,7 +222,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             features, com_feat_index = [], 0
             for s, p, should_compute in zip(samples, paths, should_compute_list):
                 if should_compute:
-                    feat = computed_features[com_feat_index]                    
+                    feat = computed_features[com_feat_index]
                     com_feat_index += 1
                     # save the computed feature
                     if p is not None:

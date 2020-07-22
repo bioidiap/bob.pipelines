@@ -1,10 +1,18 @@
-from bob.pipelines.sample import Sample
-from bob.pipelines.mixins import SampleMixin, CheckpointMixin, mix_me_up
-from sklearn.base import TransformerMixin, BaseEstimator
-from sklearn.pipeline import make_pipeline
-from bob.pipelines.mixins import estimator_dask_it
-import numpy
 import time
+
+import numpy
+
+from dask.distributed import Client
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
+from sklearn.pipeline import make_pipeline
+
+from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
+from bob.pipelines.mixins import CheckpointMixin
+from bob.pipelines.mixins import SampleMixin
+from bob.pipelines.mixins import estimator_dask_it
+from bob.pipelines.mixins import mix_me_up
+from bob.pipelines.sample import Sample
 
 
 class MyTransformer(TransformerMixin, BaseEstimator):
@@ -75,8 +83,6 @@ Q_1DAY_GPU_SPEC = {
     },
 }
 
-from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
-from dask.distributed import Client
 
 cluster = SGEMultipleQueuesCluster()
 cluster.scale(1, sge_job_spec_key="q_gpu")  # Submitting 1 job in the q_gpu queue

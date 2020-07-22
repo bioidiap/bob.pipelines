@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, dist
+from setuptools import dist
+from setuptools import setup
+
+from bob.extension.utils import find_packages
+from bob.extension.utils import load_requirements
 
 dist.Distribution(dict(setup_requires=["bob.extension"]))
 
-from bob.extension.utils import load_requirements, find_packages
 
 install_requires = load_requirements()
 
