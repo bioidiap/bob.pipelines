@@ -1,15 +1,20 @@
+import os
+import tempfile
+
+import dask
+import dask_ml.decomposition
+import dask_ml.preprocessing
+import dask_ml.wrappers
+import numpy as np
+import xarray as xr
+
 from sklearn import datasets
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
+
 import bob.pipelines as mario
-import dask
-import dask_ml.preprocessing, dask_ml.decomposition, dask_ml.wrappers
-import numpy as np
-import os
-import tempfile
-import xarray as xr
 
 
 def _build_toy_samples():
@@ -38,7 +43,9 @@ def _build_iris_dataset(shuffle=False):
         for x, y, k in zip(iris.data, iris.target, keys)
     ]
     meta = xr.DataArray(X[0], dims=("feature",))
-    dataset = mario.xr.samples_to_dataset(samples, meta=meta, npartitions=3, shuffle=shuffle)
+    dataset = mario.xr.samples_to_dataset(
+        samples, meta=meta, npartitions=3, shuffle=shuffle
+    )
     return dataset
 
 
@@ -163,7 +170,7 @@ def test_dataset_pipeline_with_dask_ml():
 
     scaler = dask_ml.preprocessing.StandardScaler()
     pca = dask_ml.decomposition.PCA(n_components=3, random_state=0)
-    clf = SGDClassifier(random_state=0, loss='log', penalty='l2', tol=1e-3)
+    clf = SGDClassifier(random_state=0, loss="log", penalty="l2", tol=1e-3)
     clf = dask_ml.wrappers.Incremental(clf, scoring="accuracy")
 
     iris_ds = _build_iris_dataset(shuffle=True)

@@ -72,7 +72,7 @@ Below follow a nice video explaining what is the :doc:`Dask-Jobqueue <dask-jobqu
      <iframe width="560" height="315" src="https://www.youtube.com/embed/FXsgmwpRExM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 
-.. warning:: 
+.. warning::
 
   To submit jobs at Idiap's SGE it's mandatory to set a project name. Run the code below to set it::
 
@@ -192,4 +192,3 @@ Note line 83
 .. literalinclude:: ./python/pipeline_example_dask_sge_adaptive.py
    :linenos:
    :emphasize-lines: 83
-

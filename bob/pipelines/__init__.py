@@ -1,18 +1,21 @@
-from . import utils
-from .sample import Sample, DelayedSample, SampleSet, sample_to_hdf5, hdf5_to_sample
-from .wrappers import (
-    BaseWrapper,
-    DelayedSamplesCall,
-    SampleWrapper,
-    CheckpointWrapper,
-    DaskWrapper,
-    ToDaskBag,
-    wrap,
-    dask_tags,    
-)
-from . import distributed
-from . import transformers
-from . import xarray as xr
+from . import distributed  # noqa
+from . import transformers  # noqa
+from . import utils  # noqa
+from . import xarray as xr  # noqa
+from .sample import DelayedSample
+from .sample import DelayedSampleSet
+from .sample import Sample
+from .sample import SampleSet
+from .sample import hdf5_to_sample  # noqa
+from .sample import sample_to_hdf5  # noqa
+from .wrappers import BaseWrapper
+from .wrappers import CheckpointWrapper
+from .wrappers import DaskWrapper
+from .wrappers import DelayedSamplesCall
+from .wrappers import SampleWrapper
+from .wrappers import ToDaskBag
+from .wrappers import dask_tags  # noqa
+from .wrappers import wrap  # noqa
 
 
 def __appropriate__(*args):
@@ -37,6 +40,7 @@ __appropriate__(
     Sample,
     DelayedSample,
     SampleSet,
+    DelayedSampleSet,
     BaseWrapper,
     DelayedSamplesCall,
     SampleWrapper,

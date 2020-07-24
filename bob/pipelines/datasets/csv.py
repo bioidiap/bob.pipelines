@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import os
 import csv
-import pathlib
-
 import logging
+import os
+import pathlib
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ class CSVDataset:
 
         """
 
-        logger.info(f"Checking dataset...")
+        logger.info("Checking dataset...")
         errors = 0
         for name in self._subsets.keys():
             logger.info(f"Checking subset '{name}'...")
@@ -100,7 +99,7 @@ class CSVDataset:
                     logger.error(
                         f"Found error loading entry {pos} in subset {name} "
                         f"from file '{self._subsets[name]}': {e}"
-                        )
+                    )
                     errors += 1
         return errors
 
@@ -152,8 +151,6 @@ class CSVDataset:
             fileobj.seek(0)
 
         return [
-            self._loader(
-                dict(subset=subset, order=n), dict(zip(self.fieldnames, k))
-            )
+            self._loader(dict(subset=subset, order=n), dict(zip(self.fieldnames, k)))
             for n, k in enumerate(samples)
         ]

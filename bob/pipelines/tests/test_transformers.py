@@ -1,12 +1,14 @@
 import os
 import tempfile
-from sklearn.utils.validation import check_is_fitted
-import bob.pipelines as mario
+
 import numpy as np
+
+from sklearn.utils.validation import check_is_fitted
+
+import bob.pipelines as mario
 
 
 def test_linearize():
-
     def _assert(Xt, oracle):
         assert np.allclose(Xt, oracle), (Xt, oracle)
 

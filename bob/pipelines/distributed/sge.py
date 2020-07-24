@@ -2,23 +2,22 @@
 # vim: set fileencoding=utf-8 :
 # Tiago de Freitas Pereira <tiago.pereira@idiap.ch>
 
+import logging
 import sys
 
-import logging
+import dask
+
+from dask_jobqueue.core import Job
+from dask_jobqueue.core import JobQueueCluster
+from distributed.deploy import Adaptive
+from distributed.scheduler import Scheduler
+
+from bob.extension import rc
+
+from .sge_queues import QUEUE_DEFAULT
 
 logger = logging.getLogger(__name__)
 
-
-from dask_jobqueue.core import JobQueueCluster, Job
-from dask_jobqueue.sge import SGEJob
-from distributed.scheduler import Scheduler
-from distributed import SpecCluster
-import dask
-from distributed.scheduler import Scheduler
-from distributed.deploy import Adaptive
-
-from .sge_queues import QUEUE_DEFAULT
-from bob.extension import rc
 
 class SGEIdiapJob(Job):
     """Launches a SGE Job in the IDIAP cluster. This class basically encodes
@@ -121,7 +120,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
       dashboard_address: str
         Default port for the dask dashboard,
-      
+
       env_extra: str,
         Extra environment variables to send to the workers
 
@@ -152,7 +151,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
     >>> client = Client(cluster) # doctest: +SKIP
 
     It's possible to demand a resource specification yourself:
-        
+
     >>> Q_1DAY_IO_BIG_SPEC = {
     ...        "default": {
     ...        "queue": "q_1day",
@@ -207,9 +206,8 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         env_extra=None,
         sge_job_spec=QUEUE_DEFAULT,
         min_jobs=10,
-        project=rc.get('sge.project'),
+        project=rc.get("sge.project"),
         **kwargs,
-
     ):
 
         # Defining the job launcher
@@ -221,11 +219,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         self.project = project
 
         silence_logs = "error"
-        secutity = None
         interface = None
         host = None
         security = None
-
 
         if env_extra is None:
             env_extra = []
@@ -256,7 +252,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             loop=loop,
             silence_logs=silence_logs,
             asynchronous=asynchronous,
-            name=name,            
+            name=name,
         )
 
         max_jobs = get_max_jobs(sge_job_spec)
@@ -283,9 +279,8 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             "io_big=TRUE," if "io_big" in job_spec and job_spec["io_big"] else ""
         )
 
-
         memory = _get_key_from_spec(job_spec, "memory")[:-1]
-        new_resource_spec += (f"mem_free={memory},")
+        new_resource_spec += f"mem_free={memory},"
 
         queue = _get_key_from_spec(job_spec, "queue")
         if queue != "all.q":
@@ -306,7 +301,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             "protocol": self.protocol,
             "security": None,
             "resources": _get_key_from_spec(job_spec, "resources"),
-            "env_extra": self.env_extra,            
+            "env_extra": self.env_extra,
         }
 
     def scale(self, n_jobs, sge_job_spec_key="default"):
@@ -374,8 +369,6 @@ class AdaptiveMultipleQueue(Adaptive):
         target."""
 
         plan = self.plan
-        requested = self.requested
-        observed = self.observed
 
         # Get tasks with no worker associated due to
         # resource restrictions

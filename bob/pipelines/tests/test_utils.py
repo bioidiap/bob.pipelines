@@ -1,8 +1,11 @@
+import os
+
+from tempfile import NamedTemporaryFile
+
 import nose
 import numpy as np
-import os
+
 import bob.pipelines as mario
-from tempfile import NamedTemporaryFile
 
 
 def test_io_vstack():
@@ -117,8 +120,8 @@ def test_io_vstack():
                 # create the file back so NamedTemporaryFile does not complain
                 np.save(paths[0], reader(i + 1))
 
-def test_isinstance_nested():
 
+def test_isinstance_nested():
     class A:
         pass
 

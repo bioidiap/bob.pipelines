@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, dist
+from setuptools import dist
+from setuptools import setup
+
+from bob.extension.utils import find_packages
+from bob.extension.utils import load_requirements
 
 dist.Distribution(dict(setup_requires=["bob.extension"]))
 
-from bob.extension.utils import load_requirements, find_packages
 
 install_requires = load_requirements()
 
@@ -30,9 +33,6 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
-    entry_points={
-        "bob.cli": ["pipelines = bob.pipelines.scripts.pipelines:pipelines"],
-    },
     # check classifiers, add and remove as you see fit
     # full list here: https://pypi.org/classifiers/
     # don't remove the Bob framework unless it's not a bob package

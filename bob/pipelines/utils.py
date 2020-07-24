@@ -1,4 +1,5 @@
 import pickle
+
 import nose
 import numpy as np
 
@@ -87,7 +88,7 @@ def _generate_features(reader, paths, same_size=False):
             yield (feature.ravel(),)
         else:
             for feat in feature:
-                yield (feat.ravel(), )
+                yield (feat.ravel(),)
 
 
 def vstack_features(reader, paths, same_size=False, dtype=None):
@@ -213,7 +214,9 @@ def isinstance_nested(instance, attribute, isinstance_of):
         return False
 
     # Checking the current object and its immediate nested
-    if isinstance(instance,isinstance_of) or isinstance(getattr(instance, attribute), isinstance_of):
+    if isinstance(instance, isinstance_of) or isinstance(
+        getattr(instance, attribute), isinstance_of
+    ):
         return True
     else:
         # Recursive search

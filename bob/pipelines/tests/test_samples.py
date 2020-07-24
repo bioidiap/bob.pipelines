@@ -1,19 +1,17 @@
-from bob.pipelines import (
-    Sample,
-    DelayedSample,
-    SampleSet,
-    sample_to_hdf5,
-    hdf5_to_sample,
-)
-import bob.io.base
-import numpy as np
-
 import copy
-import pickle
-import tempfile
 import functools
 import os
+import pickle
+import tempfile
+
 import h5py
+import numpy as np
+
+from bob.pipelines import DelayedSampleSet
+from bob.pipelines import Sample
+from bob.pipelines import SampleSet
+from bob.pipelines import hdf5_to_sample
+from bob.pipelines import sample_to_hdf5
 
 
 def test_sampleset_collection():
@@ -44,7 +42,7 @@ def test_sampleset_collection():
     def _load(path):
         return pickle.loads(open(path, "rb").read())
 
-    # Testing delayed sample in the sampleset
+    # Testing delayed sampleset
     with tempfile.TemporaryDirectory() as dir_name:
 
         samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
@@ -52,9 +50,10 @@ def test_sampleset_collection():
         with open(filename, "wb") as f:
             f.write(pickle.dumps(samples))
 
-        sampleset = SampleSet(DelayedSample(functools.partial(_load, filename)), key=1)
+        sampleset = DelayedSampleSet(functools.partial(_load, filename), key=1)
 
         assert len(sampleset) == n_samples
+        assert sampleset.samples == samples
 
 
 def test_sample_hdf5():
