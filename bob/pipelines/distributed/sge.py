@@ -18,7 +18,7 @@ from distributed.scheduler import Scheduler
 from distributed.deploy import Adaptive
 
 from .sge_queues import QUEUE_DEFAULT
-
+from bob.extension import rc
 
 class SGEIdiapJob(Job):
     """Launches a SGE Job in the IDIAP cluster. This class basically encodes
@@ -37,12 +37,13 @@ class SGEIdiapJob(Job):
         self,
         *args,
         queue=None,
-        project="biometric",
+        project=rc.get("sge.project"),
         resource_spec=None,
         job_extra=None,
         config_name="sge",
         **kwargs,
     ):
+
         if queue is None:
             queue = dask.config.get("jobqueue.%s.queue" % config_name)
         if project is None:
@@ -206,7 +207,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         env_extra=None,
         sge_job_spec=QUEUE_DEFAULT,
         min_jobs=10,
+        project=rc.get('sge.project'),
         **kwargs,
+
     ):
 
         # Defining the job launcher
@@ -215,12 +218,14 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
         self.protocol = protocol
         self.log_directory = log_directory
+        self.project = project
 
         silence_logs = "error"
         secutity = None
         interface = None
         host = None
         security = None
+
 
         if env_extra is None:
             env_extra = []
@@ -290,6 +295,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
         return {
             "queue": queue,
+            "project": self.project,
             "memory": _get_key_from_spec(job_spec, "memory"),
             "cores": 1,
             "processes": 1,

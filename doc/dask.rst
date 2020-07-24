@@ -72,6 +72,14 @@ Below follow a nice video explaining what is the :doc:`Dask-Jobqueue <dask-jobqu
      <iframe width="560" height="315" src="https://www.youtube.com/embed/FXsgmwpRExM" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 
+.. warning:: 
+
+  To submit jobs at Idiap's SGE it's mandatory to set a project name. Run the code below to set it::
+
+  $ bob config set sge.project <YOUR_PROJECT_NAME>
+
+
+
 The snippet below shows how to deploy the exact same pipeline from the previous section in the Idiap SGE cluster
 
 
