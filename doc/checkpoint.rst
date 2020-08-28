@@ -40,7 +40,7 @@ transformer.
    ...         print(f"Transforming {len(X)} samples ...")
    ...         return np.array(X) + np.array(sample_specific_offsets)
    ...
-   ...     def fit(self, X):
+   ...     def fit(self, X, y=None):
    ...         print("Fit was called!")
    ...         return self
 
