@@ -163,7 +163,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
         X = SampleBatch(samples)
 
-        self.estimator = self.estimator.fit(X, **kwargs)
+        self.estimator = self.estimator.fit(X, y=y, **kwargs)
         copy_learned_attributes(self.estimator, self)
         return self
 
