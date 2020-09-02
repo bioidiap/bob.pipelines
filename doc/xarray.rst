@@ -445,7 +445,7 @@ provide dask-ml estimators, set ``input_dask_array`` as ``True``.
    >>> ds = pipeline.fit(dataset).predict(dataset)
    >>> ds = ds.compute()
    >>> correct_classification = np.array(ds.data == ds.target).sum()
-   >>> correct_classification > 90
+   >>> correct_classification > 85
    True
    >>> ds.dims == {"sample": 150}
    True
