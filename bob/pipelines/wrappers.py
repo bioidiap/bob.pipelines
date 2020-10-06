@@ -153,6 +153,12 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         return self._samples_transform(samples, "score")
 
     def fit(self, samples, y=None):
+        if y is not None:
+            raise TypeError(
+                "We don't accept `y` in fit arguments because "
+                "`y` should be part of the sample. To pass `y` "
+                "to the wrapped estimator, use `fit_extra_arguments`."
+            )
 
         if is_estimator_stateless(self.estimator):
             return self
@@ -163,7 +169,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
         X = SampleBatch(samples)
 
-        self.estimator = self.estimator.fit(X, y=y, **kwargs)
+        self.estimator = self.estimator.fit(X, **kwargs)
         copy_learned_attributes(self.estimator, self)
         return self
 
