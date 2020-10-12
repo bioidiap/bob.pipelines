@@ -206,7 +206,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         dashboard_address=":8787",
         env_extra=None,
         sge_job_spec=QUEUE_DEFAULT,
-        min_jobs=10,
+        min_jobs=1,
         project=rc.get("sge.project"),
         **kwargs,
     ):
@@ -265,7 +265,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         #             Here the goal is to wait 2 minutes before scaling down since
         #             it is very expensive to get jobs on the SGE grid
 
-        self.adapt(minimum=min_jobs, maximum=max_jobs, wait_count=60, interval=1000)
+        self.adapt(minimum=min_jobs, maximum=max_jobs, wait_count=5, interval=120)
 
     def _get_worker_spec_options(self, job_spec):
         """Craft a dask worker_spec to be used in the qsub command."""
@@ -446,8 +446,12 @@ class SchedulerResourceRestriction(Scheduler):
 
     def __init__(self, *args, **kwargs):
         super(SchedulerResourceRestriction, self).__init__(
-            idle_timeout=60,
-            allowed_failures=100,
+            idle_timeout=300
+            if rc.get("bob.pipelines.sge.idle_timeout") is None
+            else rc.get("bob.pipelines.sge.idle_timeout"),
+            allowed_failures=100
+            if rc.get("bob.pipelines.sge.allowed_failures") is None
+            else rc.get("bob.pipelines.sge.allowed_failures"),
             synchronize_worker_interval="60s",
             *args,
             **kwargs,
