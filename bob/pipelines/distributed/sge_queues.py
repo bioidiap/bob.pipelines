@@ -50,14 +50,14 @@ default
 """
 
 
-QUEUE_LIGHT = {
+QUEUE_GPU = {
     "default": {
-        "queue": "q_1day",
-        "memory": "4GB",
+        "queue": "q_short_gpu",
+        "memory": "30GB",
         "io_big": False,
         "resource_spec": "",
-        "max_jobs": 96,
-        "resources": "",
+        "max_jobs": 45,
+        "resources": {"q_short_gpu": 1},
     },
     "q_1day": {
         "queue": "q_1day",
@@ -98,6 +98,5 @@ QUEUE_LIGHT = {
     },
 }
 """
-This queue setup has a light arrangement.
-For CPU jobs, it prioritizes all.q and not io_big
+This queue setup uses the q_short_gpu queue of the SGE.
 """

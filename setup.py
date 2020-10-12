@@ -46,7 +46,7 @@ setup(
         'dask.client': [
             'local-parallel  = bob.pipelines.config.distributed.local_parallel',
             'sge             = bob.pipelines.config.distributed.sge_default',
-            'sge-light       = bob.pipelines.config.distributed.sge_light',
+            'sge-gpu         = bob.pipelines.config.distributed.sge_gpu',
         ],
     },
 
