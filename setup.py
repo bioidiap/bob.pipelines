@@ -14,6 +14,7 @@ install_requires = load_requirements()
 
 
 setup(
+    # This is the basic information about the project.
     name="bob.pipelines",
     version=open("version.txt").read().rstrip(),
     description="Tools to build robust and extensible pipelines",
@@ -27,13 +28,29 @@ setup(
     # maintainer_email='email@example.com'
     # you may add more keywords separating those by commas (a, b, c, ...)
     keywords="bob",
+
+    # If you have a better, long description of your package, place it on the
+    # 'doc' directory and then hook it here
     long_description=open("README.rst").read(),
-    # leave this here, it is pretty standard
+
+    # This line is required for any distutils based packaging.
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
+
+    # Packages that should be installed when you "install" this package.
     install_requires=install_requires,
-    # check classifiers, add and remove as you see fit
+
+    # entry_points defines which scripts will be inside the 'bin' directory
+    entry_points = {
+        'dask.client': [
+            'local-parallel  = bob.pipelines.config.distributed.local_parallel',
+            'sge             = bob.pipelines.config.distributed.sge_default',
+            'sge-light       = bob.pipelines.config.distributed.sge_light',
+        ],
+    },
+
+    # check classifiers (important for PyPI), add and remove as you see fit.
     # full list here: https://pypi.org/classifiers/
     # don't remove the Bob framework unless it's not a bob package
     classifiers=[
