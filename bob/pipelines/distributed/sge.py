@@ -31,6 +31,7 @@ class SGEIdiapJob(Job):
 
     submit_command = "qsub"
     cancel_command = "qdel"
+    config_name = "SGEIdiapJob"
 
     def __init__(
         self,
