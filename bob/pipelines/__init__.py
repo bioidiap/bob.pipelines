@@ -6,6 +6,7 @@ from .sample import DelayedSample
 from .sample import DelayedSampleSet
 from .sample import Sample
 from .sample import SampleSet
+from .sample import SampleBatch
 from .sample import hdf5_to_sample  # noqa
 from .sample import sample_to_hdf5  # noqa
 from .wrappers import BaseWrapper
@@ -41,6 +42,7 @@ __appropriate__(
     DelayedSample,
     SampleSet,
     DelayedSampleSet,
+    SampleBatch,
     BaseWrapper,
     DelayedSamplesCall,
     SampleWrapper,
