@@ -44,9 +44,9 @@ setup(
     # entry_points defines which scripts will be inside the 'bin' directory
     entry_points = {
         'dask.client': [
-            'local-parallel  = bob.pipelines.config.distributed.local_parallel',
-            'sge             = bob.pipelines.config.distributed.sge_default',
-            'sge-gpu         = bob.pipelines.config.distributed.sge_gpu',
+            'local-parallel  = bob.pipelines.config.distributed.local_parallel:dask_client',
+            'sge             = bob.pipelines.config.distributed.sge_default:dask_client',
+            'sge-gpu         = bob.pipelines.config.distributed.sge_gpu:dask_client',
         ],
     },
 
