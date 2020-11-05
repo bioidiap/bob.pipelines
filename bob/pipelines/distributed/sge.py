@@ -109,7 +109,7 @@ def get_max_jobs(queue_dict):
 
 class SGEMultipleQueuesCluster(JobQueueCluster):
     """Launch Dask jobs in the SGE cluster allowing the request of multiple
-    queus.
+    queues.
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
       sge_job_spec: dict
         Dictionary containing a minimum specification for the qsub command.
-        It cosists of:
+        It consists of:
 
           queue: SGE queue
           memory: Memory requirement in GB (e.g. 4GB)
@@ -358,7 +358,7 @@ class AdaptiveMultipleQueue(Adaptive):
     This custom implementation extends the `Adaptive.recommendations` by looking
     at the `distributed.scheduler.TaskState.resource_restrictions`.
 
-    The heristics is:
+    The heuristics is:
 
     .. note ::
         If a certain task has the status `no-worker` and it has resource_restrictions, the scheduler should
@@ -446,7 +446,7 @@ class SchedulerResourceRestriction(Scheduler):
 
     def __init__(self, *args, **kwargs):
         super(SchedulerResourceRestriction, self).__init__(
-            idle_timeout=300
+            idle_timeout=3600
             if rc.get("bob.pipelines.sge.idle_timeout") is None
             else rc.get("bob.pipelines.sge.idle_timeout"),
             allowed_failures=100
