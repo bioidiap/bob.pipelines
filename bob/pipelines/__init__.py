@@ -10,9 +10,11 @@ from .sample import hdf5_to_sample  # noqa
 from .sample import sample_to_hdf5  # noqa
 from .wrappers import BaseWrapper
 from .wrappers import CheckpointWrapper
+from .wrappers import CheckpointAnnotationsWrapper
 from .wrappers import DaskWrapper
 from .wrappers import DelayedSamplesCall
 from .wrappers import SampleWrapper
+from .wrappers import AnnotatedSampleWrapper
 from .wrappers import ToDaskBag
 from .wrappers import dask_tags  # noqa
 from .wrappers import wrap  # noqa
