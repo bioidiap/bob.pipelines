@@ -4,6 +4,7 @@ import os
 
 from functools import partial
 
+import bob.io.base
 import cloudpickle
 import dask.bag
 
@@ -12,8 +13,6 @@ from sklearn.base import BaseEstimator
 from sklearn.base import MetaEstimatorMixin
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
-
-import bob.io.base
 
 from .sample import DelayedSample
 from .sample import SampleBatch
@@ -84,13 +83,10 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
     Do not use this class except for scikit-learn estimators.
 
-    .. todo::
-
-        Also implement ``predict``, ``predict_proba``, and ``score``. See:
-        https://scikit-learn.org/stable/developers/develop.html#apis-of-scikit-learn-objects
-
     Attributes
     ----------
+    estimator
+        The scikit-learn estimator that is wrapped.
     fit_extra_arguments : [tuple]
         Use this option if you want to pass extra arguments to the fit method of the
         mixed instance. The format is a list of two value tuples. The first value in
@@ -99,14 +95,14 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         passing samples to the fit method and want to pass ``subject`` attributes of
         samples as the ``y`` argument to the fit method, you can provide ``[("y",
         "subject")]`` as the value for this attribute.
-    transform_extra_arguments : [tuple]
-        Similar to ``fit_extra_arguments`` but for the transform and other similar methods.
-    output_attribute: str
+    output_attribute : str
         The name of a Sample attribute where the output of the estimator will be
-        saved to. [Default is ``data``]
-        Example:
-            if ``output_attribute`` is ``"annotations"``, then
-            ``sample.annotations`` will contain the output of the estimator.
+        saved to [Default is ``data``]. For example, if ``output_attribute`` is
+        ``"annotations"``, then ``sample.annotations`` will contain the output of
+        the estimator.
+    transform_extra_arguments : [tuple]
+        Similar to ``fit_extra_arguments`` but for the transform and other similar
+        methods.
     """
 
     def __init__(
