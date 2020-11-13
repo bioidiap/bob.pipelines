@@ -6,7 +6,7 @@ from collections.abc import Sequence
 import h5py
 import numpy as np
 
-from .utils import vstack_features
+from bob.io.base import vstack_features
 
 SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
 
