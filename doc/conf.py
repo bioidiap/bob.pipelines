@@ -243,4 +243,4 @@ def setup(app):
     # Add `>>>` button to toggle visibility of prompts in code blocks.
     # see https://github.com/readthedocs/sphinx_rtd_theme/issues/167 and
     # https://raw.githubusercontent.com/python/python-docs-theme/master/python_docs_theme/static/copybutton.js
-    app.add_javascript("copybutton.js")
+    app.add_js_file("copybutton.js")
