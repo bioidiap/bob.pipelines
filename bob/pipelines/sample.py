@@ -87,7 +87,7 @@ class DelayedSample(_ReprMixin):
     Parameters
     ----------
 
-        load:
+        load
             A python function that can be called parameterlessly, to load the
             sample in question from whatever medium
 
@@ -95,24 +95,38 @@ class DelayedSample(_ReprMixin):
             If passed, consider this as a parent of this sample, to copy
             information
 
+        delayed_attributes : dict or None
+            A dictionary of name : load_fn pairs that will be used to create
+            attributes of name : load_fn() in this class. Use this to option
+            to create more delayed attributes than just ``sample.data``.
+
         kwargs : dict
             Further attributes of this sample, to be stored and eventually
             transmitted to transformed versions of the sample
     """
 
-    def __init__(self, load, parent=None, **kwargs):
-        self.load = load
+    def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
         if parent is not None:
             _copy_attributes(self, parent.__dict__)
         _copy_attributes(self, kwargs)
-        self._data = None
+        self.load = load
+        self.delayed_attributes = delayed_attributes
+
+    def __getattr__(self, name: str):
+        if self.delayed_attributes is None:
+            raise AttributeError(name)
+
+        load_fn = self.delayed_attributes.get(name)
+
+        if load_fn is None:
+            raise AttributeError(name)
+
+        return load_fn()
 
     @property
     def data(self):
         """Loads the data from the disk file."""
-        if self._data is None:
-            self._data = self.load()
-        return self._data
+        return self.load()
 
 
 class SampleSet(MutableSequence, _ReprMixin):
