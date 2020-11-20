@@ -8,19 +8,34 @@ import numpy as np
 
 from bob.io.base import vstack_features
 
-SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
+SAMPLE_DATA_ATTRS = ("data", "load", "samples", "delayed_attributes")
 
 
-def _copy_attributes(s, d):
+def _copy_attributes(sample, parent, kwargs):
     """Copies attributes from a dictionary to self."""
-    s.__dict__.update(dict((k, v) for k, v in d.items() if k not in SAMPLE_DATA_ATTRS))
+    if parent is not None:
+        for key in parent.__dict__:
+            if key in SAMPLE_DATA_ATTRS:
+                continue
+
+            setattr(sample, key, getattr(parent, key))
+
+    for key, value in kwargs.items():
+        if key in SAMPLE_DATA_ATTRS:
+            continue
+
+        setattr(sample, key, value)
 
 
 class _ReprMixin:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}("
-            + ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+            + ", ".join(
+                f"{k}={v!r}"
+                for k, v in self.__dict__.items()
+                if k != "delayed_attributes"
+            )
             + ")"
         )
 
@@ -72,9 +87,7 @@ class Sample(_ReprMixin):
 
     def __init__(self, data, parent=None, **kwargs):
         self.data = data
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
+        _copy_attributes(self, parent, kwargs)
 
 
 class DelayedSample(_ReprMixin):
@@ -106,22 +119,18 @@ class DelayedSample(_ReprMixin):
     """
 
     def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
-        self.load = load
         self.delayed_attributes = delayed_attributes
+        # create the delayed attributes but leave the their values as None for now.
+        if delayed_attributes is not None:
+            kwargs.update({k: None for k in delayed_attributes})
+        _copy_attributes(self, parent, kwargs)
+        self.load = load
 
-    def __getattr__(self, name: str):
-        if self.delayed_attributes is None:
-            raise AttributeError(name)
-
-        load_fn = self.delayed_attributes.get(name)
-
-        if load_fn is None:
-            raise AttributeError(name)
-
-        return load_fn()
+    def __getattribute__(self, name: str):
+        delayed_attributes = super().__getattribute__("delayed_attributes")
+        if delayed_attributes is None or name not in delayed_attributes:
+            return super().__getattribute__(name)
+        return delayed_attributes[name]()
 
     @property
     def data(self):
@@ -134,9 +143,7 @@ class SampleSet(MutableSequence, _ReprMixin):
 
     def __init__(self, samples, parent=None, **kwargs):
         self.samples = samples
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
+        _copy_attributes(self, parent, kwargs)
 
     def __len__(self):
         return len(self.samples)
@@ -161,9 +168,7 @@ class DelayedSampleSet(SampleSet):
     def __init__(self, load, parent=None, **kwargs):
         self._data = None
         self.load = load
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
+        _copy_attributes(self, parent, kwargs)
 
     @property
     def samples(self):

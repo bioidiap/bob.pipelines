@@ -76,7 +76,7 @@ to convert our dataset to a list of samples first:
    ...     for i, y in enumerate(iris.target)
    ... ]
    >>> samples[0]
-   DelayedSample(load=functools.partial(<function load at ...>, 0), target=0, _data=None)
+   DelayedSample(target=0, load=...)
 
 You may be already familiar with our sample concept. If not, please read more on
 :ref:`bob.pipelines.sample`. Now, to optimize our process, we will represent our
@@ -265,7 +265,7 @@ features. Let's add the ``key`` metadata to our dataset first:
    ...     for i, y in enumerate(iris.target)
    ... ]
    >>> samples[0]
-   DelayedSample(load=functools.partial(<function load at ...>, 0), target=0, key=0, _data=None)
+   DelayedSample(target=0, key=0, load=...)
 
    >>> # construct the meta from one sample
    >>> meta = xr.DataArray(samples[0].data, dims=("feature"))
