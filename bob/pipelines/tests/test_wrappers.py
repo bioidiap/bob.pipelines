@@ -11,7 +11,7 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_is_fitted
-
+from bob.pipelines.utils import hash_string
 import bob.pipelines as mario
 
 
@@ -171,6 +171,17 @@ def test_checkpoint_function_sample_transfomer():
         func=_offset_add_func,
         kw_args=dict(offset=offset),
         validate=True,
+    )
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(oracle, [s.data for s in features])
+
+    # test when both model_path and features_dir is None
+    transformer = mario.wrap(
+        [FunctionTransformer, "sample", "checkpoint"],
+        func=_offset_add_func,
+        kw_args=dict(offset=offset),
+        validate=True,
+        hash_fn=hash_string,
     )
     features = transformer.transform(samples)
     _assert_all_close_numpy_array(oracle, [s.data for s in features])

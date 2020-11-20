@@ -2,6 +2,8 @@ import pickle
 
 import nose
 import numpy as np
+import random
+import string
 
 
 def is_picklable(obj):
@@ -76,3 +78,33 @@ def isinstance_nested(instance, attribute, isinstance_of):
     else:
         # Recursive search
         return isinstance_nested(getattr(instance, attribute), attribute, isinstance_of)
+
+
+def hash_string(key, bucket_size=1000, word_length=8):
+    """
+    Generates a hash code given a string.
+    
+    Parameters
+    ----------
+    
+    key: str
+      Input string to be hashed
+
+    bucket_size: int
+      Size of the hash table.
+
+    word_lenth: str
+      Size of the output string
+
+    
+
+    """
+    letters = string.ascii_lowercase
+
+    # Getting an integer value from the key
+    # and mod `n_slots` to have values between 0 and 1000
+    string_seed = sum([ord(i) for i in (key)]) % bucket_size
+
+    # Defining the seed so we have predictable values
+    random.seed(string_seed)
+    return "".join(random.choice(letters) for i in range(word_length))
