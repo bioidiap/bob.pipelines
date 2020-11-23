@@ -4,7 +4,6 @@ import os
 
 from functools import partial
 
-import bob.io.base
 import cloudpickle
 import dask.bag
 
@@ -14,6 +13,8 @@ from sklearn.base import MetaEstimatorMixin
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
+
+import bob.io.base
 
 from .sample import DelayedSample
 from .sample import SampleBatch
@@ -137,13 +138,14 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(sset.samples, method_name), parent=sset,
+                    self._samples_transform(sset.samples, method_name),
+                    parent=sset,
                 )
                 for sset in samples
             ]
         else:
             kwargs = _make_kwargs_from_samples(samples, self.transform_extra_arguments)
-            delayed = DelayedSamplesCall(partial(method, **kwargs), func_name, samples,)
+            delayed = DelayedSamplesCall(partial(method, **kwargs), func_name, samples)
             if self.output_attribute != "data":
                 # Edit the sample.<output_attribute> instead of data
                 for i, s in enumerate(samples):
@@ -202,13 +204,13 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
     estimator
        The scikit-learn estimator to be wrapped.
-    
+
     model_path: str
        Saves the estimator state in this directory if the `estimator` is stateful
 
     features_dir: str
        Saves the transformed data in this directory
-    
+
     extension: str
        Default extension of the transformed features
 
@@ -216,14 +218,14 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
        Pointer to a customized function that saves transformed features to disk
 
     load_func
-       Pointer to a customized function that loads transformed features from disk 
+       Pointer to a customized function that loads transformed features from disk
 
     sample_attribute: str
        Defines the payload attribute of the sample (Defaul: `data`)
 
     hash_fn
        Pointer to a hash function. This hash function maps
-       `sample.key` to a hash code and this hash code corresponds a relative directory 
+       `sample.key` to a hash code and this hash code corresponds a relative directory
        where a single `sample` will be checkpointed.
        This is useful when is desirable file directories with less than
        a certain number of files.
@@ -406,7 +408,11 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     """
 
     def __init__(
-        self, estimator, fit_tag=None, transform_tag=None, **kwargs,
+        self,
+        estimator,
+        fit_tag=None,
+        transform_tag=None,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
@@ -458,7 +464,10 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
-        self._dask_state = delayed(_fit)(X, y,)
+        self._dask_state = delayed(_fit)(
+            X,
+            y,
+        )
         if self.fit_tag is not None:
             self.resource_tags[self._dask_state] = self.fit_tag
 
