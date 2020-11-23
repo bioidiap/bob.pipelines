@@ -1,6 +1,8 @@
 import os
 import tempfile
 
+from functools import partial
+
 import dask
 import dask_ml.decomposition
 import dask_ml.preprocessing
@@ -17,9 +19,25 @@ from sklearn.preprocessing import StandardScaler
 import bob.pipelines as mario
 
 
-def _build_toy_samples():
+def _build_toy_samples(delayed=False):
     X = np.ones(shape=(10, 5), dtype=int)
-    samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    if delayed:
+
+        def _load(index, attr):
+            if attr == "data":
+                return X[index]
+            if attr == "key":
+                return str(index)
+
+        samples = [
+            mario.DelayedSample(
+                partial(_load, i, "data"),
+                delayed_attributes=dict(key=partial(_load, i, "key")),
+            )
+            for i in range(len(X))
+        ]
+    else:
+        samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
     return X, samples
 
 
@@ -31,17 +49,46 @@ def test_samples_to_dataset():
     np.testing.assert_array_equal(dataset["key"], [str(i) for i in range(10)])
 
 
-def _build_iris_dataset(shuffle=False):
+def test_delayed_samples_to_dataset():
+    X, samples = _build_toy_samples(delayed=True)
+    dataset = mario.xr.samples_to_dataset(samples)
+    assert dataset.dims == {"sample": X.shape[0], "dim_0": X.shape[1]}, dataset.dims
+    np.testing.assert_array_equal(dataset["data"], X)
+    np.testing.assert_array_equal(dataset["key"], [str(i) for i in range(10)])
+
+
+def _build_iris_dataset(shuffle=False, delayed=False):
 
     iris = datasets.load_iris()
 
     X = iris.data
     keys = [str(k) for k in range(len(X))]
 
-    samples = [
-        mario.Sample(x, target=y, key=k)
-        for x, y, k in zip(iris.data, iris.target, keys)
-    ]
+    if delayed:
+
+        def _load(index, attr):
+            if attr == "data":
+                return X[index]
+            if attr == "key":
+                return str(index)
+            if attr == "target":
+                return iris.target[index]
+
+        samples = [
+            mario.DelayedSample(
+                partial(_load, i, "data"),
+                delayed_attributes=dict(
+                    key=partial(_load, i, "key"),
+                    target=partial(_load, i, "target"),
+                ),
+            )
+            for i in range(len(X))
+        ]
+    else:
+        samples = [
+            mario.Sample(x, target=y, key=k)
+            for x, y, k in zip(iris.data, iris.target, keys)
+        ]
     meta = xr.DataArray(X[0], dims=("feature",))
     dataset = mario.xr.samples_to_dataset(
         samples, meta=meta, npartitions=3, shuffle=shuffle
@@ -50,20 +97,21 @@ def _build_iris_dataset(shuffle=False):
 
 
 def test_dataset_pipeline():
-    ds = _build_iris_dataset()
-    estimator = mario.xr.DatasetPipeline(
-        [
-            PCA(n_components=0.99),
-            {
-                "estimator": LinearDiscriminantAnalysis(),
-                "fit_input": ["data", "target"],
-            },
-        ]
-    )
+    for delayed in (True, False):
+        ds = _build_iris_dataset(delayed=delayed)
+        estimator = mario.xr.DatasetPipeline(
+            [
+                PCA(n_components=0.99),
+                {
+                    "estimator": LinearDiscriminantAnalysis(),
+                    "fit_input": ["data", "target"],
+                },
+            ]
+        )
 
-    estimator = estimator.fit(ds)
-    ds = estimator.decision_function(ds)
-    ds.compute()
+        estimator = estimator.fit(ds)
+        ds = estimator.decision_function(ds)
+        ds.compute()
 
 
 def test_dataset_pipeline_with_shapes():

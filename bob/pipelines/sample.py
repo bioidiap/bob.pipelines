@@ -8,19 +8,34 @@ import numpy as np
 
 from bob.io.base import vstack_features
 
-SAMPLE_DATA_ATTRS = ("data", "load", "samples", "_data")
+SAMPLE_DATA_ATTRS = ("data", "load", "samples", "delayed_attributes")
 
 
-def _copy_attributes(s, d):
+def _copy_attributes(sample, parent, kwargs):
     """Copies attributes from a dictionary to self."""
-    s.__dict__.update(dict((k, v) for k, v in d.items() if k not in SAMPLE_DATA_ATTRS))
+    if parent is not None:
+        for key in parent.__dict__:
+            if key in SAMPLE_DATA_ATTRS:
+                continue
+
+            setattr(sample, key, getattr(parent, key))
+
+    for key, value in kwargs.items():
+        if key in SAMPLE_DATA_ATTRS:
+            continue
+
+        setattr(sample, key, value)
 
 
 class _ReprMixin:
     def __repr__(self):
         return (
             f"{self.__class__.__name__}("
-            + ", ".join(f"{k}={v!r}" for k, v in self.__dict__.items())
+            + ", ".join(
+                f"{k}={v!r}"
+                for k, v in self.__dict__.items()
+                if k != "delayed_attributes"
+            )
             + ")"
         )
 
@@ -72,9 +87,7 @@ class Sample(_ReprMixin):
 
     def __init__(self, data, parent=None, **kwargs):
         self.data = data
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
+        _copy_attributes(self, parent, kwargs)
 
 
 class DelayedSample(_ReprMixin):
@@ -87,7 +100,7 @@ class DelayedSample(_ReprMixin):
     Parameters
     ----------
 
-        load:
+        load
             A python function that can be called parameterlessly, to load the
             sample in question from whatever medium
 
@@ -95,24 +108,34 @@ class DelayedSample(_ReprMixin):
             If passed, consider this as a parent of this sample, to copy
             information
 
+        delayed_attributes : dict or None
+            A dictionary of name : load_fn pairs that will be used to create
+            attributes of name : load_fn() in this class. Use this to option
+            to create more delayed attributes than just ``sample.data``.
+
         kwargs : dict
             Further attributes of this sample, to be stored and eventually
             transmitted to transformed versions of the sample
     """
 
-    def __init__(self, load, parent=None, **kwargs):
+    def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
+        self.delayed_attributes = delayed_attributes
+        # create the delayed attributes but leave the their values as None for now.
+        if delayed_attributes is not None:
+            kwargs.update({k: None for k in delayed_attributes})
+        _copy_attributes(self, parent, kwargs)
         self.load = load
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
-        self._data = None
+
+    def __getattribute__(self, name: str):
+        delayed_attributes = super().__getattribute__("delayed_attributes")
+        if delayed_attributes is None or name not in delayed_attributes:
+            return super().__getattribute__(name)
+        return delayed_attributes[name]()
 
     @property
     def data(self):
         """Loads the data from the disk file."""
-        if self._data is None:
-            self._data = self.load()
-        return self._data
+        return self.load()
 
 
 class SampleSet(MutableSequence, _ReprMixin):
@@ -120,9 +143,7 @@ class SampleSet(MutableSequence, _ReprMixin):
 
     def __init__(self, samples, parent=None, **kwargs):
         self.samples = samples
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
+        _copy_attributes(self, parent, kwargs)
 
     def __len__(self):
         return len(self.samples)
@@ -147,9 +168,7 @@ class DelayedSampleSet(SampleSet):
     def __init__(self, load, parent=None, **kwargs):
         self._data = None
         self.load = load
-        if parent is not None:
-            _copy_attributes(self, parent.__dict__)
-        _copy_attributes(self, kwargs)
+        _copy_attributes(self, parent, kwargs)
 
     @property
     def samples(self):
@@ -165,19 +184,20 @@ class SampleBatch(Sequence, _ReprMixin):
     sample.data attributes in a memory efficient way.
     """
 
-    def __init__(self, samples):
+    def __init__(self, samples, sample_attribute="data"):
         self.samples = samples
+        self.sample_attribute = sample_attribute
 
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, item):
-        return self.samples[item].data
+        return getattr(self.samples[item], self.sample_attribute)
 
     def __array__(self, dtype=None, *args, **kwargs):
         def _reader(s):
             # adding one more dimension to data so they get stacked sample-wise
-            return s.data[None, ...]
+            return getattr(s, self.sample_attribute)[None, ...]
 
         arr = vstack_features(_reader, self.samples, dtype=dtype)
         return np.asarray(arr, dtype, *args, **kwargs)

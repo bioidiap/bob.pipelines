@@ -7,6 +7,7 @@ import tempfile
 import h5py
 import numpy as np
 
+from bob.pipelines import DelayedSample
 from bob.pipelines import DelayedSampleSet
 from bob.pipelines import Sample
 from bob.pipelines import SampleSet
@@ -84,3 +85,19 @@ def test_sample_hdf5():
 
         compare = [a == b for a, b in zip(samples_deserialized, samples)]
         assert np.sum(compare) == 10
+
+
+def test_delayed_samples():
+    def load_data():
+        return 0
+
+    def load_annot():
+        return "annotation"
+
+    delayed_sample = DelayedSample(load_data, delayed_attributes=dict(annot=load_annot))
+    assert delayed_sample.data == 0, delayed_sample.data
+    assert delayed_sample.annot == "annotation", delayed_sample.annot
+
+    child_sample = Sample(1, parent=delayed_sample)
+    assert child_sample.data == 1, child_sample.data
+    assert child_sample.annot == "annotation", child_sample.annot

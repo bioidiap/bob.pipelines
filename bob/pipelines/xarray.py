@@ -21,20 +21,41 @@ from .utils import is_estimator_stateless
 logger = logging.getLogger(__name__)
 
 
-def _one_sample_to_dataset(sample, meta=None):
-    dataset = {k: v for k, v in sample.__dict__.items() if k not in SAMPLE_DATA_ATTRS}
+def _load_fn_to_xarray(load_fn, meta=None):
     if meta is None:
-        meta = sample.data
-    dataset["data"] = dask.array.from_delayed(
-        dask.delayed(sample).data, meta.shape, dtype=meta.dtype, name=False
+        meta = np.array(load_fn())
+
+    da = dask.array.from_delayed(
+        dask.delayed(load_fn)(), meta.shape, dtype=meta.dtype, name=False
     )
     try:
         dims = meta.dims
     except Exception:
         dims = None
 
-    dataset["data"] = xr.DataArray(dataset["data"], dims=dims)
-    return xr.Dataset(dataset).chunk()
+    xa = xr.DataArray(da, dims=dims)
+    return xa, meta
+
+
+def _one_sample_to_dataset(sample, meta=None):
+    dataset = {}
+    delayed_attributes = getattr(sample, "delayed_attributes", None) or {}
+    for k in sample.__dict__:
+        if k in SAMPLE_DATA_ATTRS or k in delayed_attributes:
+            continue
+        dataset[k] = getattr(sample, k)
+
+    meta = meta or {}
+
+    for k in ["data"] + list(delayed_attributes.keys()):
+        attr_meta = meta.get(k)
+        attr_array, attr_meta = _load_fn_to_xarray(
+            partial(getattr, sample, k), meta=attr_meta
+        )
+        meta[k] = attr_meta
+        dataset[k] = attr_array
+
+    return xr.Dataset(dataset).chunk(), meta
 
 
 def samples_to_dataset(samples, meta=None, npartitions=48, shuffle=False):
@@ -58,13 +79,20 @@ def samples_to_dataset(samples, meta=None, npartitions=48, shuffle=False):
     ``xarray.Dataset``
         The constructed dataset with at least a ``data`` variable.
     """
-    if meta is None:
-        dataset = _one_sample_to_dataset(samples[0])
-        meta = dataset["data"]
+    if meta is not None and not isinstance(meta, dict):
+        meta = dict(data=meta)
+
+    delayed_attributes = getattr(samples[0], "delayed_attributes", None) or {}
+    if meta is None or not all(
+        k in meta for k in ["data"] + list(delayed_attributes.keys())
+    ):
+        dataset, meta = _one_sample_to_dataset(samples[0])
+
     if shuffle:
         random.shuffle(samples)
+
     dataset = xr.concat(
-        [_one_sample_to_dataset(s, meta=meta) for s in samples], dim="sample"
+        [_one_sample_to_dataset(s, meta=meta)[0] for s in samples], dim="sample"
     )
     if npartitions is not None:
         dataset = dataset.chunk({"sample": max(1, len(samples) // npartitions)})
@@ -431,7 +459,9 @@ class DatasetPipeline(_BaseComposition):
                 try:
                     ds = block.dataset_map(ds)
                 except Exception as e:
-                    raise RuntimeError(f"Could not map ds {ds}\n with {block.dataset_map}") from e
+                    raise RuntimeError(
+                        f"Could not map ds {ds}\n with {block.dataset_map}"
+                    ) from e
                 continue
 
             if do_fit:
