@@ -2,6 +2,7 @@
 
 from collections.abc import MutableSequence
 from collections.abc import Sequence
+from typing import Any
 
 import h5py
 import numpy as np
@@ -120,17 +121,28 @@ class DelayedSample(_ReprMixin):
 
     def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
         self.delayed_attributes = delayed_attributes
+        self.__running_init__ = True
         # create the delayed attributes but leave the their values as None for now.
         if delayed_attributes is not None:
             kwargs.update({k: None for k in delayed_attributes})
         _copy_attributes(self, parent, kwargs)
         self.load = load
+        del self.__running_init__
 
-    def __getattribute__(self, name: str):
+    def __getattribute__(self, name: str) -> Any:
         delayed_attributes = super().__getattribute__("delayed_attributes")
         if delayed_attributes is None or name not in delayed_attributes:
             return super().__getattribute__(name)
         return delayed_attributes[name]()
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name != "delayed_attributes" and "__running_init__" not in self.__dict__:
+            delayed_attributes = self.delayed_attributes
+            # if setting an attribute which was delayed, remove it from delayed_attributes
+            if delayed_attributes is not None and name in delayed_attributes:
+                del delayed_attributes[name]
+
+        super().__setattr__(name, value)
 
     @property
     def data(self):
@@ -166,15 +178,12 @@ class DelayedSampleSet(SampleSet):
     """A set of samples with extra attributes"""
 
     def __init__(self, load, parent=None, **kwargs):
-        self._data = None
         self.load = load
         _copy_attributes(self, parent, kwargs)
 
     @property
     def samples(self):
-        if self._data is None:
-            self._data = self.load()
-        return self._data
+        return self.load()
 
 
 class SampleBatch(Sequence, _ReprMixin):
@@ -222,7 +231,7 @@ def sample_to_hdf5(sample, hdf5):
             sample_to_hdf5(s, group)
     else:
         for s in sample.__dict__:
-            hdf5[s] = sample.__dict__[s]
+            hdf5[s] = getattr(sample, s)
 
 
 def hdf5_to_sample(hdf5):
@@ -250,6 +259,6 @@ def hdf5_to_sample(hdf5):
         # If hasn't groups, returns a sample
         sample = Sample(None)
         for k in hdf5.keys():
-            sample.__dict__[k] = hdf5[k].value
+            setattr(sample, k, hdf5[k].value)
 
         return sample

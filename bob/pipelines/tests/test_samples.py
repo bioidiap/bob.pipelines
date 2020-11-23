@@ -101,3 +101,6 @@ def test_delayed_samples():
     child_sample = Sample(1, parent=delayed_sample)
     assert child_sample.data == 1, child_sample.data
     assert child_sample.annot == "annotation", child_sample.annot
+
+    delayed_sample.annot = "changed"
+    assert delayed_sample.annot == "changed", delayed_sample.annot
