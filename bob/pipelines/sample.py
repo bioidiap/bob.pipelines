@@ -9,20 +9,20 @@ import numpy as np
 
 from bob.io.base import vstack_features
 
-SAMPLE_DATA_ATTRS = ("data", "load", "samples", "delayed_attributes")
+SAMPLE_DATA_ATTRS = ("data", "samples")
 
 
 def _copy_attributes(sample, parent, kwargs):
     """Copies attributes from a dictionary to self."""
     if parent is not None:
         for key in parent.__dict__:
-            if key in SAMPLE_DATA_ATTRS:
+            if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
                 continue
 
             setattr(sample, key, getattr(parent, key))
 
     for key, value in kwargs.items():
-        if key in SAMPLE_DATA_ATTRS:
+        if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
             continue
 
         setattr(sample, key, value)
@@ -33,9 +33,7 @@ class _ReprMixin:
         return (
             f"{self.__class__.__name__}("
             + ", ".join(
-                f"{k}={v!r}"
-                for k, v in self.__dict__.items()
-                if k != "delayed_attributes"
+                f"{k}={v!r}" for k, v in self.__dict__.items() if not k.startswith("_")
             )
             + ")"
         )
@@ -120,24 +118,27 @@ class DelayedSample(_ReprMixin):
     """
 
     def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
-        self.delayed_attributes = delayed_attributes
         self.__running_init__ = True
+        self._delayed_attributes = delayed_attributes
         # create the delayed attributes but leave the their values as None for now.
         if delayed_attributes is not None:
             kwargs.update({k: None for k in delayed_attributes})
         _copy_attributes(self, parent, kwargs)
-        self.load = load
+        self._load = load
         del self.__running_init__
 
     def __getattribute__(self, name: str) -> Any:
-        delayed_attributes = super().__getattribute__("delayed_attributes")
+        try:
+            delayed_attributes = super().__getattribute__("_delayed_attributes")
+        except AttributeError:
+            delayed_attributes = None
         if delayed_attributes is None or name not in delayed_attributes:
             return super().__getattribute__(name)
         return delayed_attributes[name]()
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name != "delayed_attributes" and "__running_init__" not in self.__dict__:
-            delayed_attributes = self.delayed_attributes
+            delayed_attributes = getattr(self, "_delayed_attributes", None)
             # if setting an attribute which was delayed, remove it from delayed_attributes
             if delayed_attributes is not None and name in delayed_attributes:
                 del delayed_attributes[name]
@@ -147,7 +148,7 @@ class DelayedSample(_ReprMixin):
     @property
     def data(self):
         """Loads the data from the disk file."""
-        return self.load()
+        return self._load()
 
 
 class SampleSet(MutableSequence, _ReprMixin):
@@ -178,12 +179,12 @@ class DelayedSampleSet(SampleSet):
     """A set of samples with extra attributes"""
 
     def __init__(self, load, parent=None, **kwargs):
-        self.load = load
+        self._load = load
         _copy_attributes(self, parent, kwargs)
 
     @property
     def samples(self):
-        return self.load()
+        return self._load()
 
 
 class SampleBatch(Sequence, _ReprMixin):

@@ -39,9 +39,9 @@ def _load_fn_to_xarray(load_fn, meta=None):
 
 def _one_sample_to_dataset(sample, meta=None):
     dataset = {}
-    delayed_attributes = getattr(sample, "delayed_attributes", None) or {}
+    delayed_attributes = getattr(sample, "_delayed_attributes", None) or {}
     for k in sample.__dict__:
-        if k in SAMPLE_DATA_ATTRS or k in delayed_attributes:
+        if k in SAMPLE_DATA_ATTRS or k in delayed_attributes or k.startswith("_"):
             continue
         dataset[k] = getattr(sample, k)
 

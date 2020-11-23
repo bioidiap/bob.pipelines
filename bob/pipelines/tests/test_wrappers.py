@@ -11,9 +11,10 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array
 from sklearn.utils.validation import check_is_fitted
-from bob.pipelines.utils import hash_string
+
 import bob.pipelines as mario
-import tempfile
+
+from bob.pipelines.utils import hash_string
 
 
 def _offset_add_func(X, offset=1):
@@ -189,7 +190,7 @@ def test_checkpoint_function_sample_transfomer():
 
         features = transformer.transform(samples)
         # Checking if we have 8 chars in the second level
-        assert len(features[0].load.args[0].split("/")[-2]) == 8
+        assert len(features[0]._load.args[0].split("/")[-2]) == 8
         _assert_all_close_numpy_array(oracle, [s.data for s in features])
 
 
