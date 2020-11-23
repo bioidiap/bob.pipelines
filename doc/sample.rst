@@ -157,9 +157,9 @@ Below, follow an example on how to use :any:`DelayedSample`.
    ...     return np.zeros((2,))
    >>> delayed_sample = mario.DelayedSample(load, metadata=1)
    >>> delayed_sample
-   DelayedSample(metadata=1, load=<function load at ...)
+   DelayedSample(metadata=1)
 
-As soon as you access the ``.data`` attribute, the data is loaded and kept in memory:
+As soon as you access the ``.data`` attribute, the data is loaded and returned:
 
 .. doctest::
 
@@ -213,6 +213,6 @@ transform each sample inside and returns the same SampleSets with new data.
 
    >>> transformed_sample_sets = sample_pipeline.transform(sample_sets)
    >>> transformed_sample_sets[0].samples[1]
-   DelayedSample(offset=array([1]), load=...)
+   DelayedSample(offset=array([1]))
    >>> transformed_sample_sets[0].samples[1].data
    array([1., 1.])
