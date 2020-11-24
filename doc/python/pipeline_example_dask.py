@@ -4,21 +4,17 @@ from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_pipeline
 
-from bob.pipelines.mixins import CheckpointMixin
-from bob.pipelines.mixins import SampleMixin
-from bob.pipelines.mixins import estimator_dask_it
-from bob.pipelines.mixins import mix_me_up
 from bob.pipelines.sample import Sample
+import bob.pipelines
+import os
 
 
 class MyTransformer(TransformerMixin, BaseEstimator):
     def transform(self, X, metadata=None):
         # Transform `X` with metadata
-        if metadata is None:
-            return X
-        return [x + m for x, m in zip(X, metadata)]
+        return X
 
-    def fit(self, X):
+    def fit(self, X, y=None):
         pass
 
     def _more_tags(self):
@@ -26,9 +22,8 @@ class MyTransformer(TransformerMixin, BaseEstimator):
 
 
 class MyFitTranformer(TransformerMixin, BaseEstimator):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self._fit_model = None
-        super().__init__(*args, **kwargs)
 
     def transform(self, X):
         # Transform `X`
@@ -39,30 +34,27 @@ class MyFitTranformer(TransformerMixin, BaseEstimator):
         return self
 
 
-# Mixing up MyTransformer with the capabilities of handling Samples AND checkpointing
-MyBoostedTransformer = mix_me_up((CheckpointMixin, SampleMixin), MyTransformer)
-MyBoostedFitTransformer = mix_me_up((CheckpointMixin, SampleMixin), MyFitTranformer)
-
 # Creating X
 X = numpy.zeros((2, 2))
 # Wrapping X with Samples
 X_as_sample = [Sample(X, key=str(i), metadata=1) for i in range(10)]
 
 # Building an arbitrary pipeline
-pipeline = make_pipeline(
-    MyBoostedTransformer(
-        transform_extra_arguments=(("metadata", "metadata"),),
-        features_dir="./checkpoint_1",
-    ),
-    MyBoostedFitTransformer(
-        features_dir="./checkpoint_2", model_path="./checkpoint_2/model.pkl",
-    ),
+model_path = "~/dask_tmp"
+os.makedirs(model_path, exist_ok=True)
+pipeline = make_pipeline(MyTransformer(), MyFitTranformer())
+
+# Wrapping with sample, checkpoint and dask
+pipeline = bob.pipelines.wrap(
+    ["sample", "checkpoint", "dask"],
+    pipeline,
+    model_path=model_path,
+    transform_extra_arguments=(("metadata", "metadata"),),
 )
 
 # Create a dask graph from a pipeline
-dasked_pipeline = estimator_dask_it(pipeline, npartitions=5)
-
 # Run the task graph in the local computer in a single tread
-X_transformed = dasked_pipeline.fit_transform(X_as_sample).compute(
-    scheduler="single-threaded"
-)
+X_transformed = pipeline.fit_transform(X_as_sample).compute(scheduler="single-threaded")
+import shutil
+
+shutil.rmtree(model_path)

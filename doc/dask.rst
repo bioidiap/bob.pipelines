@@ -49,7 +49,7 @@ The code below is an example. Especially lines 59-63 where we convert such pipel
 
 .. literalinclude:: ./python/pipeline_example_dask.py
    :linenos:
-   :emphasize-lines: 59-63
+   :emphasize-lines: 48-53
 
 
 Such code generates the following graph.
@@ -125,13 +125,13 @@ SGE queue specs are defined in python dictionary as in the example below, where,
     ...             "max_jobs": 48,
     ...             "resources": "",
     ...         },
-    ...         "gpu": {
-    ...             "queue": "q_gpu",
+    ...         "q_short_gpu": {
+    ...             "queue": "q_short_gpu",
     ...             "memory": "12GB",
     ...             "io_big": False,
     ...             "resource_spec": "",
     ...             "max_jobs": 48,
-    ...             "resources": {"GPU":1},
+    ...             "resources": {"q_short_gpu":1},
     ...         },
     ...     }
 
@@ -157,38 +157,11 @@ Running estimator operations in specific SGE queues
 ---------------------------------------------------
 
 Sometimes it's necessary to run parts of a :doc:`pipeline <modules/generated/sklearn.pipeline.Pipeline>`  in specific SGE queues (e.g. q_1day IO_BIG or q_gpu).
-The example below shows how this is approached (lines 78 to 88).
-In this example, the `fit` method of `MyBoostedFitTransformer` runs on `q_gpu`
+The example below shows how this is approached (lines 52 to 57).
+In this example, the `fit` method of `MyBoostedFitTransformer` runs on `q_short_gpu`
 
-
-.. literalinclude:: ./python/pipeline_example_dask_sge.py
-   :linenos:
-   :emphasize-lines: 78-88
-
-
-
-Adaptive SGE: Scale up/down SGE cluster according to the graph complexity
--------------------------------------------------------------------------
-
-One note about the code from the last section.
-Every time` cluster.scale` is executed to increase the amount of available SGE jobs to run a :doc:`dask graph <graphs>`, such resources will be available until the end of its execution.
-Note that in `MyBoostedFitTransformer.fit` a delay of `120s`was introduced to fake "processing" in the GPU queue.
-During the execution of `MyBoostedFitTransformer.fit` in `q_gpu`, other resources are idle, which is a waste of resources (imagined a CNN training of 2 days instead of the 2 minutes from our example).
-
-For this reason there's the method adapt in :any:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster` that will adjust the SGE jobs available according to the needs of a :doc:`dask graph <graphs>`.
-
-Its usage is pretty simple.
-The code below determines that to run a :doc:`dask graph <graphs>`, the :any`distributed.scheduler.Scheduler` can demand a maximum of 10 SGE jobs. A lower bound was also set, in this case, two SGE jobs.
-
-
-.. code:: python
-
-   >>> cluster.adapt(minimum=2, maximum=10)
-
-
-The code below shows the same example, but with adaptive cluster.
-Note line 83
 
 .. literalinclude:: ./python/pipeline_example_dask_sge_adaptive.py
    :linenos:
-   :emphasize-lines: 83
+   :emphasize-lines: 52-57
+
