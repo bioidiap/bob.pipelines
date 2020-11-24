@@ -138,8 +138,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(sset.samples, method_name),
-                    parent=sset,
+                    self._samples_transform(sset.samples, method_name), parent=sset,
                 )
                 for sset in samples
             ]
@@ -408,11 +407,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     """
 
     def __init__(
-        self,
-        estimator,
-        fit_tag=None,
-        transform_tag=None,
-        **kwargs,
+        self, estimator, fit_tag=None, transform_tag=None, **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
@@ -420,6 +415,9 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         self.resource_tags = dict()
         self.fit_tag = fit_tag
         self.transform_tag = transform_tag
+
+    def _make_dask_resource_tag(self, tag):
+        return [(1, tag)]
 
     def _dask_transform(self, X, method_name):
         graph_name = f"{_frmt(self)}.{method_name}"
@@ -432,7 +430,9 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         _transf.__name__ = graph_name
         map_partitions = X.map_partitions(_transf, self._dask_state)
         if self.transform_tag is not None:
-            self.resource_tags[map_partitions] = self.transform_tag
+            self.resource_tags[map_partitions] = self._make_dask_resource_tag(
+                self.transform_tag
+            )
 
         return map_partitions
 
@@ -464,12 +464,12 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
-        self._dask_state = delayed(_fit)(
-            X,
-            y,
-        )
+        self._dask_state = delayed(_fit)(X, y,)
+
         if self.fit_tag is not None:
-            self.resource_tags[self._dask_state] = self.fit_tag
+            self.resource_tags[self._dask_state] = self._make_dask_resource_tag(
+                self.fit_tag
+            )
 
         return self
 
