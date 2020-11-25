@@ -278,6 +278,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         -------
         >>> cluster = SGEMultipleQueuesCluster(sge_job_spec=Q_1DAY_GPU_SPEC) # doctest: +SKIP
         >>> client = Client(cluster) # doctest: +SKIP
+        >>> resources = cluster.get_sge_resources() # doctest: +SKIP
         >>> my_delayed_task.compute(scheduler=client, resources=resources) # doctest: +SKIP
         """
 
