@@ -20,13 +20,12 @@ QUEUE_DEFAULT = {
         "max_jobs": 24,
         "resources": {"q_1week": 1},
     },
-    "q_short_gpu": {
-        "queue": "q_short_gpu",
+    "q_long_gpu": {
+        "queue": "q_long_gpu",
         "memory": "30GB",
         "io_big": False,
         "resource_spec": "",
-        "max_jobs": 45,
-        "resources": {"q_short_gpu": 1},
+        "resources": {"q_long_gpu": 1},
     },
     "q_gpu": {
         "queue": "q_gpu",
@@ -35,20 +34,15 @@ QUEUE_DEFAULT = {
         "resource_spec": "",
         "resources": {"q_gpu": 1},
     },
-    "q_long_gpu": {
-        "queue": "q_long_gpu",
+    "q_short_gpu": {
+        "queue": "q_short_gpu",
         "memory": "30GB",
         "io_big": False,
         "resource_spec": "",
-        "resources": {"q_long_gpu": 1},
+        "max_jobs": 45,
+        "resources": {"q_short_gpu": 1},
     },
 }
-"""This queue setup has a DEMANDING arrangement.
-
-For CPU jobs, it prioritizes q_1day and io_big This HAS to be the
-default
-"""
-
 
 QUEUE_GPU = {
     "default": {
@@ -57,7 +51,7 @@ QUEUE_GPU = {
         "io_big": False,
         "resource_spec": "",
         "max_jobs": 45,
-        "resources": {"q_short_gpu": 1},
+        "resources": "",
     },
     "q_1day": {
         "queue": "q_1day",
@@ -82,6 +76,13 @@ QUEUE_GPU = {
         "max_jobs": 45,
         "resources": {"q_short_gpu": 1},
     },
+    "q_long_gpu": {
+        "queue": "q_long_gpu",
+        "memory": "30GB",
+        "io_big": False,
+        "resource_spec": "",
+        "resources": {"q_long_gpu": 1},
+    },
     "q_gpu": {
         "queue": "q_gpu",
         "memory": "30GB",
@@ -97,6 +98,3 @@ QUEUE_GPU = {
         "resources": {"q_long_gpu": 1},
     },
 }
-"""
-This queue setup uses the q_short_gpu queue of the SGE.
-"""
