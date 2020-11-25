@@ -28,7 +28,7 @@ class MyFitTranformer(TransformerMixin, BaseEstimator):
     def __init__(self):
         self._fit_model = None
 
-    def transform(self, X):
+    def transform(self, X, metadata=None):
         # Transform `X`
         return [x @ self._fit_model for x in X]
 
@@ -43,7 +43,7 @@ X = numpy.zeros((2, 2))
 X_as_sample = [Sample(X, key=str(i), metadata=1) for i in range(10)]
 
 # Building an arbitrary pipeline
-model_path = "~/dask_tmp"
+model_path = "./dask_tmp"
 os.makedirs(model_path, exist_ok=True)
 pipeline = make_pipeline(MyTransformer(), MyFitTranformer())
 
