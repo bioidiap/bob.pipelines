@@ -249,8 +249,16 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         self.model_path = model_path
         self.features_dir = features_dir
         self.extension = extension
-        self.save_func = save_func or bob.io.base.save
-        self.load_func = load_func or bob.io.base.load
+        self.save_func = (
+            save_func
+            or estimator._get_tags().get("bob_features_save_fn")
+            or bob.io.base.save
+        )
+        self.load_func = (
+            load_func
+            or estimator._get_tags().get("bob_features_load_fn")
+            or bob.io.base.load
+        )
         self.sample_attribute = sample_attribute
         self.hash_fn = hash_fn
         if model_path is None and features_dir is None:
