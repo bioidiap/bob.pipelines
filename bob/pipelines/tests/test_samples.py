@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 
 from bob.pipelines import DelayedSample
-from bob.pipelines import DelayedSampleSet
+from bob.pipelines import DelayedSampleSet, DelayedSampleSetCached
 from bob.pipelines import Sample
 from bob.pipelines import SampleSet
 from bob.pipelines import hdf5_to_sample
@@ -52,6 +52,19 @@ def test_sampleset_collection():
             f.write(pickle.dumps(samples))
 
         sampleset = DelayedSampleSet(functools.partial(_load, filename), key=1)
+
+        assert len(sampleset) == n_samples
+        assert sampleset.samples == samples
+
+    # Testing delayed sampleset cached
+    with tempfile.TemporaryDirectory() as dir_name:
+
+        samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
+        filename = os.path.join(dir_name, "samples.pkl")
+        with open(filename, "wb") as f:
+            f.write(pickle.dumps(samples))
+
+        sampleset = DelayedSampleSetCached(functools.partial(_load, filename), key=1)
 
         assert len(sampleset) == n_samples
         assert sampleset.samples == samples

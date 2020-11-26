@@ -187,6 +187,21 @@ class DelayedSampleSet(SampleSet):
         return self._load()
 
 
+class DelayedSampleSetCached(DelayedSampleSet):
+    """A cached version of DelayedSampleSet"""
+
+    def __init__(self, load, parent=None, **kwargs):
+        super().__init__(load, parent=parent, kwargs=kwargs)
+        self._data = None
+        _copy_attributes(self, parent, kwargs)
+
+    @property
+    def samples(self):
+        if self._data is None:
+            self._data = self._load()
+        return self._data
+
+
 class SampleBatch(Sequence, _ReprMixin):
     """A batch of samples that looks like [s.data for s in samples]
 

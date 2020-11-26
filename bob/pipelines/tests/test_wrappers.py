@@ -189,8 +189,9 @@ def test_checkpoint_function_sample_transfomer():
         )
 
         features = transformer.transform(samples)
-        # Checking if we have 8 chars in the second level
-        assert len(features[0]._load.args[0].split("/")[-2]) == 8
+        # Checking if we can cast the has as integer
+        assert isinstance(int(features[0]._load.args[0].split("/")[-2]), int)
+
         _assert_all_close_numpy_array(oracle, [s.data for s in features])
 
 

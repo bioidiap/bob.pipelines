@@ -3,7 +3,7 @@ from . import transformers  # noqa
 from . import utils  # noqa
 from . import xarray as xr  # noqa
 from .sample import DelayedSample
-from .sample import DelayedSampleSet
+from .sample import DelayedSampleSet, DelayedSampleSetCached
 from .sample import Sample
 from .sample import SampleSet
 from .sample import SampleBatch
