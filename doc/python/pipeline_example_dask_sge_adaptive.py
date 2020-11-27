@@ -5,7 +5,10 @@ from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_pipeline
 
-from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
+from bob.pipelines.distributed.sge import (
+    SGEMultipleQueuesCluster,
+    get_resource_requirements,
+)
 
 from bob.pipelines.sample import Sample
 import bob.pipelines
@@ -60,12 +63,12 @@ pipeline = bob.pipelines.wrap(
 # Creating my cluster obj.
 cluster = SGEMultipleQueuesCluster()
 client = Client(cluster)  # Creating the scheduler
-
+resources = get_resource_requirements(pipeline)
 
 # Run the task graph in the local computer in a single tread
 # NOTE THAT resources is set in .compute
 X_transformed = pipeline.fit_transform(X_as_sample).compute(
-    scheduler=client, resources=cluster.get_sge_resources()
+    scheduler=client, resources=resources
 )
 import shutil
 
