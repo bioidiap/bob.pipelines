@@ -10,7 +10,7 @@ QUEUE_DEFAULT = {
         "io_big": False,
         "resource_spec": "",
         "max_jobs": 96,
-        "resources": "",
+        "resources": {"default": 1},
     },
     "q_1week": {
         "queue": "q_1week",

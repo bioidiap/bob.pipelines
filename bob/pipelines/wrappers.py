@@ -138,8 +138,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(sset.samples, method_name),
-                    parent=sset,
+                    self._samples_transform(sset.samples, method_name), parent=sset,
                 )
                 for sset in samples
             ]
@@ -416,11 +415,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     """
 
     def __init__(
-        self,
-        estimator,
-        fit_tag=None,
-        transform_tag=None,
-        **kwargs,
+        self, estimator, fit_tag=None, transform_tag=None, **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
@@ -430,7 +425,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         self.transform_tag = transform_tag
 
     def _make_dask_resource_tag(self, tag):
-        return [(1, tag)]
+        return {tag: 1}
 
     def _dask_transform(self, X, method_name):
         graph_name = f"{_frmt(self)}.{method_name}"
@@ -442,10 +437,10 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         # change the name to have a better name in dask graphs
         _transf.__name__ = graph_name
         map_partitions = X.map_partitions(_transf, self._dask_state)
-        if self.transform_tag is not None:
-            self.resource_tags[map_partitions] = self._make_dask_resource_tag(
-                self.transform_tag
-            )
+        if self.transform_tag:
+            self.resource_tags[
+                tuple(map_partitions.dask.keys())
+            ] = self._make_dask_resource_tag(self.transform_tag)
 
         return map_partitions
 
@@ -483,15 +478,16 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
-        self._dask_state = delayed(_fit)(
-            X,
-            y,
-        )
-
+        self._dask_state = delayed(_fit)(X, y)
         if self.fit_tag is not None:
-            self.resource_tags[self._dask_state] = self._make_dask_resource_tag(
-                self.fit_tag
-            )
+            from dask import core
+
+            # If you do `delayed(_fit)(X, y)`, two tasks are generated;
+            # the `finlize-TASK` and `TASK`. With this, we make sure
+            # that the two are annotated
+            self.resource_tags[
+                tuple([f"{k}{str(self._dask_state.key)}" for k in ["", "finalize-"]])
+            ] = self._make_dask_resource_tag(self.fit_tag)
 
         return self
 
