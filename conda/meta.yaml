@@ -28,7 +28,7 @@ requirements:
     - bob.extension
     - bob.io.base
     # other libraries
-    - numpy >=1.17
+    - numpy {{ numpy }}
     - dask {{ dask }}
     - dask-jobqueue {{ dask_jobqueue }}
     - distributed {{ distributed }}
