@@ -40,6 +40,8 @@ def dask_get_partition_size(cluster, n_objects, lower_bound=200):
             Minimum partition size.
 
     """
+    from .sge import SGEMultipleQueuesCluster
+
     if not isinstance(cluster, SGEMultipleQueuesCluster):
         return None
 
