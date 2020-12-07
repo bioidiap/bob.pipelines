@@ -290,10 +290,14 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         # interval: Milliseconds between checks from the scheduler
         # wait_count: Number of consecutive times that a worker should be suggested for
         #             removal before we remove it.
-        #             Here the goal is to wait 2 minutes before scaling down since
-        #             it is very expensive to get jobs on the SGE grid
 
-        self.adapt(minimum=min_jobs, maximum=max_jobs, wait_count=5, interval=10)
+        self.adapt(
+            minimum=min_jobs,
+            maximum=max_jobs,
+            wait_count=5,
+            interval=10,
+            target_duration="10s",
+        )
 
     def _get_worker_spec_options(self, job_spec):
         """Craft a dask worker_spec to be used in the qsub command."""
