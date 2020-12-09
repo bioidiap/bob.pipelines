@@ -154,7 +154,7 @@ class Block(_ReprMixin):
         estimator_name=None,
         model_path=None,
         features_dir=None,
-        extension=".npy",
+        extension=".hdf5",
         save_func=None,
         load_func=None,
         dataset_map=None,
@@ -179,12 +179,18 @@ class Block(_ReprMixin):
         self.model_path = model_path
         self.features_dir = features_dir
         self.extension = extension
-        self.save_func = (
-            save_func or estimator._get_tags().get("bob_features_save_fn") or save
+        estimator_save_fn = (
+            None
+            if estimator is None
+            else estimator._get_tags().get("bob_features_save_fn")
         )
-        self.load_func = (
-            load_func or estimator._get_tags().get("bob_features_load_fn") or load
+        estimator_load_fn = (
+            None
+            if estimator is None
+            else estimator._get_tags().get("bob_features_load_fn")
         )
+        self.save_func = save_func or estimator_save_fn or save
+        self.load_func = load_func or estimator_load_fn or load
         self.dataset_map = dataset_map
         self.input_dask_array = input_dask_array
         self.fit_kwargs = fit_kwargs or {}
