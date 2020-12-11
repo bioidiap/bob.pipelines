@@ -15,7 +15,20 @@ __path__ = extend_path(__path__, __name__)
 #    cls=ResourceOption,
 # )
 
-VALID_DASK_CLIENT_STRINGS = ("single-threaded", "sync", "threaded", "processes")
+try:
+    import dask
+
+    VALID_DASK_CLIENT_STRINGS = dask.base.named_schedulers
+except (ModuleNotFoundError, ImportError):
+    VALID_DASK_CLIENT_STRINGS = (
+        "sync",
+        "synchronous",
+        "single-threaded",
+        "threads",
+        "threading",
+        "processes",
+        "multiprocessing",
+    )
 
 
 def dask_get_partition_size(cluster, n_objects, lower_bound=200):

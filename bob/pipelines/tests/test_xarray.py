@@ -16,6 +16,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 
+import bob.io.base
 import bob.pipelines as mario
 
 
@@ -178,8 +179,8 @@ def test_dataset_pipeline_with_checkpoints():
             )
         ):
             path = os.path.join(pca_features, path)
-            assert path.endswith(f"{i}.npy"), path
-            np.testing.assert_array_equal(np.load(path).shape, (3,))
+            assert path.endswith(f"{i}.hdf5"), path
+            np.testing.assert_array_equal(bob.io.base.load(path).shape, (3,))
 
         # now this time it should load features
         # delete one of the features
