@@ -2,6 +2,7 @@ setuptools
 numpy
 bob.extension
 bob.io.base
+bob.db.base
 scikit-learn
 dask
 distributed
