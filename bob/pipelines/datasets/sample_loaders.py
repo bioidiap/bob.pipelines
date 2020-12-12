@@ -94,14 +94,6 @@ class CSVToSampleLoader(TransformerMixin, BaseEstimator):
         if not "path" in header:
             raise ValueError("The field `path` is not available in your dataset.")
 
-    def __call__(self, f):
-        f.seek(0)
-        reader = csv.reader(f)
-        header = next(reader)
-
-        self.check_header(header)
-        return [self.convert_row_to_sample(row, header) for row in reader]
-
     def convert_row_to_sample(self, row, header):
         path = row[0]
         reference_id = row[1]
