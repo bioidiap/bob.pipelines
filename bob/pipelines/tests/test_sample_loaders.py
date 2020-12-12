@@ -4,6 +4,7 @@ import bob.io.base
 import bob.io.image
 import os
 import numpy as np
+from sklearn.pipeline import make_pipeline
 
 
 def test_sample_loader():
@@ -23,19 +24,20 @@ def test_sample_loader():
 def test_annotations_loader():
     path = pkg_resources.resource_filename(__name__, os.path.join("data", "samples"))
 
-    sample_loader = CSVToSampleLoader(
+    csv_sample_loader = CSVToSampleLoader(
         data_loader=bob.io.base.load, dataset_original_directory=path, extension=".pgm"
     )
     annotation_loader = AnnotationsLoader(
-        sample_loader,
         annotation_directory=path,
         annotation_extension=".pos",
         annotation_type="eyecenter",
     )
 
+    sample_loader = make_pipeline(csv_sample_loader, annotation_loader)
+
     f = open(os.path.join(path, "samples.csv"))
 
-    samples = annotation_loader.transform(f)
+    samples = sample_loader.transform(f)
     assert len(samples) == 2
     assert np.alltrue([s.data.shape == (112, 92) for s in samples])
     assert np.alltrue([isinstance(s.annotations, dict) for s in samples])

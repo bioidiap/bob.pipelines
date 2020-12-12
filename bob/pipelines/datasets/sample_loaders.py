@@ -127,9 +127,6 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
     Parameters
     ----------
 
-    csv_to_sample_loader: :any:`CSVToSampleLoader`
-        Mechanisms that knows how to convert one line to one sample
-
     annotation_directory: str
         Path where the annotations are store
 
@@ -143,7 +140,6 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
 
     def __init__(
         self,
-        csv_to_sample_loader,
         annotation_directory=None,
         annotation_extension=".json",
         annotation_type="json",
@@ -151,15 +147,13 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
         self.annotation_directory = annotation_directory
         self.annotation_extension = annotation_extension
         self.annotation_type = annotation_type
-        self.csv_to_sample_loader = csv_to_sample_loader
 
     def transform(self, X):
         if self.annotation_directory is None:
             return None
 
-        samples = self.csv_to_sample_loader.transform(X)
         annotated_samples = []
-        for x in samples:
+        for x in X:
 
             # since the file id is equal to the file name, we can simply use it
             annotation_file = os.path.join(
@@ -179,3 +173,12 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
             )
 
         return annotated_samples
+
+    def fit(self, X, y=None):
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": True,
+            "requires_fit": False,
+        }
