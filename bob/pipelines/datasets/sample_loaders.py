@@ -9,10 +9,14 @@ Base mechanism that converts CSV lines to Samples
 from bob.extension.download import find_element_in_tarball
 from bob.pipelines import DelayedSample, Sample, SampleSet
 import os
-from abc import ABCMeta, abstractmethod
+
+from sklearn.base import TransformerMixin, BaseEstimator
+import csv
+import functools
+import bob.db.base
 
 
-class CSVBaseSampleLoader(metaclass=ABCMeta):
+class CSVToSampleLoader(TransformerMixin, BaseEstimator):
     """    
     Base class that converts the lines of a CSV file, like the one below to
     :any:`bob.pipelines.DelayedSample` or :any:`bob.pipelines.SampleSet`
@@ -36,9 +40,6 @@ class CSVBaseSampleLoader(metaclass=ABCMeta):
             A python function that can be called parameterlessly, to load the
             sample in question from whatever medium
 
-        metadata_loader:
-            A python function that transforms parts of a `row` in a more complex object (e.g. convert eyes annotations embedded in the CSV file to a python dict)
-
         dataset_original_directory: str
             Path of where data is stored
         
@@ -48,47 +49,128 @@ class CSVBaseSampleLoader(metaclass=ABCMeta):
     """
 
     def __init__(
-        self,
-        data_loader,
-        metadata_loader=None,
-        dataset_original_directory="",
-        extension="",
+        self, data_loader, dataset_original_directory="", extension="",
     ):
         self.data_loader = data_loader
         self.extension = extension
         self.dataset_original_directory = dataset_original_directory
-        self.metadata_loader = metadata_loader
 
-    @abstractmethod
-    def __call__(self, filename):
-        pass
+    def fit(self, X, y=None):
+        return self
 
-    @abstractmethod
-    def convert_row_to_sample(self, row, header):
-        pass
+    def _more_tags(self):
+        return {
+            "stateless": True,
+            "requires_fit": False,
+        }
 
-    def convert_samples_to_samplesets(
-        self, samples, group_by_reference_id=True, references=None
-    ):
-        if group_by_reference_id:
+    def transform(self, X):
+        """
+        Transform one CVS line to ONE :any:`bob.pipelines.DelayedSample`
 
-            # Grouping sample sets
-            sample_sets = dict()
-            for s in samples:
-                if s.reference_id not in sample_sets:
-                    sample_sets[s.reference_id] = (
-                        SampleSet([s], parent=s)
-                        if references is None
-                        else SampleSet([s], parent=s, references=references)
-                    )
-                else:
-                    sample_sets[s.reference_id].append(s)
-            return list(sample_sets.values())
+        Parameters
+        ----------
+        X:
+            CSV File Object (open file)
 
-        else:
-            return (
-                [SampleSet([s], parent=s) for s in samples]
-                if references is None
-                else [SampleSet([s], parent=s, references=references) for s in samples]
+        """
+        X.seek(0)
+        reader = csv.reader(X)
+        header = next(reader)
+
+        self.check_header(header)
+        return [self.convert_row_to_sample(row, header) for row in reader]
+
+    def check_header(self, header):
+        """
+        A header should have at least "reference_id" AND "PATH"
+        """
+        header = [h.lower() for h in header]
+        if not "reference_id" in header:
+            raise ValueError(
+                "The field `reference_id` is not available in your dataset."
             )
 
+        if not "path" in header:
+            raise ValueError("The field `path` is not available in your dataset.")
+
+    def convert_row_to_sample(self, row, header):
+        path = row[0]
+        reference_id = row[1]
+
+        kwargs = dict([[str(h).lower(), r] for h, r in zip(header[2:], row[2:])])
+
+        return DelayedSample(
+            functools.partial(
+                self.data_loader,
+                os.path.join(self.dataset_original_directory, path + self.extension),
+            ),
+            key=path,
+            reference_id=reference_id,
+            **kwargs
+        )
+
+
+class AnnotationsLoader(TransformerMixin, BaseEstimator):
+    """
+    Metadata loader that loads annotations in the Idiap format using the function
+    :any:`bob.db.base.read_annotation_file`
+
+    Parameters
+    ----------
+
+    annotation_directory: str
+        Path where the annotations are store
+
+    annotation_extension: str
+        Extension of the annotations
+    
+    annotation_type: str
+        Annotations type
+
+    """
+
+    def __init__(
+        self,
+        annotation_directory=None,
+        annotation_extension=".json",
+        annotation_type="json",
+    ):
+        self.annotation_directory = annotation_directory
+        self.annotation_extension = annotation_extension
+        self.annotation_type = annotation_type
+
+    def transform(self, X):
+        if self.annotation_directory is None:
+            return None
+
+        annotated_samples = []
+        for x in X:
+
+            # since the file id is equal to the file name, we can simply use it
+            annotation_file = os.path.join(
+                self.annotation_directory, x.key + self.annotation_extension
+            )
+
+            annotated_samples.append(
+                DelayedSample(
+                    x._load,
+                    parent=x,
+                    delayed_attributes=dict(
+                        annotations=lambda: bob.db.base.read_annotation_file(
+                            annotation_file, self.annotation_type
+                        )
+                    ),
+                )
+            )
+
+        return annotated_samples
+
+    def fit(self, X, y=None):
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": True,
+            "requires_fit": False,
+        }
