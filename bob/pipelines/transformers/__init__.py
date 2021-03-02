@@ -1,3 +1,4 @@
+from .file_loader import FileLoader
 from .function import CheckpointSampleFunctionTransformer
 from .function import SampleFunctionTransformer
 from .function import StatelessPipeline
@@ -6,6 +7,7 @@ from .linearize import Linearize
 from .linearize import SampleLinearize
 from .pca import CheckpointSamplePCA
 from .pca import SamplePCA
+from .str_to_types import Str_To_Types  # noqa: F401
 
 
 def __appropriate__(*args):
@@ -35,6 +37,7 @@ __appropriate__(
     SampleFunctionTransformer,
     CheckpointSampleFunctionTransformer,
     StatelessPipeline,
+    FileLoader,
 )
 
 # gets sphinx autodoc done right - don't remove it

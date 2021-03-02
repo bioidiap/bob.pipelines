@@ -1,6 +1,5 @@
 import pickle
 
-import nose
 import numpy as np
 
 
@@ -24,12 +23,12 @@ def assert_picklable(obj):
     obj = obj.__dict__
     new_obj = new_obj.__dict__
     assert len(obj) == len(new_obj)
-    nose.tools.assert_equal(list(obj.keys()), list(new_obj.keys()))
+    assert list(obj.keys()) == list(new_obj.keys())
     for k, v in obj.items():
         if isinstance(v, np.ndarray):
             np.testing.assert_equal(v, new_obj[k])
         else:
-            nose.tools.assert_equal(v, new_obj[k])
+            assert v == new_obj[k]
 
 
 def is_estimator_stateless(estimator):
@@ -82,10 +81,10 @@ def hash_string(key, bucket_size=1000):
     """
     Generates a hash code given a string.
     The have is given by the `sum(ord([string])) mod bucket_size`
-    
+
     Parameters
     ----------
-    
+
     key: str
       Input string to be hashed
 

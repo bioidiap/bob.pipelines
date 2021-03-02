@@ -1,9 +1,13 @@
-from bob.pipelines.datasets import CSVToSampleLoader, AnnotationsLoader
+import os
+
+import numpy as np
 import pkg_resources
+
 import bob.io.base
 import bob.io.image
-import os
-import numpy as np
+
+from bob.pipelines.datasets import AnnotationsLoader
+from bob.pipelines.datasets import CSVToSampleLoader
 from sklearn.pipeline import make_pipeline
 
 

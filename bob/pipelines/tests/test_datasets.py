@@ -5,96 +5,60 @@
 
 import os
 
-import nose.tools
+import numpy as np
 import pkg_resources
 
-from ..datasets.csv import CSVDataset
-from ..datasets.json import JSONDataset
-from ..sample import Sample
+import pytest
+
+from bob.pipelines.datasets import FileListDatabase
+from bob.pipelines.transformers import Str_To_Types
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import FunctionTransformer
 
 
-def _data_file(f):
-    return pkg_resources.resource_filename(__name__, os.path.join("data", f))
+def iris_data_tranform(samples):
+    for s in samples:
+        data = np.array([s.sepal_length, s.sepal_width, s.petal_length, s.petal_width])
+        s.data = data
+    return samples
 
 
-def _raw_data_loader(context, d):
-    return Sample(
-        data=[
-            float(d["sepal_length"]),
-            float(d["sepal_width"]),
-            float(d["petal_length"]),
-            float(d["petal_width"]),
-            d["species"][5:],
-        ],
-        key=(context["subset"] + str(context["order"])),
+def test_iris_list_database():
+    dataset_protocol_path = pkg_resources.resource_filename(
+        __name__, os.path.join("data", "iris_database")
     )
 
+    database = FileListDatabase(dataset_protocol_path, None)
+    assert database.protocol == "default"
+    assert database.protocols() == ["default"]
+    assert database.groups() == ["test", "train"]
+    with pytest.raises(ValueError):
+        database.protocol = "none"
 
-def test_csv_loading():
+    samples = database.samples()
+    assert len(samples) == 150
+    assert samples[0].data is None
+    assert samples[0].sepal_length == "5"
+    assert samples[0].petal_width == "0.2"
+    assert samples[0].target == "Iris-setosa"
 
-    # tests if we can build a simple CSV loader for the Iris Flower dataset
-    subsets = {
-        "train": _data_file("iris-train.csv"),
-        "test": _data_file("iris-test.csv"),
-    }
+    with pytest.raises(ValueError):
+        database.samples(groups="random")
 
-    fieldnames = (
-        "sepal_length",
-        "sepal_width",
-        "petal_length",
-        "petal_width",
-        "species",
+    database.transformer = make_pipeline(
+        Str_To_Types(
+            fieldtypes=dict(
+                sepal_length=float,
+                sepal_width=float,
+                petal_length=float,
+                petal_width=float,
+            )
+        ),
+        FunctionTransformer(iris_data_tranform),
     )
-
-    dataset = CSVDataset(subsets, fieldnames, _raw_data_loader)
-    dataset.check()
-
-    data = dataset.subsets()
-
-    nose.tools.eq_(len(data["train"]), 75)
-    for k in data["train"]:
-        for f in range(4):
-            nose.tools.eq_(type(k.data[f]), float)
-        nose.tools.eq_(type(k.data[4]), str)
-        nose.tools.eq_(type(k.key), str)
-
-    nose.tools.eq_(len(data["test"]), 75)
-    for k in data["test"]:
-        for f in range(4):
-            nose.tools.eq_(type(k.data[f]), float)
-        nose.tools.eq_(type(k.data[4]), str)
-        assert k.data[4] in ("setosa", "versicolor", "virginica")
-        nose.tools.eq_(type(k.key), str)
-
-
-def test_json_loading():
-
-    # tests if we can build a simple JSON loader for the Iris Flower dataset
-    protocols = {"default": _data_file("iris.json")}
-
-    fieldnames = (
-        "sepal_length",
-        "sepal_width",
-        "petal_length",
-        "petal_width",
-        "species",
-    )
-
-    dataset = JSONDataset(protocols, fieldnames, _raw_data_loader)
-
-    data = dataset.subsets("default")
-    dataset.check()
-
-    nose.tools.eq_(len(data["train"]), 75)
-    for k in data["train"]:
-        for f in range(4):
-            nose.tools.eq_(type(k.data[f]), float)
-        nose.tools.eq_(type(k.data[4]), str)
-        nose.tools.eq_(type(k.key), str)
-
-    nose.tools.eq_(len(data["test"]), 75)
-    for k in data["test"]:
-        for f in range(4):
-            nose.tools.eq_(type(k.data[f]), float)
-        nose.tools.eq_(type(k.data[4]), str)
-        nose.tools.eq_(type(k.key), str)
+    samples = database.samples(groups="train")
+    assert len(samples) == 75
+    np.testing.assert_allclose(samples[0].data, [5.1, 3.5, 1.4, 0.2])
+    assert samples[0].sepal_length == 5.1
+    assert samples[0].petal_width == 0.2
+    assert samples[0].target == "Iris-setosa"
