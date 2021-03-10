@@ -8,6 +8,7 @@ from .linearize import SampleLinearize
 from .pca import CheckpointSamplePCA
 from .pca import SamplePCA
 from .str_to_types import Str_To_Types  # noqa: F401
+from .str_to_types import str_to_bool  # noqa: F401
 
 
 def __appropriate__(*args):

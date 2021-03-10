@@ -3,12 +3,13 @@ import os
 import numpy as np
 import pkg_resources
 
+from sklearn.pipeline import make_pipeline
+
 import bob.io.base
 import bob.io.image
 
-from bob.pipelines.datasets import AnnotationsLoader
-from bob.pipelines.datasets import CSVToSampleLoader
-from sklearn.pipeline import make_pipeline
+from bob.pipelines.sample_loaders import AnnotationsLoader
+from bob.pipelines.sample_loaders import CSVToSampleLoader
 
 
 def test_sample_loader():

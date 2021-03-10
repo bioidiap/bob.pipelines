@@ -154,7 +154,7 @@ class FileListDatabase:
     def list_file(self, group):
         list_file = search_file(
             self.dataset_protocols_path,
-            os.path.join(self.protocol, group),
+            os.path.join(self.protocol, group + ".csv"),
         )
         return list_file
 
@@ -196,12 +196,14 @@ class FileListDatabase:
     def sort(samples, unique=True):
         """Sorts samples and removes duplicates by default."""
 
-        def key(x):
+        def key_func(x):
             return x.key
 
-        samples = sorted(samples, key=key)
+        samples = sorted(samples, key=key_func)
 
         if unique:
-            samples = [k for k, _ in itertools.groupby(samples, key=key)]
+            samples = [
+                next(iter(v)) for _, v in itertools.groupby(samples, key=key_func)
+            ]
 
         return samples
