@@ -247,5 +247,5 @@ def test_dataset_pipeline_with_dask_ml():
         ds = estimator.predict(iris_ds)
         ds = ds.compute()
     correct_classification = np.asarray(ds.data == ds.target).sum()
-    assert correct_classification > 90, correct_classification
+    assert correct_classification > 80, correct_classification
     assert ds.dims == {"sample": 150}, ds.dims
