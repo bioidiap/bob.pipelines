@@ -26,6 +26,4 @@ xarray Wrapper
 Filelist Datasets
 -----------------
 
-.. automodule:: bob.pipelines.datasets.csv
-
-.. automodule:: bob.pipelines.datasets.json
+.. automodule:: bob.pipelines.datasets

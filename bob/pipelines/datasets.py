@@ -1,4 +1,6 @@
 """
+The principles of this module are:
+
 * one csv file -> one set
 * one row -> one sample
 * csv files could exist in a tarball or inside a folder
@@ -173,7 +175,7 @@ class FileListDatabase:
 
         Parameters
         ----------
-        groups : str, optional
+        groups : :obj:`str`, optional
             A str or list of str to be used for filtering samples, by default None
 
         Returns

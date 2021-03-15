@@ -30,7 +30,7 @@ def Str_To_Types(fieldtypes):
     Example
     -------
     >>> from bob.pipelines import Sample
-    >>> from bob.pipelines.transformers import Str_To_Types
+    >>> from bob.pipelines.transformers import Str_To_Types, str_to_bool
     >>> samples = [Sample(None, id="1", flag="True"), Sample(None, id="2", flag="False")]
     >>> transformer = Str_To_Types(fieldtypes=dict(id=int, flag=str_to_bool))
     >>> transformer.transform(samples)
