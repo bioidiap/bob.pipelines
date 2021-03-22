@@ -6,18 +6,20 @@
 Base mechanism that converts CSV lines to Samples
 """
 
-from bob.extension.download import find_element_in_tarball
-from bob.pipelines import DelayedSample, Sample, SampleSet
-import os
-
-from sklearn.base import TransformerMixin, BaseEstimator
 import csv
 import functools
+import os
+
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
+
 import bob.db.base
+
+from bob.pipelines import DelayedSample
 
 
 class CSVToSampleLoader(TransformerMixin, BaseEstimator):
-    """    
+    """
     Base class that converts the lines of a CSV file, like the one below to
     :any:`bob.pipelines.DelayedSample` or :any:`bob.pipelines.SampleSet`
 
@@ -42,14 +44,17 @@ class CSVToSampleLoader(TransformerMixin, BaseEstimator):
 
         dataset_original_directory: str
             Path of where data is stored
-        
+
         extension: str
             Default file extension
 
     """
 
     def __init__(
-        self, data_loader, dataset_original_directory="", extension="",
+        self,
+        data_loader,
+        dataset_original_directory="",
+        extension="",
     ):
         self.data_loader = data_loader
         self.extension = extension
@@ -86,12 +91,12 @@ class CSVToSampleLoader(TransformerMixin, BaseEstimator):
         A header should have at least "reference_id" AND "PATH"
         """
         header = [h.lower() for h in header]
-        if not "reference_id" in header:
+        if "reference_id" not in header:
             raise ValueError(
                 "The field `reference_id` is not available in your dataset."
             )
 
-        if not "path" in header:
+        if "path" not in header:
             raise ValueError("The field `path` is not available in your dataset.")
 
     def convert_row_to_sample(self, row, header):
@@ -124,7 +129,7 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
 
     annotation_extension: str
         Extension of the annotations
-    
+
     annotation_type: str
         Annotations type
 

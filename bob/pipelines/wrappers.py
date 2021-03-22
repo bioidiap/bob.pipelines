@@ -8,13 +8,14 @@ import cloudpickle
 import dask.bag
 
 from dask import delayed
+
+import bob.io.base
+
 from sklearn.base import BaseEstimator
 from sklearn.base import MetaEstimatorMixin
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
-
-import bob.io.base
 
 from .sample import DelayedSample
 from .sample import SampleBatch
@@ -72,16 +73,17 @@ def _check_n_input_output(samples, output, func_name):
 
 
 class DelayedSamplesCall:
-    def __init__(self, func, func_name, samples, **kwargs):
+    def __init__(self, func, func_name, samples, sample_attribute="data", **kwargs):
         super().__init__(**kwargs)
         self.func = func
         self.func_name = func_name
         self.samples = samples
         self.output = None
+        self.sample_attribute = sample_attribute
 
     def __call__(self, index):
         if self.output is None:
-            X = SampleBatch(self.samples)
+            X = SampleBatch(self.samples, sample_attribute=self.sample_attribute)
             self.output = self.func(X)
             _check_n_input_output(self.samples, self.output, self.func_name)
         return self.output[index]
@@ -121,6 +123,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         transform_extra_arguments=None,
         fit_extra_arguments=None,
         output_attribute="data",
+        input_attribute="data",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -128,6 +131,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         self.transform_extra_arguments = transform_extra_arguments or tuple()
         self.fit_extra_arguments = fit_extra_arguments or tuple()
         self.output_attribute = output_attribute
+        self.input_attribute = input_attribute
 
     def _samples_transform(self, samples, method_name):
         # Transform either samples or samplesets
@@ -138,13 +142,19 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(sset.samples, method_name), parent=sset,
+                    self._samples_transform(sset.samples, method_name),
+                    parent=sset,
                 )
                 for sset in samples
             ]
         else:
             kwargs = _make_kwargs_from_samples(samples, self.transform_extra_arguments)
-            delayed = DelayedSamplesCall(partial(method, **kwargs), func_name, samples)
+            delayed = DelayedSamplesCall(
+                partial(method, **kwargs),
+                func_name,
+                samples,
+                sample_attribute=self.input_attribute,
+            )
             if self.output_attribute != "data":
                 # Edit the sample.<output_attribute> instead of data
                 for i, s in enumerate(samples):
@@ -415,7 +425,11 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     """
 
     def __init__(
-        self, estimator, fit_tag=None, transform_tag=None, **kwargs,
+        self,
+        estimator,
+        fit_tag=None,
+        transform_tag=None,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
@@ -480,8 +494,6 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         _fit.__name__ = f"{_frmt(self)}.fit"
         self._dask_state = delayed(_fit)(X, y)
         if self.fit_tag is not None:
-            from dask import core
-
             # If you do `delayed(_fit)(X, y)`, two tasks are generated;
             # the `finlize-TASK` and `TASK`. With this, we make sure
             # that the two are annotated
