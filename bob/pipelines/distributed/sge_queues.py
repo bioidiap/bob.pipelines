@@ -76,13 +76,6 @@ QUEUE_GPU = {
         "max_jobs": 45,
         "resources": {"q_short_gpu": 1},
     },
-    "q_long_gpu": {
-        "queue": "q_long_gpu",
-        "memory": "30GB",
-        "io_big": False,
-        "resource_spec": "",
-        "resources": {"q_long_gpu": 1},
-    },
     "q_gpu": {
         "queue": "q_gpu",
         "memory": "30GB",

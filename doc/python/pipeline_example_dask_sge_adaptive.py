@@ -1,3 +1,6 @@
+import os
+import shutil
+
 import numpy
 
 from dask.distributed import Client
@@ -5,14 +8,11 @@ from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_pipeline
 
-from bob.pipelines.distributed.sge import (
-    SGEMultipleQueuesCluster,
-    get_resource_requirements,
-)
-
-from bob.pipelines.sample import Sample
 import bob.pipelines
-import os
+
+from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
+from bob.pipelines.distributed.sge import get_resource_requirements
+from bob.pipelines.sample import Sample
 
 
 class MyTransformer(TransformerMixin, BaseEstimator):
@@ -70,6 +70,5 @@ resources = get_resource_requirements(pipeline)
 X_transformed = pipeline.fit_transform(X_as_sample).compute(
     scheduler=client, resources=resources
 )
-import shutil
 
 shutil.rmtree(model_path)

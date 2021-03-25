@@ -1,7 +1,8 @@
 import os
 
-from bob.io.base import load
 from sklearn.preprocessing import FunctionTransformer
+
+from bob.io.base import load
 
 from ..wrappers import wrap
 

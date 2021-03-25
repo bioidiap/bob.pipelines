@@ -28,28 +28,23 @@ setup(
     # maintainer_email='email@example.com'
     # you may add more keywords separating those by commas (a, b, c, ...)
     keywords="bob",
-
     # If you have a better, long description of your package, place it on the
     # 'doc' directory and then hook it here
     long_description=open("README.rst").read(),
-
     # This line is required for any distutils based packaging.
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-
     # Packages that should be installed when you "install" this package.
     install_requires=install_requires,
-
     # entry_points defines which scripts will be inside the 'bin' directory
-    entry_points = {
-        'dask.client': [
-            'local-parallel  = bob.pipelines.config.distributed.local_parallel:dask_client',
-            'sge             = bob.pipelines.config.distributed.sge_default:dask_client',
-            'sge-gpu         = bob.pipelines.config.distributed.sge_gpu:dask_client',
+    entry_points={
+        "dask.client": [
+            "local-parallel  = bob.pipelines.config.distributed.local_parallel:dask_client",
+            "sge             = bob.pipelines.config.distributed.sge_default:dask_client",
+            "sge-gpu         = bob.pipelines.config.distributed.sge_gpu:dask_client",
         ],
     },
-
     # check classifiers (important for PyPI), add and remove as you see fit.
     # full list here: https://pypi.org/classifiers/
     # don't remove the Bob framework unless it's not a bob package

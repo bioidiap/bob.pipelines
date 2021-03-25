@@ -117,7 +117,7 @@ def get_resource_requirements(pipeline):
     Parameters
     ----------
        pipeline: :any:`sklearn.pipeline.Pipeline`
-          A :any:`sklearn.pipeline.Pipeline` wrapper with :any:`bob.pipelines.DaskWrapper` 
+          A :any:`sklearn.pipeline.Pipeline` wrapper with :any:`bob.pipelines.DaskWrapper`
 
     Example
     -------
@@ -285,7 +285,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         )
 
         max_jobs = get_max_jobs(sge_job_spec)
-        self.scale(min_jobs)
+        self.scale(max_jobs)
         # Adapting to minimim 1 job to maximum 48 jobs
         # interval: Milliseconds between checks from the scheduler
         # wait_count: Number of consecutive times that a worker should be suggested for

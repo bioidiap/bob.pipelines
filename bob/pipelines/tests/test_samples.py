@@ -8,7 +8,8 @@ import h5py
 import numpy as np
 
 from bob.pipelines import DelayedSample
-from bob.pipelines import DelayedSampleSet, DelayedSampleSetCached
+from bob.pipelines import DelayedSampleSet
+from bob.pipelines import DelayedSampleSetCached
 from bob.pipelines import Sample
 from bob.pipelines import SampleSet
 from bob.pipelines import hdf5_to_sample

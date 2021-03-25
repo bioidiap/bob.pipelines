@@ -1,22 +1,23 @@
-from . import distributed  # noqa
-from . import transformers  # noqa
-from . import utils  # noqa
-from . import xarray as xr  # noqa
+from . import distributed  # noqa: F401
+from . import transformers  # noqa: F401
+from . import utils  # noqa: F401
+from . import xarray as xr  # noqa: F401
 from .sample import DelayedSample
-from .sample import DelayedSampleSet, DelayedSampleSetCached
+from .sample import DelayedSampleSet
+from .sample import DelayedSampleSetCached
 from .sample import Sample
-from .sample import SampleSet
 from .sample import SampleBatch
-from .sample import hdf5_to_sample  # noqa
-from .sample import sample_to_hdf5  # noqa
+from .sample import SampleSet
+from .sample import hdf5_to_sample  # noqa: F401
+from .sample import sample_to_hdf5  # noqa: F401
 from .wrappers import BaseWrapper
 from .wrappers import CheckpointWrapper
 from .wrappers import DaskWrapper
 from .wrappers import DelayedSamplesCall
 from .wrappers import SampleWrapper
 from .wrappers import ToDaskBag
-from .wrappers import dask_tags  # noqa
-from .wrappers import wrap  # noqa
+from .wrappers import dask_tags  # noqa: F401
+from .wrappers import wrap  # noqa: F401
 
 
 def __appropriate__(*args):
@@ -42,6 +43,7 @@ __appropriate__(
     DelayedSample,
     SampleSet,
     DelayedSampleSet,
+    DelayedSampleSetCached,
     SampleBatch,
     BaseWrapper,
     DelayedSamplesCall,

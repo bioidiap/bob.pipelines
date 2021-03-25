@@ -164,4 +164,3 @@ In this example, the `fit` method of `MyBoostedFitTransformer` runs on `q_short_
 .. literalinclude:: ./python/pipeline_example_dask_sge_adaptive.py
    :linenos:
    :emphasize-lines: 52-57
-

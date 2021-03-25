@@ -1,12 +1,15 @@
+import os
+import shutil
+
 import numpy
 
 from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import make_pipeline
 
-from bob.pipelines.sample import Sample
 import bob.pipelines
-import os
+
+from bob.pipelines.sample import Sample
 
 
 class MyTransformer(TransformerMixin, BaseEstimator):
@@ -57,6 +60,5 @@ pipeline = bob.pipelines.wrap(
 # Run the task graph in the local computer in a single tread
 X_transformed = pipeline.fit_transform(X_as_sample).compute(scheduler="single-threaded")
 
-import shutil
 
 shutil.rmtree(model_path)

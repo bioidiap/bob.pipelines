@@ -7,13 +7,13 @@ import os
 
 import numpy as np
 import pkg_resources
-
 import pytest
+
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import FunctionTransformer
 
 from bob.pipelines.datasets import FileListDatabase
 from bob.pipelines.transformers import Str_To_Types
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import FunctionTransformer
 
 
 def iris_data_tranform(samples):

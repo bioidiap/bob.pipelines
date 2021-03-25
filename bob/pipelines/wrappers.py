@@ -8,14 +8,13 @@ import cloudpickle
 import dask.bag
 
 from dask import delayed
-
-import bob.io.base
-
 from sklearn.base import BaseEstimator
 from sklearn.base import MetaEstimatorMixin
 from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
+
+import bob.io.base
 
 from .sample import DelayedSample
 from .sample import SampleBatch
