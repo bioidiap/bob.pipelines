@@ -325,7 +325,8 @@ def test_checkpoint_fit_transform_pipeline():
 
 
 def _get_local_client():
-    from dask.distributed import Client, LocalCluster
+    from dask.distributed import Client
+    from dask.distributed import LocalCluster
 
     cluster = LocalCluster(
         nanny=False, processes=False, n_workers=1, threads_per_worker=1
