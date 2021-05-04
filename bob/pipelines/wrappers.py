@@ -141,7 +141,8 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(sset.samples, method_name), parent=sset,
+                    self._samples_transform(sset.samples, method_name),
+                    parent=sset,
                 )
                 for sset in samples
             ]
@@ -437,7 +438,11 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     """
 
     def __init__(
-        self, estimator, fit_tag=None, transform_tag=None, **kwargs,
+        self,
+        estimator,
+        fit_tag=None,
+        transform_tag=None,
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
