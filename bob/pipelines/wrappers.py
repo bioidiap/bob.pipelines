@@ -141,8 +141,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         if isinstance(samples[0], SampleSet):
             return [
                 SampleSet(
-                    self._samples_transform(sset.samples, method_name),
-                    parent=sset,
+                    self._samples_transform(sset.samples, method_name), parent=sset,
                 )
                 for sset in samples
             ]
@@ -384,7 +383,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
                 # test loading
                 self.load_func(path)
                 break
-            except Exception as e:
+            except Exception:
                 pass
         else:
             raise RuntimeError(f"Could not save {to_save} doing {self}.save")
@@ -438,11 +437,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     """
 
     def __init__(
-        self,
-        estimator,
-        fit_tag=None,
-        transform_tag=None,
-        **kwargs,
+        self, estimator, fit_tag=None, transform_tag=None, **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
