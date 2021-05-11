@@ -21,7 +21,9 @@ def _copy_attributes(sample, parent, kwargs):
             if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
                 continue
             # Prevent the assignment of delayed attributes when copying
-            if getattr(parent, "_delayed_attributes") is not None and key in getattr(parent, "_delayed_attributes"):
+            if getattr(parent, "_delayed_attributes") is not None and key in getattr(
+                parent, "_delayed_attributes"
+            ):
                 setattr(sample, key, None)
                 continue
             setattr(sample, key, getattr(parent, key))
