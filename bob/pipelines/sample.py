@@ -16,7 +16,15 @@ def _copy_attributes(sample, parent, kwargs):
     """Copies attributes from a dictionary to self."""
     if parent is not None:
         for key in parent.__dict__:
-            if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
+            if (
+                key.startswith("_")
+                or key in SAMPLE_DATA_ATTRS
+                or (
+                    isinstance(sample, SampleSet)
+                    and getattr(parent, "_delayed_attributes", None) is not None
+                    and key in getattr(parent, "_delayed_attributes", [])
+                )
+            ):
                 continue
 
             setattr(sample, key, getattr(parent, key))
