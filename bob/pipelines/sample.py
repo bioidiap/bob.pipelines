@@ -15,28 +15,10 @@ SAMPLE_DATA_ATTRS = ("data", "samples")
 def _copy_attributes(sample, parent, kwargs):
     """Copies attributes from a dictionary to self."""
     if parent is not None:
-        if (
-            isinstance(sample, DelayedSample)
-            and getattr(parent, "_delayed_attributes", None) is not None
-        ):
-            setattr(sample, "_delayed_attributes", parent._delayed_attributes)
         for key in parent.__dict__:
             if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
                 continue
-            # Prevent the assignment of delayed attributes when copying to DelayedSample
-            if (
-                isinstance(sample, DelayedSample)
-                and getattr(parent, "_delayed_attributes", None) is not None
-                and key in getattr(parent, "_delayed_attributes")
-            ):
-                setattr(sample, key, None)
-                continue
-            if (
-                isinstance(sample, SampleSet)
-                and getattr(parent, "_delayed_attributes", None) is not None
-                and key in getattr(parent, "_delayed_attributes")
-            ):
-                continue
+
             setattr(sample, key, getattr(parent, key))
 
     for key, value in kwargs.items():
@@ -137,16 +119,28 @@ class DelayedSample(_ReprMixin):
 
     def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
         self.__running_init__ = True
-        self._delayed_attributes = None
-        # create the delayed attributes but leave their values as None for now.
-        if delayed_attributes is not None:
-            kwargs.update({k: None for k in delayed_attributes})
-        # Inherit attributes from parent, without calling delayed_attributes
-        _copy_attributes(self, parent, kwargs)
+        # Merge parent's and param's delayed_attributes
+        self._delayed_attributes = getattr(parent, "_delayed_attributes", None)
         if self._delayed_attributes is not None and delayed_attributes is not None:
             self._delayed_attributes.update(delayed_attributes)
-        else:
+        elif self._delayed_attributes is None:
             self._delayed_attributes = delayed_attributes
+        # Inherit attributes from parent, without calling delayed_attributes
+        for key in getattr(parent, "__dict__", []):
+            if (
+                not key.startswith("_")
+                and key not in SAMPLE_DATA_ATTRS
+                and (
+                    self._delayed_attributes is None
+                    or key not in self._delayed_attributes
+                )
+            ):
+                setattr(self, key, getattr(parent, key))
+        # Create the delayed attributes, but leave their values as None for now.
+        if self._delayed_attributes is not None:
+            kwargs.update({k: None for k in self._delayed_attributes})
+        # Set attribute from kwargs
+        _copy_attributes(self, None, kwargs)
         self._load = load
         del self.__running_init__
 
