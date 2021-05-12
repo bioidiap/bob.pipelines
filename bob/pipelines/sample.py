@@ -31,6 +31,12 @@ def _copy_attributes(sample, parent, kwargs):
             ):
                 setattr(sample, key, None)
                 continue
+            if (
+                isinstance(sample, SampleSet)
+                and getattr(parent, "_delayed_attributes", None) is not None
+                and key in getattr(parent, "_delayed_attributes")
+            ):
+                continue
             setattr(sample, key, getattr(parent, key))
 
     for key, value in kwargs.items():
