@@ -1,25 +1,21 @@
 """Scikit-learn Estimator Wrappers."""
 import logging
 import os
-import numpy
 
 from functools import partial
 
 import cloudpickle
 import dask.bag
+import numpy
 
 from dask import delayed
-from sklearn.base import BaseEstimator
-from sklearn.base import MetaEstimatorMixin
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, MetaEstimatorMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 import bob.io.base
 
-from .sample import DelayedSample
-from .sample import SampleBatch
-from .sample import SampleSet
+from .sample import DelayedSample, SampleBatch, SampleSet
 from .utils import is_estimator_stateless
 
 logger = logging.getLogger(__name__)
