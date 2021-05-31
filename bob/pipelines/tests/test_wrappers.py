@@ -73,6 +73,25 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
         return {"stateless": True, "requires_fit": False}
 
 
+class HalfFailingDummyTransformer(DummyTransformer):
+    """Transformer that fails for some samples (all even indices fail)"""
+
+    def transform(self, X):
+        X = check_array(X, force_all_finite=False)
+        X = _offset_add_func(X)
+        output = []
+        for i, x in enumerate(X):
+            output.append(x if i % 2 else None)
+        return output
+
+
+class FullFailingDummyTransformer(DummyTransformer):
+    """Transformer that fails for all samples"""
+
+    def transform(self, X):
+        return [None] * len(X)
+
+
 def _assert_all_close_numpy_array(oracle, result):
     oracle, result = np.array(oracle), np.array(result)
     assert (
@@ -117,6 +136,130 @@ def test_fittable_sample_transformer():
 
     features = transformer.fit_transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
+
+
+def test_failing_sample_transformer():
+
+    X = np.zeros(shape=(10, 2))
+    samples = [mario.Sample(data, key=i) for i, data in enumerate(X)]
+    expected = np.full_like(X, 2)
+    expected[::2] = np.nan
+    expected[1::4] = np.nan
+
+    transformer = Pipeline(
+        [
+            ("1", mario.wrap([HalfFailingDummyTransformer, "sample"])),
+            ("2", mario.wrap([HalfFailingDummyTransformer, "sample"])),
+        ]
+    )
+    features = transformer.transform(samples)
+
+    np_features = np.array(
+        [np.full(X.shape[1], np.nan) if f.data is None else f.data for f in features]
+    )
+    assert len(expected) == len(
+        np_features
+    ), f"Expected: {len(expected)} but got: {len(np_features)}"
+    assert np.allclose(
+        expected, np_features, equal_nan=True
+    ), f"Expected: {expected} but got: {np_features}"
+
+    samples = [mario.Sample(data) for data in X]
+    expected = np.full(X.shape[0], np.nan)
+    transformer = Pipeline(
+        [
+            ("1", mario.wrap([FullFailingDummyTransformer, "sample"])),
+            ("2", mario.wrap([FullFailingDummyTransformer, "sample"])),
+        ]
+    )
+    features = transformer.transform(samples)
+
+    np_features = np.array([np.nan if not f.data else f.data for f in features])
+    assert len(expected) == len(
+        np_features
+    ), f"Expected: {len(expected)} but got: {len(np_features)}"
+    assert np.allclose(
+        expected, np_features, equal_nan=True
+    ), f"Expected: {expected} but got: {np_features}"
+
+
+def test_failing_checkpoint_transformer():
+
+    X = np.zeros(shape=(10, 2))
+    samples = [mario.Sample(data, key=i) for i, data in enumerate(X)]
+    expected = np.full_like(X, 2)
+    expected[::2] = np.nan
+    expected[1::4] = np.nan
+
+    with tempfile.TemporaryDirectory() as d:
+        features_dir_1 = os.path.join(d, "features_1")
+        features_dir_2 = os.path.join(d, "features_2")
+        transformer = Pipeline(
+            [
+                (
+                    "1",
+                    mario.wrap(
+                        [HalfFailingDummyTransformer, "sample", "checkpoint"],
+                        features_dir=features_dir_1,
+                    ),
+                ),
+                (
+                    "2",
+                    mario.wrap(
+                        [HalfFailingDummyTransformer, "sample", "checkpoint"],
+                        features_dir=features_dir_2,
+                    ),
+                ),
+            ]
+        )
+        features = transformer.transform(samples)
+
+        np_features = np.array(
+            [
+                np.full(X.shape[1], np.nan) if f.data is None else f.data
+                for f in features
+            ]
+        )
+        assert len(expected) == len(
+            np_features
+        ), f"Expected: {len(expected)} but got: {len(np_features)}"
+        assert np.allclose(
+            expected, np_features, equal_nan=True
+        ), f"Expected: {expected} but got: {np_features}"
+
+    samples = [mario.Sample(data, key=i) for i, data in enumerate(X)]
+    expected = np.full(X.shape[0], np.nan)
+
+    with tempfile.TemporaryDirectory() as d:
+        features_dir_1 = os.path.join(d, "features_1")
+        features_dir_2 = os.path.join(d, "features_2")
+        transformer = Pipeline(
+            [
+                (
+                    "1",
+                    mario.wrap(
+                        [FullFailingDummyTransformer, "sample", "checkpoint"],
+                        features_dir=features_dir_1,
+                    ),
+                ),
+                (
+                    "2",
+                    mario.wrap(
+                        [FullFailingDummyTransformer, "sample", "checkpoint"],
+                        features_dir=features_dir_2,
+                    ),
+                ),
+            ]
+        )
+        features = transformer.transform(samples)
+
+        np_features = np.array([f.data for f in features])
+        assert len(expected) == len(
+            np_features
+        ), f"Expected: {len(expected)} but got: {len(np_features)}"
+        assert np.allclose(
+            expected, np_features, equal_nan=True
+        ), f"Expected: {expected} but got: {np_features}"
 
 
 def _assert_checkpoints(features, oracle, model_path, features_dir, stateless):
