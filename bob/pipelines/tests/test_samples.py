@@ -142,9 +142,9 @@ def test_delayed_samples():
     assert child_sample.data == 0, child_sample.data
     assert child_sample.annot == "annotation_variant", child_sample.annot
     assert child_sample.new_annot == "annotation", child_sample.new_annot
-    assert delayed_attr_read == False, "delayed attribute has been read early"
+    assert not delayed_attr_read, "delayed attribute has been read early"
     assert child_sample.read_check == "delayed_attr_data", child_sample.read_check
-    assert delayed_attr_read == True
+    assert delayed_attr_read, "delayed attribute should have been read by now"
 
     delayed_sample.annot = "changed"
     assert delayed_sample.annot == "changed", delayed_sample.annot
