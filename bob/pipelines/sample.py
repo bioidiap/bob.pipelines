@@ -119,11 +119,28 @@ class DelayedSample(_ReprMixin):
 
     def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
         self.__running_init__ = True
-        self._delayed_attributes = delayed_attributes
-        # create the delayed attributes but leave the their values as None for now.
-        if delayed_attributes is not None:
-            kwargs.update({k: None for k in delayed_attributes})
-        _copy_attributes(self, parent, kwargs)
+        # Merge parent's and param's delayed_attributes
+        self._delayed_attributes = getattr(parent, "_delayed_attributes", None)
+        if self._delayed_attributes is not None and delayed_attributes is not None:
+            self._delayed_attributes.update(delayed_attributes)
+        elif self._delayed_attributes is None:
+            self._delayed_attributes = delayed_attributes
+        # Inherit attributes from parent, without calling delayed_attributes
+        for key in getattr(parent, "__dict__", []):
+            if (
+                not key.startswith("_")
+                and key not in SAMPLE_DATA_ATTRS
+                and (
+                    self._delayed_attributes is None
+                    or key not in self._delayed_attributes
+                )
+            ):
+                setattr(self, key, getattr(parent, key))
+        # Create the delayed attributes, but leave their values as None for now.
+        if self._delayed_attributes is not None:
+            kwargs.update({k: None for k in self._delayed_attributes})
+        # Set attribute from kwargs
+        _copy_attributes(self, None, kwargs)
         self._load = load
         del self.__running_init__
 
