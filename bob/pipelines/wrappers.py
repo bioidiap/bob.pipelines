@@ -82,9 +82,21 @@ class DelayedSamplesCall:
 
     def __call__(self, index):
         if self.output is None:
-            X = SampleBatch(self.samples, sample_attribute=self.sample_attribute)
-            self.output = self.func(X)
-            _check_n_input_output(self.samples, self.output, self.func_name)
+            # Isolate invalid samples (when previous transformers returned None)
+            invalid_ids = [i for i, s in enumerate(self.samples) if s.data is None]
+            valid_samples = [s for s in self.samples if s.data is not None]
+            # Process only the valid samples
+            if len(valid_samples) > 0:
+                X = SampleBatch(valid_samples, sample_attribute=self.sample_attribute)
+                self.output = self.func(X)
+                _check_n_input_output(valid_samples, self.output, self.func_name)
+            if self.output is None:
+                self.output = [None] * len(valid_samples)
+            # Rebuild the full batch of samples (include the previously failed)
+            if len(invalid_ids) > 0:
+                self.output = list(self.output)
+                for i in invalid_ids:
+                    self.output.insert(i, None)
         return self.output[index]
 
 
@@ -311,8 +323,11 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
                 if should_compute:
                     feat = computed_features[com_feat_index]
                     com_feat_index += 1
-                    # save the computed feature
-                    if p is not None:
+                    # save the computed feature when valid (not None)
+                    if (
+                        p is not None
+                        and getattr(feat, self.sample_attribute) is not None
+                    ):
                         self.save(feat)
                         feat = self.load(s, p)
                     features.append(feat)
