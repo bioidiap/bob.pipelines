@@ -726,6 +726,31 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
         return {"stateless": True, "requires_fit": False}
 
 
+def get_default_tags():
+    """Returns the default tags of a Transformer.
+
+    Relies on the tags API of sklearn.
+
+    Specify tags in ``Transformer._more_tags``:
+
+    .. code-block:: py
+
+        def _more_tags(self):
+            return {"bob_input": "annotations"}
+
+    Retrieve all the tags with ``Transformer._get_tags``.
+    """
+    return {
+        "bob_is_checkpointable": True,
+        "bob_is_daskable": True,
+        "bob_input": "data",
+        "bob_extra_input": [],
+        "bob_output": "data",
+        "bob_load_fct": bob.io.base.load,
+        "bob_save_fct": bob.io.base.save,
+    }
+
+
 def wrap(bases, estimator=None, **kwargs):
     """Wraps several estimators inside each other.
 
@@ -807,6 +832,7 @@ def wrap(bases, estimator=None, **kwargs):
         raise ValueError(f"Got extra kwargs that were not consumed: {leftover}")
 
     return estimator
+
 
 
 def dask_tags(estimator):
