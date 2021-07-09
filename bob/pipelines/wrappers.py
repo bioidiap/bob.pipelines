@@ -267,7 +267,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         load_func=None,
         sample_attribute="data",
         hash_fn=None,
-        attempts=5,
+        attempts=10,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -389,11 +389,12 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
     def save(self, sample):
         path = self.make_path(sample)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
         # Gets sample.data or sample.<sample_attribute> if specified
         to_save = getattr(sample, self.sample_attribute)
         for _ in range(self.attempts):
             try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+
                 self.save_func(to_save, path)
 
                 # test loading

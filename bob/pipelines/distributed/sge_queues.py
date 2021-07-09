@@ -9,7 +9,7 @@ QUEUE_DEFAULT = {
         "memory": "8GB",
         "io_big": False,
         "resource_spec": "",
-        "max_jobs": 96,
+        "max_jobs": 128,
         "resources": {"default": 1},
     },
     "q_1week": {
