@@ -120,7 +120,8 @@ class DelayedSample(_ReprMixin):
     def __init__(self, load, parent=None, delayed_attributes=None, **kwargs):
         self.__running_init__ = True
         # Merge parent's and param's delayed_attributes
-        self._delayed_attributes = getattr(parent, "_delayed_attributes", None)
+        parent_attr = getattr(parent, "_delayed_attributes", None)
+        self._delayed_attributes = None if parent_attr is None else parent_attr.copy()
         if self._delayed_attributes is not None and delayed_attributes is not None:
             self._delayed_attributes.update(delayed_attributes)
         elif self._delayed_attributes is None:
