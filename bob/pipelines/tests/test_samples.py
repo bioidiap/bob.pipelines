@@ -139,6 +139,8 @@ def test_delayed_samples():
     child_sample = DelayedSample(
         load_data, parent=delayed_sample, delayed_attributes=new_delayed_attr
     )
+
+    assert delayed_sample._delayed_attributes == dict(annot=load_annot)
     assert child_sample.data == 0, child_sample.data
     assert child_sample.annot == "annotation_variant", child_sample.annot
     assert child_sample.new_annot == "annotation", child_sample.new_annot
