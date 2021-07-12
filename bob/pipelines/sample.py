@@ -12,17 +12,18 @@ from bob.io.base import vstack_features
 SAMPLE_DATA_ATTRS = ("data", "samples")
 
 
-def _copy_attributes(sample, parent, kwargs):
+def _copy_attributes(sample, parent, kwargs, exclude_list=None):
     """Copies attributes from a dictionary to self."""
+    exclude_list = exclude_list or []
     if parent is not None:
         for key in parent.__dict__:
-            if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
+            if key.startswith("_") or key in SAMPLE_DATA_ATTRS or key in exclude_list:
                 continue
 
             setattr(sample, key, getattr(parent, key))
 
     for key, value in kwargs.items():
-        if key.startswith("_") or key in SAMPLE_DATA_ATTRS:
+        if key.startswith("_") or key in SAMPLE_DATA_ATTRS or key in exclude_list:
             continue
 
         setattr(sample, key, value)
@@ -174,7 +175,12 @@ class SampleSet(MutableSequence, _ReprMixin):
 
     def __init__(self, samples, parent=None, **kwargs):
         self.samples = samples
-        _copy_attributes(self, parent, kwargs)
+        _copy_attributes(
+            self,
+            parent,
+            kwargs,
+            exclude_list=getattr(parent, "_delayed_attributes", None),
+        )
 
     def __len__(self):
         return len(self.samples)
@@ -198,7 +204,12 @@ class DelayedSampleSet(SampleSet):
 
     def __init__(self, load, parent=None, **kwargs):
         self._load = load
-        _copy_attributes(self, parent, kwargs)
+        _copy_attributes(
+            self,
+            parent,
+            kwargs,
+            exclude_list=getattr(parent, "_delayed_attributes", None),
+        )
 
     @property
     def samples(self):
@@ -211,7 +222,12 @@ class DelayedSampleSetCached(DelayedSampleSet):
     def __init__(self, load, parent=None, **kwargs):
         super().__init__(load, parent=parent, kwargs=kwargs)
         self._data = None
-        _copy_attributes(self, parent, kwargs)
+        _copy_attributes(
+            self,
+            parent,
+            kwargs,
+            exclude_list=getattr(parent, "_delayed_attributes", None),
+        )
 
     @property
     def samples(self):
