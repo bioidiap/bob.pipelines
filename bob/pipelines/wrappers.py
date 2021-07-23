@@ -754,42 +754,27 @@ def get_default_bob_tags(estimator_tags={}):
     Parameters
     ----------
     set_tags: dict[str, typing.Any]
-        Tags with a non-default value.
+        Tags with a non-default value that will be overwritten in returned tags.
+
+    Returns
+    -------
+    dict[str, Any]
+        The tags specified in `estimator_tags`, and all the default bob tags.
     """
-    wrap_default_tags = {
-        "bob_is_checkpointable": True,  # Used to skip the wrapping of checkpoint
-        "bob_is_daskable": True,  # Used to skip the dask wrapping
-        "bob_sample_input": False,  # Used to skip the sample wrapping
-    }
     samplewrapper_default_tags = {
-        "bob_input": "data",  # Selects Which field of Sample is fed to transform
-        "bob_extra_input": {},  # Specifies additional fields input to transform
-        "bob_extra_fit_input": {},  # Specifies additional fields input to fit
-        "bob_output": "data",  # Output field to save when checkpointing
+        "bob_input": ("data",),  # Selects Which fields of a Sample is fed to transform
+        "bob_output": "data",  # Output field of a transformer
     }
     checkpointwrapper_default_tags = {
         "bob_checkpoint_extension": ".h5",
         "bob_features_save_fn": bob.io.base.save,  # Function used to checkpoint
-        "bob_features_load_fn": bob.io.base.load,  # Function used to restore from checkpoint
+        "bob_features_load_fn": bob.io.base.load,  # Function used to restore
     }
     return {
-        **wrap_default_tags,
         **samplewrapper_default_tags,
         **checkpointwrapper_default_tags,
         **estimator_tags,
     }
-
-
-def needs_wrap(estimator, wrapper):
-    if estimator is None:
-        return True
-    bob_tags = get_default_bob_tags(estimator._get_tags())
-    return (
-        wrapper is CheckpointWrapper
-        and not bob_tags.get("bob_is_checkpointable")
-        or (wrapper is DaskWrapper and not bob_tags.get("bob_is_daskable"))
-        or (wrapper is SampleWrapper and bob_tags.get("bob_input_samples"))
-    )
 
 
 def wrap(bases, estimator=None, **kwargs):
@@ -800,15 +785,10 @@ def wrap(bases, estimator=None, **kwargs):
     Use estimator tags to wrap conditionally, or to pass special variables to an
     estimator. Processed tags are:
 
-    - *bob_is_checkpointable* Default: True; Skips the checkpoint wrapping if False.
-    - *bob_is_daskable* Default: True; Skips the dask wrapping if False.
-    - *bob_sample_input* Default: False; The transformer takes samples as input if True.
-    - *bob_input* Default: "data"; Selects Which field of Sample is fed to transform.
-    - *bob_extra_input* Default: []; Specifies additional fields input to transform.
-    - *bob_extra_fit_input* Default: []; Specifies additional fields input to fit.
-    - *bob_output* Default: "data"; Output field to save when checkpointing.
-    - *bob_save_fct* Default: bob.io.base.save; Function used to checkpoint.
-    - *bob_load_fct* Default: bob.io.base.load; Function used to restore from checkpoint.
+    - ``bob_input`` Default: ("data",); Selects Which field of Sample is fed to transform.
+    - ``bob_output`` Default: "data"; Output field (saved when checkpointing).
+    - ``bob_save_fct`` Default: bob.io.base.save; Function used to checkpoint.
+    - ``bob_load_fct`` Default: bob.io.base.load; Function used to restore from checkpoint.
 
     Parameters
     ----------
@@ -846,7 +826,7 @@ def wrap(bases, estimator=None, **kwargs):
             params = {k: kwargs.pop(k) for k in valid_params if k in kwargs}
             if estimator is None:
                 estimator = w_class(**params)
-            elif needs_wrap(estimator, w_class):
+            else:
                 estimator = w_class(estimator, **params)
         return estimator, kwargs
 
