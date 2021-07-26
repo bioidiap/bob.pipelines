@@ -90,6 +90,13 @@ class FullFailingDummyTransformer(DummyTransformer):
         return [None] * len(X)
 
 
+class DummyWithTags(DummyTransformer):
+    def _more_tags(self):
+        return {
+            "bob_output": "annotations",
+        }
+
+
 def _assert_all_close_numpy_array(oracle, result):
     oracle, result = np.array(oracle), np.array(result)
     assert (
@@ -134,6 +141,21 @@ def test_fittable_sample_transformer():
 
     features = transformer.fit_transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
+
+
+def test_tagged_sample_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+
+    # Mixing up with an object
+    transformer = mario.wrap([DummyWithTags, "sample"])
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(X + 1, [s.annotations for s in features])
+    _assert_all_close_numpy_array(X, [s.data for s in features])
+
+
+# TODO add more tags tests
 
 
 def test_failing_sample_transformer():
