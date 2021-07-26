@@ -379,18 +379,6 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         self.estimator = estimator
         self.model_path = model_path
         self.features_dir = features_dir
-        self.extension = extension or estimator._get_tags().get(
-            "bob_checkpoint_extension", ".h5"
-        )
-        self.save_func = save_func or estimator._get_tags().get(
-            "bob_features_save_fn", bob.io.base.save
-        )
-        self.load_func = load_func or estimator._get_tags().get(
-            "bob_features_load_fn", bob.io.base.load
-        )
-        self.sample_attribute = sample_attribute or estimator._get_tags().get(
-            "bob_output", "data"
-        )
         self.hash_fn = hash_fn
         self.attempts = attempts
 
@@ -738,57 +726,10 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
         return {"stateless": True, "requires_fit": False}
 
 
-def get_default_bob_tags(estimator_tags={}):
-    """Returns the default tags of a Transformer unless specified.
-
-    Relies on the tags API of sklearn to set and retrieve the tags.
-
-    Specify tags values in ``Transformer._more_tags``:
-
-    ```
-    class My_annotator_transformer(sklearn.base.BaseEstimator):
-        def _more_tags(self):
-            return {"bob_output": "annotations"}
-    ```
-
-    Parameters
-    ----------
-    set_tags: dict[str, typing.Any]
-        Tags with a non-default value that will be overwritten in returned tags.
-
-    Returns
-    -------
-    dict[str, Any]
-        The tags specified in `estimator_tags`, and all the default bob tags.
-    """
-    samplewrapper_default_tags = {
-        "bob_input": ("data",),  # Selects Which fields of a Sample is fed to transform
-        "bob_output": "data",  # Output field of a transformer
-    }
-    checkpointwrapper_default_tags = {
-        "bob_checkpoint_extension": ".h5",
-        "bob_features_save_fn": bob.io.base.save,  # Function used to checkpoint
-        "bob_features_load_fn": bob.io.base.load,  # Function used to restore
-    }
-    return {
-        **samplewrapper_default_tags,
-        **checkpointwrapper_default_tags,
-        **estimator_tags,
-    }
-
-
 def wrap(bases, estimator=None, **kwargs):
     """Wraps several estimators inside each other.
 
     If ``estimator`` is a pipeline, the estimators in that pipeline are wrapped.
-
-    Use estimator tags to wrap conditionally, or to pass special variables to an
-    estimator. Processed tags are:
-
-    - ``bob_input`` Default: ("data",); Selects Which field of Sample is fed to transform.
-    - ``bob_output`` Default: "data"; Output field (saved when checkpointing).
-    - ``bob_save_fct`` Default: bob.io.base.save; Function used to checkpoint.
-    - ``bob_load_fct`` Default: bob.io.base.load; Function used to restore from checkpoint.
 
     Parameters
     ----------
