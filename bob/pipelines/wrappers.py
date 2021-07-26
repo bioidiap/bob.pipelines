@@ -309,7 +309,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             "bob_features_load_fn", bob.io.base.load
         )
         self.sample_attribute = sample_attribute or estimator._get_tags().get(
-            "bob_checkpoint_attribute", "data"
+            "bob_output", "data"
         )
         self.hash_fn = hash_fn
         self.attempts = attempts
