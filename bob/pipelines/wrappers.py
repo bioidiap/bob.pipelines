@@ -1,6 +1,7 @@
 """Scikit-learn Estimator Wrappers."""
 import logging
 import os
+import tempfile
 
 from functools import partial
 
@@ -393,9 +394,13 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         to_save = getattr(sample, self.sample_attribute)
         for _ in range(self.attempts):
             try:
-                os.makedirs(os.path.dirname(path), exist_ok=True)
+                dirname = os.path.dirname(path)
+                os.makedirs(dirname, exist_ok=True)
 
-                self.save_func(to_save, path)
+                # Atomic writing
+                with tempfile.NamedTemporaryFile(dir=dirname, delete=False) as f:
+                    self.save_func(to_save, f.name)
+                    os.replace(f.name, path)
 
                 # test loading
                 self.load_func(path)
