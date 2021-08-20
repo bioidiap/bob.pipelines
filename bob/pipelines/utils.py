@@ -1,3 +1,4 @@
+import copy
 import pickle
 
 import numpy as np
@@ -93,3 +94,33 @@ def hash_string(key, bucket_size=1000):
 
     """
     return str(sum([ord(i) for i in (key)]) % bucket_size)
+
+
+def flatten_samplesets(samplesets):
+    """
+    Takes a list of SampleSets (with one or multiple samples in each SampleSet)
+    and returns a list of SampleSets (with one sample in each SampleSet)
+
+    Parameters
+    ----------
+
+    samplesets: list of SampleSets
+      Input list of SampleSets (with one or multiple samples in each SampleSet
+
+    """
+    new_samplesets = []
+
+    # Iterating over the samplesets
+    for sset in samplesets:
+        # Iterating over the samples, and deep copying each sampleset
+        # for each sample
+        for i, s in enumerate(sset):
+            new_sset = copy.deepcopy(sset)
+            new_sset.samples = [s]
+            # Very important step
+            # We need to redo the keys
+            new_sset.key = f"{new_sset.key}-{i}"
+
+            new_samplesets.append(new_sset)
+
+    return new_samplesets
