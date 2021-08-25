@@ -102,7 +102,7 @@ def _assert_all_close_numpy_array(oracle, result):
 
 def test_sklearn_compatible_estimator():
     # check classes for API consistency
-    check_estimator(DummyWithFit)
+    check_estimator(DummyWithFit())
 
 
 def test_function_sample_transfomer():

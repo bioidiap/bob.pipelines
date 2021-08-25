@@ -4,7 +4,6 @@ from collections.abc import MutableSequence
 from collections.abc import Sequence
 from typing import Any
 
-import h5py
 import numpy as np
 
 from bob.io.base import vstack_features
@@ -260,55 +259,3 @@ class SampleBatch(Sequence, _ReprMixin):
 
         arr = vstack_features(_reader, self.samples, dtype=dtype)
         return np.asarray(arr, dtype, *args, **kwargs)
-
-
-def sample_to_hdf5(sample, hdf5):
-    """
-    Saves the content of sample to hdf5 file
-
-    Parameters
-    ----------
-
-        sample: :any:`Sample` or :any:`DelayedSample` or :any:`list`
-            Sample to be saved
-
-        hdf5: `h5py.File`
-            Pointer to a HDF5 file for writing
-    """
-    if isinstance(sample, list):
-        for i, s in enumerate(sample):
-            group = hdf5.create_group(str(i))
-            sample_to_hdf5(s, group)
-    else:
-        for s in sample.__dict__:
-            hdf5[s] = getattr(sample, s)
-
-
-def hdf5_to_sample(hdf5):
-    """
-    Reads the content of a HDF5File and returns a :any:`Sample`
-
-    Parameters
-    ----------
-
-        hdf5: `h5py.File`
-            Pointer to a HDF5 file for reading
-    """
-
-    # Checking if it has groups
-    has_groups = np.sum([isinstance(hdf5[k], h5py.Group) for k in hdf5.keys()]) > 0
-
-    if has_groups:
-        # If has groups, returns a list of Samples
-        samples = []
-        for k in hdf5.keys():
-            group = hdf5[k]
-            samples.append(hdf5_to_sample(group))
-        return samples
-    else:
-        # If hasn't groups, returns a sample
-        sample = Sample(None)
-        for k in hdf5.keys():
-            setattr(sample, k, hdf5[k].value)
-
-        return sample

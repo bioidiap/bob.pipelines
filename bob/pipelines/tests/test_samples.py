@@ -4,7 +4,6 @@ import os
 import pickle
 import tempfile
 
-import h5py
 import numpy as np
 
 from bob.pipelines import DelayedSample
@@ -12,8 +11,6 @@ from bob.pipelines import DelayedSampleSet
 from bob.pipelines import DelayedSampleSetCached
 from bob.pipelines import Sample
 from bob.pipelines import SampleSet
-from bob.pipelines import hdf5_to_sample
-from bob.pipelines import sample_to_hdf5
 
 
 def test_sampleset_collection():
@@ -69,36 +66,6 @@ def test_sampleset_collection():
 
         assert len(sampleset) == n_samples
         assert sampleset.samples == samples
-
-
-def test_sample_hdf5():
-    n_samples = 10
-    X = np.ones(shape=(n_samples, 2), dtype=int)
-
-    samples = [Sample(data, key=str(i), subject="Subject") for i, data in enumerate(X)]
-    with tempfile.TemporaryDirectory() as dir_name:
-
-        # Single sample
-        filename = os.path.join(dir_name, "sample.hdf5")
-
-        with h5py.File(filename, "w", driver="core") as hdf5:
-            sample_to_hdf5(samples[0], hdf5)
-
-        with h5py.File(filename, "r") as hdf5:
-            sample = hdf5_to_sample(hdf5)
-
-        assert sample == samples[0]
-
-        # List of samples
-        filename = os.path.join(dir_name, "samples.hdf5")
-        with h5py.File(filename, "w", driver="core") as hdf5:
-            sample_to_hdf5(samples, hdf5)
-
-        with h5py.File(filename, "r") as hdf5:
-            samples_deserialized = hdf5_to_sample(hdf5)
-
-        compare = [a == b for a, b in zip(samples_deserialized, samples)]
-        assert np.sum(compare) == 10
 
 
 def test_delayed_samples():

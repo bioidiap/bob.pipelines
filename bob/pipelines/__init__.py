@@ -8,8 +8,6 @@ from .sample import DelayedSampleSetCached
 from .sample import Sample
 from .sample import SampleBatch
 from .sample import SampleSet
-from .sample import hdf5_to_sample  # noqa: F401
-from .sample import sample_to_hdf5  # noqa: F401
 from .wrappers import BaseWrapper
 from .wrappers import CheckpointWrapper
 from .wrappers import DaskWrapper
