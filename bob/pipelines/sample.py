@@ -89,7 +89,7 @@ class Sample(_ReprMixin):
         _copy_attributes(self, parent, kwargs)
 
 
-class DelayedSample(_ReprMixin):
+class DelayedSample(Sample):
     """Representation of sample that can be loaded via a callable.
 
     The optional ``**kwargs`` argument allows you to attach more attributes to
@@ -167,6 +167,26 @@ class DelayedSample(_ReprMixin):
     def data(self):
         """Loads the data from the disk file."""
         return self._load()
+
+    @classmethod
+    def from_sample(cls, sample: Sample, **kwargs):
+        """Creates a DelayedSample from another DelayedSample or a Sample.
+        If the sample is a DelayedSample, its data will not be loaded.
+
+        Parameters
+        ----------
+
+        sample : :any:`Sample`
+            The sample to convert to a DelayedSample
+        """
+        if hasattr(sample, "_load"):
+            data = sample._load
+        else:
+
+            def data():
+                return sample.data
+
+        return cls(data, parent=sample, **kwargs)
 
 
 class SampleSet(MutableSequence, _ReprMixin):

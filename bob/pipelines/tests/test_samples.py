@@ -117,3 +117,29 @@ def test_delayed_samples():
 
     delayed_sample.annot = "changed"
     assert delayed_sample.annot == "changed", delayed_sample.annot
+
+    # test DelayedSample.from_smaple
+
+    # check if a non-delayed sample is correctly converted to a delayed sample
+    non_delayed_sample = Sample(1)
+    delayed_sample = DelayedSample.from_sample(non_delayed_sample, annot="test")
+    assert delayed_sample.data == 1, delayed_sample.data
+    assert delayed_sample.annot == "test", delayed_sample.annot
+
+    # check if converting a delayed sample will not load the data
+    raise_error = True
+
+    def never_load():
+        if raise_error:
+            raise ValueError("never_load should not be called")
+        return 0
+
+    delayed_sample = DelayedSample(
+        never_load, delayed_attributes=dict(annot=never_load)
+    )
+    # should not raise an error when creating the delayed sample
+    child_sample = DelayedSample.from_sample(delayed_sample)
+
+    raise_error = False
+    assert child_sample.data == 0, child_sample.data
+    assert child_sample.annot == 0, child_sample.annot
