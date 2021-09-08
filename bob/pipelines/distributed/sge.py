@@ -480,7 +480,7 @@ class SchedulerResourceRestriction(Scheduler):
         super(SchedulerResourceRestriction, self).__init__(
             idle_timeout=rc.get("bob.pipelines.sge.idle_timeout", 3600),
             allowed_failures=rc.get("bob.pipelines.sge.allowed_failures", 100),
-            worker_ttl=rc.get("bob.pipelines.sge.worker_ttl", 60),
+            worker_ttl=rc.get("bob.pipelines.sge.worker_ttl", 120),
             synchronize_worker_interval="10s",
             *args,
             **kwargs,
