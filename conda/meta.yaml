@@ -36,7 +36,7 @@ requirements:
     - scikit-learn {{ scikit_learn }}
     - xarray {{ xarray }}
     - h5py {{h5py}}
-    # test requirements
+    # optional dependencies
     - dask-ml {{ dask_ml }}
   run:
     - python
@@ -61,12 +61,11 @@ test:
     - conda inspect linkages -p $PREFIX {{ name }}  # [not win]
     - conda inspect objects -p $PREFIX {{ name }}  # [osx]
   requires:
-    - bob-devel {{ bob_devel }}.*
-    - pytest
-    - pytest-cov
-    - coverage
-    - sphinx
-    - sphinx_rtd_theme
+    - pytest {{ pytest }}
+    - pytest-cov {{ pytest_cov }}
+    - coverage {{ coverage }}
+    - sphinx {{ sphinx }}
+    - sphinx_rtd_theme {{ sphinx_rtd_theme }}
     - dask-ml
 
 about:
