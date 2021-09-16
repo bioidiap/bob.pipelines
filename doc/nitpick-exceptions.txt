@@ -6,3 +6,4 @@ py:class sklearn.preprocessing._function_transformer.FunctionTransformer
 py:class sklearn.base.MetaEstimatorMixin
 py:class sklearn.utils.metaestimators._BaseComposition
 py:class bob.pipelines.sample._ReprMixin
+py:obj dask.distributed.Adaptive
