@@ -22,7 +22,8 @@ def FileLoader(original_directory, original_extension=None, **kwargs):
         file_loader,
         validate=False,
         kw_args=dict(
-            original_directory=original_directory, original_extension=original_extension
+            original_directory=original_directory,
+            original_extension=original_extension,
         ),
     )
 

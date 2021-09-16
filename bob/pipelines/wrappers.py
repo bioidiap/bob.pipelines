@@ -10,17 +10,13 @@ import cloudpickle
 import dask.bag
 
 from dask import delayed
-from sklearn.base import BaseEstimator
-from sklearn.base import MetaEstimatorMixin
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, MetaEstimatorMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 import bob.io.base
 
-from .sample import DelayedSample
-from .sample import SampleBatch
-from .sample import SampleSet
+from .sample import DelayedSample, SampleBatch, SampleSet
 from .utils import is_estimator_stateless
 
 logger = logging.getLogger(__name__)
@@ -63,18 +59,24 @@ class BaseWrapper(MetaEstimatorMixin, BaseEstimator):
 
 
 def _make_kwargs_from_samples(samples, arg_attr_list):
-    kwargs = {arg: [getattr(s, attr) for s in samples] for arg, attr in arg_attr_list}
+    kwargs = {
+        arg: [getattr(s, attr) for s in samples] for arg, attr in arg_attr_list
+    }
     return kwargs
 
 
 def _check_n_input_output(samples, output, func_name):
     ls, lo = len(samples), len(output)
     if ls != lo:
-        raise RuntimeError(f"{func_name} got {ls} samples but returned {lo} samples!")
+        raise RuntimeError(
+            f"{func_name} got {ls} samples but returned {lo} samples!"
+        )
 
 
 class DelayedSamplesCall:
-    def __init__(self, func, func_name, samples, sample_attribute="data", **kwargs):
+    def __init__(
+        self, func, func_name, samples, sample_attribute="data", **kwargs
+    ):
         super().__init__(**kwargs)
         self.func = func
         self.func_name = func_name
@@ -85,13 +87,19 @@ class DelayedSamplesCall:
     def __call__(self, index):
         if self.output is None:
             # Isolate invalid samples (when previous transformers returned None)
-            invalid_ids = [i for i, s in enumerate(self.samples) if s.data is None]
+            invalid_ids = [
+                i for i, s in enumerate(self.samples) if s.data is None
+            ]
             valid_samples = [s for s in self.samples if s.data is not None]
             # Process only the valid samples
             if len(valid_samples) > 0:
-                X = SampleBatch(valid_samples, sample_attribute=self.sample_attribute)
+                X = SampleBatch(
+                    valid_samples, sample_attribute=self.sample_attribute
+                )
                 self.output = self.func(X)
-                _check_n_input_output(valid_samples, self.output, self.func_name)
+                _check_n_input_output(
+                    valid_samples, self.output, self.func_name
+                )
             if self.output is None:
                 self.output = [None] * len(valid_samples)
             # Rebuild the full batch of samples (include the previously failed)
@@ -161,7 +169,9 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
                 for sset in samples
             ]
         else:
-            kwargs = _make_kwargs_from_samples(samples, self.transform_extra_arguments)
+            kwargs = _make_kwargs_from_samples(
+                samples, self.transform_extra_arguments
+            )
             delayed = DelayedSamplesCall(
                 partial(method, **kwargs),
                 func_name,
@@ -307,7 +317,9 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
         def _transform_samples(samples):
             paths = [self.make_path(s) for s in samples]
-            should_compute_list = [p is None or not os.path.isfile(p) for p in paths]
+            should_compute_list = [
+                p is None or not os.path.isfile(p) for p in paths
+            ]
             # call method on non-checkpointed samples
             non_existing_samples = [
                 s
@@ -318,10 +330,14 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             computed_features = []
             if non_existing_samples:
                 computed_features = method(non_existing_samples)
-            _check_n_input_output(non_existing_samples, computed_features, method)
+            _check_n_input_output(
+                non_existing_samples, computed_features, method
+            )
             # return computed features and checkpointed features
             features, com_feat_index = [], 0
-            for s, p, should_compute in zip(samples, paths, should_compute_list):
+            for s, p, should_compute in zip(
+                samples, paths, should_compute_list
+            ):
                 if should_compute:
                     feat = computed_features[com_feat_index]
                     com_feat_index += 1
@@ -338,7 +354,10 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             return features
 
         if isinstance(samples[0], SampleSet):
-            return [SampleSet(_transform_samples(s.samples), parent=s) for s in samples]
+            return [
+                SampleSet(_transform_samples(s.samples), parent=s)
+                for s in samples
+            ]
         else:
             return _transform_samples(samples)
 
@@ -387,7 +406,9 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
         hash_dir_name = self.hash_fn(key) if self.hash_fn is not None else ""
 
-        return os.path.join(self.features_dir, hash_dir_name, key + self.extension)
+        return os.path.join(
+            self.features_dir, hash_dir_name, key + self.extension
+        )
 
     def save(self, sample):
         path = self.make_path(sample)
@@ -537,7 +558,12 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
             # the `finlize-TASK` and `TASK`. With this, we make sure
             # that the two are annotated
             self.resource_tags[
-                tuple([f"{k}{str(self._dask_state.key)}" for k in ["", "finalize-"]])
+                tuple(
+                    [
+                        f"{k}{str(self._dask_state.key)}"
+                        for k in ["", "finalize-"]
+                    ]
+                )
             ] = self._make_dask_resource_tag(self.fit_tag)
 
         return self
@@ -636,7 +662,9 @@ def wrap(bases, estimator=None, **kwargs):
             if features_dir is not None:
                 new_kwargs["features_dir"] = os.path.join(features_dir, name)
             if model_path is not None:
-                new_kwargs["model_path"] = os.path.join(model_path, f"{name}.pkl")
+                new_kwargs["model_path"] = os.path.join(
+                    model_path, f"{name}.pkl"
+                )
 
             trans, leftover = _wrap(trans, **new_kwargs)
             estimator.steps[idx] = (name, trans)

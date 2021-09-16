@@ -4,13 +4,11 @@ import tempfile
 
 import numpy as np
 
-from sklearn.base import BaseEstimator
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
-from sklearn.utils.validation import check_array
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_array, check_is_fitted
 
 import bob.pipelines as mario
 
@@ -265,7 +263,9 @@ def _assert_checkpoints(features, oracle, model_path, features_dir, stateless):
     if stateless:
         assert not os.path.exists(model_path)
     else:
-        assert os.path.exists(model_path), os.listdir(os.path.dirname(model_path))
+        assert os.path.exists(model_path), os.listdir(
+            os.path.dirname(model_path)
+        )
     assert os.path.isdir(features_dir)
     for i in range(len(oracle)):
         assert os.path.isfile(os.path.join(features_dir, f"{i}.h5"))
@@ -382,7 +382,9 @@ def _build_transformer(path, i):
 
     features_dir = os.path.join(path, f"transformer{i}")
     estimator = mario.wrap(
-        [DummyTransformer, "sample", "checkpoint"], i=i, features_dir=features_dir
+        [DummyTransformer, "sample", "checkpoint"],
+        i=i,
+        features_dir=features_dir,
     )
     return estimator
 
@@ -397,19 +399,25 @@ def test_checkpoint_fittable_pipeline():
     oracle = X + 3
 
     with tempfile.TemporaryDirectory() as d:
-        pipeline = Pipeline([(f"{i}", _build_estimator(d, i)) for i in range(2)])
+        pipeline = Pipeline(
+            [(f"{i}", _build_estimator(d, i)) for i in range(2)]
+        )
         pipeline.fit(samples)
 
         transformed_samples = pipeline.transform(samples_transform)
 
-        _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+        _assert_all_close_numpy_array(
+            oracle, [s.data for s in transformed_samples]
+        )
 
 
 def test_checkpoint_transform_pipeline():
     def _run(dask_enabled):
 
         X = np.ones(shape=(10, 2), dtype=int)
-        samples_transform = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples_transform = [
+            mario.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
         offset = 2
         oracle = X + offset
 
@@ -419,13 +427,15 @@ def test_checkpoint_transform_pipeline():
             )
             if dask_enabled:
                 pipeline = mario.wrap(["dask"], pipeline)
-                transformed_samples = pipeline.transform(samples_transform).compute(
-                    scheduler="single-threaded"
-                )
+                transformed_samples = pipeline.transform(
+                    samples_transform
+                ).compute(scheduler="single-threaded")
             else:
                 transformed_samples = pipeline.transform(samples_transform)
 
-            _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+            _assert_all_close_numpy_array(
+                oracle, [s.data for s in transformed_samples]
+            )
 
     _run(dask_enabled=True)
     _run(dask_enabled=False)
@@ -445,7 +455,9 @@ def test_checkpoint_fit_transform_pipeline():
             transformer = ("1", _build_transformer(d, 1))
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
-                pipeline = mario.wrap(["dask"], pipeline, fit_tag="GPU", npartitions=1)
+                pipeline = mario.wrap(
+                    ["dask"], pipeline, fit_tag="GPU", npartitions=1
+                )
                 pipeline = pipeline.fit(samples)
                 tags = mario.dask_tags(pipeline)
 
@@ -459,15 +471,16 @@ def test_checkpoint_fit_transform_pipeline():
                 pipeline = pipeline.fit(samples)
                 transformed_samples = pipeline.transform(samples_transform)
 
-            _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+            _assert_all_close_numpy_array(
+                oracle, [s.data for s in transformed_samples]
+            )
 
     _run(dask_enabled=True)
     _run(dask_enabled=False)
 
 
 def _get_local_client():
-    from dask.distributed import Client
-    from dask.distributed import LocalCluster
+    from dask.distributed import Client, LocalCluster
 
     cluster = LocalCluster(
         nanny=False, processes=False, n_workers=1, threads_per_worker=1
@@ -497,14 +510,16 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
                 dask_client = _get_local_client()
                 pipeline = mario.wrap(["dask"], pipeline)
                 pipeline = pipeline.fit(samples)
-                transformed_samples = pipeline.transform(samples_transform).compute(
-                    scheduler=dask_client
-                )
+                transformed_samples = pipeline.transform(
+                    samples_transform
+                ).compute(scheduler=dask_client)
             else:
                 pipeline = pipeline.fit(samples)
                 transformed_samples = pipeline.transform(samples_transform)
 
-            _assert_all_close_numpy_array(oracle, [s.data for s in transformed_samples])
+            _assert_all_close_numpy_array(
+                oracle, [s.data for s in transformed_samples]
+            )
 
     _run(True)
     _run(False)
@@ -512,10 +527,14 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
 
 def test_dask_checkpoint_transform_pipeline():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples_transform = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples_transform = [
+        mario.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     with tempfile.TemporaryDirectory() as d:
         bag_transformer = mario.ToDaskBag()
-        estimator = mario.wrap(["dask"], _build_transformer(d, 0), transform_tag="CPU")
+        estimator = mario.wrap(
+            ["dask"], _build_transformer(d, 0), transform_tag="CPU"
+        )
         X_tr = estimator.transform(bag_transformer.transform(samples_transform))
         assert len(mario.dask_tags(estimator)) == 1
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
@@ -526,7 +545,8 @@ def test_checkpoint_transform_pipeline_with_sampleset():
 
         X = np.ones(shape=(10, 2), dtype=int)
         samples_transform = mario.SampleSet(
-            [mario.Sample(data, key=str(i)) for i, data in enumerate(X)], key="1"
+            [mario.Sample(data, key=str(i)) for i, data in enumerate(X)],
+            key="1",
         )
         offset = 2
         oracle = X + offset
@@ -537,15 +557,19 @@ def test_checkpoint_transform_pipeline_with_sampleset():
             )
             if dask_enabled:
                 pipeline = mario.wrap(["dask"], pipeline)
-                transformed_samples = pipeline.transform([samples_transform]).compute(
-                    scheduler="single-threaded"
-                )
+                transformed_samples = pipeline.transform(
+                    [samples_transform]
+                ).compute(scheduler="single-threaded")
             else:
                 transformed_samples = pipeline.transform([samples_transform])
 
             _assert_all_close_numpy_array(
                 oracle,
-                [s.data for sample_set in transformed_samples for s in sample_set],
+                [
+                    s.data
+                    for sample_set in transformed_samples
+                    for s in sample_set
+                ],
             )
             assert np.all([len(s) == 10 for s in transformed_samples])
 

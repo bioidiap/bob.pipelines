@@ -3,8 +3,7 @@ import shutil
 
 import numpy
 
-from sklearn.base import BaseEstimator
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline
 
 import bob.pipelines
@@ -58,7 +57,9 @@ pipeline = bob.pipelines.wrap(
 
 # Create a dask graph from a pipeline
 # Run the task graph in the local computer in a single tread
-X_transformed = pipeline.fit_transform(X_as_sample).compute(scheduler="single-threaded")
+X_transformed = pipeline.fit_transform(X_as_sample).compute(
+    scheduler="single-threaded"
+)
 
 
 shutil.rmtree(model_path)

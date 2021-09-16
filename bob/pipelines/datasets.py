@@ -15,10 +15,11 @@ import pathlib
 
 from collections.abc import Iterable
 
-from bob.db.base.utils import check_parameter_for_validity
-from bob.db.base.utils import check_parameters_for_validity
-from bob.extension.download import list_dir
-from bob.extension.download import search_file
+from bob.db.base.utils import (
+    check_parameter_for_validity,
+    check_parameters_for_validity,
+)
+from bob.extension.download import list_dir, search_file
 
 from .sample import Sample
 
@@ -68,7 +69,9 @@ class CSVToSamples(FileListToSamples):
     def rows(self):
         self.list_file.seek(0)
         kw = self.dict_reader_kwargs or {}
-        reader = csv.DictReader(self.list_file, fieldnames=self.fieldnames, **kw)
+        reader = csv.DictReader(
+            self.list_file, fieldnames=self.fieldnames, **kw
+        )
         return reader
 
 
@@ -116,7 +119,9 @@ class FileListDatabase:
         """
         super().__init__(**kwargs)
         if not os.path.exists(dataset_protocols_path):
-            raise ValueError(f"The path `{dataset_protocols_path}` was not found")
+            raise ValueError(
+                f"The path `{dataset_protocols_path}` was not found"
+            )
         self.dataset_protocols_path = dataset_protocols_path
         self.reader_cls = reader_cls
         self._transformer = transformer
@@ -146,7 +151,9 @@ class FileListDatabase:
             reader.transformer = value
 
     def groups(self):
-        names = list_dir(self.dataset_protocols_path, self.protocol, folders=False)
+        names = list_dir(
+            self.dataset_protocols_path, self.protocol, folders=False
+        )
         names = [os.path.splitext(n)[0] for n in names]
         return names
 
@@ -205,7 +212,8 @@ class FileListDatabase:
 
         if unique:
             samples = [
-                next(iter(v)) for _, v in itertools.groupby(samples, key=key_func)
+                next(iter(v))
+                for _, v in itertools.groupby(samples, key=key_func)
             ]
 
         return samples

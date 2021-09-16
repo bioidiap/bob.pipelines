@@ -4,14 +4,15 @@ import shutil
 import numpy
 
 from dask.distributed import Client
-from sklearn.base import BaseEstimator
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline
 
 import bob.pipelines
 
-from bob.pipelines.distributed.sge import SGEMultipleQueuesCluster
-from bob.pipelines.distributed.sge import get_resource_requirements
+from bob.pipelines.distributed.sge import (
+    SGEMultipleQueuesCluster,
+    get_resource_requirements,
+)
 from bob.pipelines.sample import Sample
 
 

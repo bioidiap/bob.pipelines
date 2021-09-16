@@ -6,11 +6,13 @@ import tempfile
 
 import numpy as np
 
-from bob.pipelines import DelayedSample
-from bob.pipelines import DelayedSampleSet
-from bob.pipelines import DelayedSampleSetCached
-from bob.pipelines import Sample
-from bob.pipelines import SampleSet
+from bob.pipelines import (
+    DelayedSample,
+    DelayedSampleSet,
+    DelayedSampleSetCached,
+    Sample,
+    SampleSet,
+)
 
 
 def test_sampleset_collection():
@@ -62,7 +64,9 @@ def test_sampleset_collection():
         with open(filename, "wb") as f:
             f.write(pickle.dumps(samples))
 
-        sampleset = DelayedSampleSetCached(functools.partial(_load, filename), key=1)
+        sampleset = DelayedSampleSetCached(
+            functools.partial(_load, filename), key=1
+        )
 
         assert len(sampleset) == n_samples
         assert sampleset.samples == samples
@@ -85,7 +89,9 @@ def test_delayed_samples():
         delayed_attr_read = True
         return "delayed_attr_data"
 
-    delayed_sample = DelayedSample(load_data, delayed_attributes=dict(annot=load_annot))
+    delayed_sample = DelayedSample(
+        load_data, delayed_attributes=dict(annot=load_annot)
+    )
     assert delayed_sample.data == 0, delayed_sample.data
     assert delayed_sample.annot == "annotation", delayed_sample.annot
 
@@ -112,7 +118,9 @@ def test_delayed_samples():
     assert child_sample.annot == "annotation_variant", child_sample.annot
     assert child_sample.new_annot == "annotation", child_sample.new_annot
     assert not delayed_attr_read, "delayed attribute has been read early"
-    assert child_sample.read_check == "delayed_attr_data", child_sample.read_check
+    assert (
+        child_sample.read_check == "delayed_attr_data"
+    ), child_sample.read_check
     assert delayed_attr_read, "delayed attribute should have been read by now"
 
     delayed_sample.annot = "changed"

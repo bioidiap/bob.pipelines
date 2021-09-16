@@ -8,15 +8,18 @@ from sklearn.pipeline import make_pipeline
 import bob.io.base
 import bob.io.image
 
-from bob.pipelines.sample_loaders import AnnotationsLoader
-from bob.pipelines.sample_loaders import CSVToSampleLoader
+from bob.pipelines.sample_loaders import AnnotationsLoader, CSVToSampleLoader
 
 
 def test_sample_loader():
-    path = pkg_resources.resource_filename(__name__, os.path.join("data", "samples"))
+    path = pkg_resources.resource_filename(
+        __name__, os.path.join("data", "samples")
+    )
 
     sample_loader = CSVToSampleLoader(
-        data_loader=bob.io.base.load, dataset_original_directory=path, extension=".pgm"
+        data_loader=bob.io.base.load,
+        dataset_original_directory=path,
+        extension=".pgm",
     )
 
     f = open(os.path.join(path, "samples.csv"))
@@ -27,10 +30,14 @@ def test_sample_loader():
 
 
 def test_annotations_loader():
-    path = pkg_resources.resource_filename(__name__, os.path.join("data", "samples"))
+    path = pkg_resources.resource_filename(
+        __name__, os.path.join("data", "samples")
+    )
 
     csv_sample_loader = CSVToSampleLoader(
-        data_loader=bob.io.base.load, dataset_original_directory=path, extension=".pgm"
+        data_loader=bob.io.base.load,
+        dataset_original_directory=path,
+        extension=".pgm",
     )
     annotation_loader = AnnotationsLoader(
         annotation_directory=path,

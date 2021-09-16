@@ -10,8 +10,7 @@ import csv
 import functools
 import os
 
-from sklearn.base import BaseEstimator
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 
 import bob.db.base
 
@@ -97,18 +96,24 @@ class CSVToSampleLoader(TransformerMixin, BaseEstimator):
             )
 
         if "path" not in header:
-            raise ValueError("The field `path` is not available in your dataset.")
+            raise ValueError(
+                "The field `path` is not available in your dataset."
+            )
 
     def convert_row_to_sample(self, row, header):
         path = row[0]
         reference_id = row[1]
 
-        kwargs = dict([[str(h).lower(), r] for h, r in zip(header[2:], row[2:])])
+        kwargs = dict(
+            [[str(h).lower(), r] for h, r in zip(header[2:], row[2:])]
+        )
 
         return DelayedSample(
             functools.partial(
                 self.data_loader,
-                os.path.join(self.dataset_original_directory, path + self.extension),
+                os.path.join(
+                    self.dataset_original_directory, path + self.extension
+                ),
             ),
             key=path,
             reference_id=reference_id,

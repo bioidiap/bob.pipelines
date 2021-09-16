@@ -62,5 +62,7 @@ def dask_get_partition_size(cluster, n_objects, lower_bound=200):
 
     # Trying to set a lower bound for the
     return (
-        max(n_objects // max_jobs, lower_bound) if n_objects > max_jobs else n_objects
+        max(n_objects // max_jobs, lower_bound)
+        if n_objects > max_jobs
+        else n_objects
     )

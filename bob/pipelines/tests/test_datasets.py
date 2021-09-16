@@ -18,7 +18,9 @@ from bob.pipelines.transformers import Str_To_Types
 
 def iris_data_tranform(samples):
     for s in samples:
-        data = np.array([s.sepal_length, s.sepal_width, s.petal_length, s.petal_width])
+        data = np.array(
+            [s.sepal_length, s.sepal_width, s.petal_length, s.petal_width]
+        )
         s.data = data
     return samples
 

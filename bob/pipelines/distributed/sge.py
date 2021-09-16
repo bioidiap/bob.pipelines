@@ -7,8 +7,7 @@ import sys
 
 import dask
 
-from dask_jobqueue.core import Job
-from dask_jobqueue.core import JobQueueCluster
+from dask_jobqueue.core import Job, JobQueueCluster
 from distributed.deploy import Adaptive
 from distributed.scheduler import Scheduler
 
@@ -49,11 +48,15 @@ class SGEIdiapJob(Job):
         if project is None:
             project = dask.config.get("jobqueue.%s.project" % config_name)
         if resource_spec is None:
-            resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
+            resource_spec = dask.config.get(
+                "jobqueue.%s.resource-spec" % config_name
+            )
         if job_extra is None:
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
-        super().__init__(*args, config_name=config_name, death_timeout=10000, **kwargs)
+        super().__init__(
+            *args, config_name=config_name, death_timeout=10000, **kwargs
+        )
 
         # Amending the --resources in the `distributed.cli.dask_worker` CLI command
         if "resources" in kwargs and kwargs["resources"]:
@@ -103,7 +106,11 @@ def get_max_jobs(queue_dict):
     """Given a queue list, get the max number of possible jobs."""
 
     return max(
-        [queue_dict[r]["max_jobs"] for r in queue_dict if "max_jobs" in queue_dict[r]]
+        [
+            queue_dict[r]["max_jobs"]
+            for r in queue_dict
+            if "max_jobs" in queue_dict[r]
+        ]
     )
 
 
@@ -309,7 +316,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
 
         # IO_BIG
         new_resource_spec += (
-            "io_big=TRUE," if "io_big" in job_spec and job_spec["io_big"] else ""
+            "io_big=TRUE,"
+            if "io_big" in job_spec and job_spec["io_big"]
+            else ""
         )
 
         memory = _get_key_from_spec(job_spec, "memory")[:-1]
@@ -319,7 +328,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         if queue != "all.q":
             new_resource_spec += f"{queue}=TRUE"
 
-        new_resource_spec = None if new_resource_spec == "" else new_resource_spec
+        new_resource_spec = (
+            None if new_resource_spec == "" else new_resource_spec
+        )
 
         return {
             "queue": queue,
@@ -362,7 +373,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         # Defining a new worker_spec with some SGE characteristics
         self.new_spec = worker_spec
 
-        return super(JobQueueCluster, self).scale(n_jobs, memory=None, cores=n_cores)
+        return super(JobQueueCluster, self).scale(
+            n_jobs, memory=None, cores=n_cores
+        )
 
     def scale_up(self, n_jobs, sge_job_spec_key=None):
         """Scale cluster up.
@@ -417,7 +430,9 @@ class AdaptiveMultipleQueue(Adaptive):
                 return {
                     "status": "up",
                     "n": target,
-                    "sge_job_spec_key": list(resource_restrictions[0].keys())[0],
+                    "sge_job_spec_key": list(resource_restrictions[0].keys())[
+                        0
+                    ],
                 }
             else:
                 return {"status": "up", "n": target}
@@ -499,6 +514,8 @@ class SchedulerResourceRestriction(Scheduler):
                 self.tasks[k].state == "no-worker"
                 and self.tasks[k].resource_restrictions is not None
             ):
-                resource_restrictions.append(self.tasks[k].resource_restrictions)
+                resource_restrictions.append(
+                    self.tasks[k].resource_restrictions
+                )
 
         return resource_restrictions

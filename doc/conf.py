@@ -8,8 +8,7 @@ import pkg_resources
 import sphinx_rtd_theme
 
 # For inter-documentation mapping:
-from bob.extension.utils import link_documentation
-from bob.extension.utils import load_requirements
+from bob.extension.utils import link_documentation, load_requirements
 
 # -- General configuration -----------------------------------------------------
 
@@ -233,7 +232,8 @@ autodoc_default_options = {
 sphinx_requirements = "extra-intersphinx.txt"
 if os.path.exists(sphinx_requirements):
     intersphinx_mapping = link_documentation(
-        additional_packages=["python", "numpy"] + load_requirements(sphinx_requirements)
+        additional_packages=["python", "numpy"]
+        + load_requirements(sphinx_requirements)
     )
 else:
     intersphinx_mapping = link_documentation()

@@ -4,8 +4,7 @@ import numpy as np
 
 import bob.pipelines as mario
 
-from bob.pipelines import Sample
-from bob.pipelines import SampleSet
+from bob.pipelines import Sample, SampleSet
 from bob.pipelines.utils import flatten_samplesets
 
 
@@ -65,4 +64,6 @@ def test_break_sample_set():
     new_samplesets = flatten_samplesets(samplesets)
 
     assert len(new_samplesets) == n_samples * n_samples
-    assert np.allclose([len(s) for s in new_samplesets], np.ones(n_samples * n_samples))
+    assert np.allclose(
+        [len(s) for s in new_samplesets], np.ones(n_samples * n_samples)
+    )

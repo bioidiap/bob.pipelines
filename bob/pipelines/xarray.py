@@ -14,11 +14,9 @@ from sklearn.base import BaseEstimator
 from sklearn.pipeline import _name_estimators
 from sklearn.utils.metaestimators import _BaseComposition
 
-from bob.io.base import load
-from bob.io.base import save
+from bob.io.base import load, save
 
-from .sample import SAMPLE_DATA_ATTRS
-from .sample import _ReprMixin
+from .sample import SAMPLE_DATA_ATTRS, _ReprMixin
 from .utils import is_estimator_stateless
 
 logger = logging.getLogger(__name__)
@@ -44,7 +42,11 @@ def _one_sample_to_dataset(sample, meta=None):
     dataset = {}
     delayed_attributes = getattr(sample, "_delayed_attributes", None) or {}
     for k in sample.__dict__:
-        if k in SAMPLE_DATA_ATTRS or k in delayed_attributes or k.startswith("_"):
+        if (
+            k in SAMPLE_DATA_ATTRS
+            or k in delayed_attributes
+            or k.startswith("_")
+        ):
             continue
         dataset[k] = getattr(sample, k)
 
@@ -265,7 +267,9 @@ class _TokenStableTransform:
 
             l1, l2 = len(data), len(features)
             if l1 != l2:
-                raise ValueError(f"Got {l2} features from processing {l1} samples!")
+                raise ValueError(
+                    f"Got {l2} features from processing {l1} samples!"
+                )
 
             # save computed_features
             logger.info(f"Saving {l2} features in {block.features_dir}")
@@ -483,7 +487,9 @@ class DatasetPipeline(_BaseComposition):
                 estimator = block.estimator
                 if is_estimator_stateless(estimator):
                     block.estimator_ = estimator
-                elif block.model_path is not None and os.path.isfile(block.model_path):
+                elif block.model_path is not None and os.path.isfile(
+                    block.model_path
+                ):
                     _load_estimator.__name__ = f"load_{block.estimator_name}"
                     block.estimator_ = dask.delayed(_load_estimator)(block)
                 elif block.input_dask_array:
@@ -510,7 +516,9 @@ class DatasetPipeline(_BaseComposition):
                     args, block, mn, input_has_keys=False
                 )
             else:
-                dims, data = _transform_or_load(block, ds, block.transform_input, mn)
+                dims, data = _transform_or_load(
+                    block, ds, block.transform_input, mn
+                )
 
             # replace data inside dataset
             ds = ds.copy(deep=False)

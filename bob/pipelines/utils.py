@@ -75,7 +75,9 @@ def isinstance_nested(instance, attribute, isinstance_of):
         return True
     else:
         # Recursive search
-        return isinstance_nested(getattr(instance, attribute), attribute, isinstance_of)
+        return isinstance_nested(
+            getattr(instance, attribute), attribute, isinstance_of
+        )
 
 
 def hash_string(key, bucket_size=1000):

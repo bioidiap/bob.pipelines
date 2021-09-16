@@ -4,8 +4,7 @@ import shutil
 import numpy
 
 from dask.distributed import Client
-from sklearn.base import BaseEstimator
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import make_pipeline
 
 import bob.pipelines

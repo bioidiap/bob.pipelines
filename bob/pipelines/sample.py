@@ -1,7 +1,6 @@
 """Base definition of sample."""
 
-from collections.abc import MutableSequence
-from collections.abc import Sequence
+from collections.abc import MutableSequence, Sequence
 from typing import Any
 
 import numpy as np
@@ -16,13 +15,21 @@ def _copy_attributes(sample, parent, kwargs, exclude_list=None):
     exclude_list = exclude_list or []
     if parent is not None:
         for key in parent.__dict__:
-            if key.startswith("_") or key in SAMPLE_DATA_ATTRS or key in exclude_list:
+            if (
+                key.startswith("_")
+                or key in SAMPLE_DATA_ATTRS
+                or key in exclude_list
+            ):
                 continue
 
             setattr(sample, key, getattr(parent, key))
 
     for key, value in kwargs.items():
-        if key.startswith("_") or key in SAMPLE_DATA_ATTRS or key in exclude_list:
+        if (
+            key.startswith("_")
+            or key in SAMPLE_DATA_ATTRS
+            or key in exclude_list
+        ):
             continue
 
         setattr(sample, key, value)
@@ -33,17 +40,21 @@ class _ReprMixin:
         return (
             f"{self.__class__.__name__}("
             + ", ".join(
-                f"{k}={v!r}" for k, v in self.__dict__.items() if not k.startswith("_")
+                f"{k}={v!r}"
+                for k, v in self.__dict__.items()
+                if not k.startswith("_")
             )
             + ")"
         )
 
     def __eq__(self, other):
         sorted_self = {
-            k: v for k, v in sorted(self.__dict__.items(), key=lambda item: item[0])
+            k: v
+            for k, v in sorted(self.__dict__.items(), key=lambda item: item[0])
         }
         sorted_other = {
-            k: v for k, v in sorted(other.__dict__.items(), key=lambda item: item[0])
+            k: v
+            for k, v in sorted(other.__dict__.items(), key=lambda item: item[0])
         }
 
         for s, o in zip(sorted_self, sorted_other):
@@ -121,8 +132,13 @@ class DelayedSample(Sample):
         self.__running_init__ = True
         # Merge parent's and param's delayed_attributes
         parent_attr = getattr(parent, "_delayed_attributes", None)
-        self._delayed_attributes = None if parent_attr is None else parent_attr.copy()
-        if self._delayed_attributes is not None and delayed_attributes is not None:
+        self._delayed_attributes = (
+            None if parent_attr is None else parent_attr.copy()
+        )
+        if (
+            self._delayed_attributes is not None
+            and delayed_attributes is not None
+        ):
             self._delayed_attributes.update(delayed_attributes)
         elif self._delayed_attributes is None:
             self._delayed_attributes = delayed_attributes
@@ -155,7 +171,10 @@ class DelayedSample(Sample):
         return delayed_attributes[name]()
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name != "delayed_attributes" and "__running_init__" not in self.__dict__:
+        if (
+            name != "delayed_attributes"
+            and "__running_init__" not in self.__dict__
+        ):
             delayed_attributes = getattr(self, "_delayed_attributes", None)
             # if setting an attribute which was delayed, remove it from delayed_attributes
             if delayed_attributes is not None and name in delayed_attributes:

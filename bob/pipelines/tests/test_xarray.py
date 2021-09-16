@@ -45,7 +45,10 @@ def _build_toy_samples(delayed=False):
 def test_samples_to_dataset():
     X, samples = _build_toy_samples()
     dataset = mario.xr.samples_to_dataset(samples)
-    assert dataset.dims == {"sample": X.shape[0], "dim_0": X.shape[1]}, dataset.dims
+    assert dataset.dims == {
+        "sample": X.shape[0],
+        "dim_0": X.shape[1],
+    }, dataset.dims
     np.testing.assert_array_equal(dataset["data"], X)
     np.testing.assert_array_equal(dataset["key"], [str(i) for i in range(10)])
 
@@ -53,7 +56,10 @@ def test_samples_to_dataset():
 def test_delayed_samples_to_dataset():
     X, samples = _build_toy_samples(delayed=True)
     dataset = mario.xr.samples_to_dataset(samples)
-    assert dataset.dims == {"sample": X.shape[0], "dim_0": X.shape[1]}, dataset.dims
+    assert dataset.dims == {
+        "sample": X.shape[0],
+        "dim_0": X.shape[1],
+    }, dataset.dims
     np.testing.assert_array_equal(dataset["data"], X)
     np.testing.assert_array_equal(dataset["key"], [str(i) for i in range(10)])
 
@@ -202,10 +208,14 @@ def test_dataset_pipeline_with_failures():
     estimator = mario.xr.DatasetPipeline(
         [
             dict(
-                estimator=FailingPCA(n_components=3), output_dims=[("pca_features", 3)]
+                estimator=FailingPCA(n_components=3),
+                output_dims=[("pca_features", 3)],
             ),
             dict(dataset_map=lambda x: x.persist().dropna("sample")),
-            dict(estimator=LinearDiscriminantAnalysis(), fit_input=["data", "target"]),
+            dict(
+                estimator=LinearDiscriminantAnalysis(),
+                fit_input=["data", "target"],
+            ),
         ]
     )
 
@@ -227,10 +237,14 @@ def test_dataset_pipeline_with_dask_ml():
     estimator = mario.xr.DatasetPipeline(
         [
             dict(
-                estimator=scaler, output_dims=[("feature", None)], input_dask_array=True
+                estimator=scaler,
+                output_dims=[("feature", None)],
+                input_dask_array=True,
             ),
             dict(
-                estimator=pca, output_dims=[("pca_features", 3)], input_dask_array=True
+                estimator=pca,
+                output_dims=[("pca_features", 3)],
+                input_dask_array=True,
             ),
             dict(
                 estimator=clf,

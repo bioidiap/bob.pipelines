@@ -28,7 +28,9 @@ def test_linearize():
 
     # Test checkpoint
     with tempfile.TemporaryDirectory() as d:
-        transformer = mario.transformers.CheckpointSampleLinearize(features_dir=d)
+        transformer = mario.transformers.CheckpointSampleLinearize(
+            features_dir=d
+        )
         X_tr = transformer.transform(samples)
         _assert([s.data for s in X_tr], oracle)
         assert os.path.exists(os.path.join(d, "1.h5"))
