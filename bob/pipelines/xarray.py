@@ -7,6 +7,7 @@ from functools import partial
 
 import cloudpickle
 import dask
+import h5py
 import numpy as np
 import xarray as xr
 
@@ -14,12 +15,22 @@ from sklearn.base import BaseEstimator
 from sklearn.pipeline import _name_estimators
 from sklearn.utils.metaestimators import _BaseComposition
 
-from bob.io.base import load, save
-
 from .sample import SAMPLE_DATA_ATTRS, _ReprMixin
 from .utils import is_estimator_stateless
 
 logger = logging.getLogger(__name__)
+
+
+def save(data, path):
+    array = np.require(data, requirements=("C_CONTIGUOUS", "ALIGNED"))
+    with h5py.File(path, "w") as f:
+        f.create_dataset("array", data=array)
+
+
+def load(path):
+    with h5py.File(path, "r") as f:
+        data = np.array(f["array"])
+    return data
 
 
 def _load_fn_to_xarray(load_fn, meta=None):
