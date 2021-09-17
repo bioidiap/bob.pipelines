@@ -87,11 +87,11 @@ samples in an :any:`xarray.Dataset` using :any:`dask.array.Array`’s:
    >>> dataset = mario.xr.samples_to_dataset(samples, npartitions=3)
    >>> dataset  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (dim_0: 4, sample: 150)
-   Dimensions without coordinates: dim_0, sample
+   Dimensions:  (sample: 150, dim_0: 4)
+   Dimensions without coordinates: sample, dim_0
    Data variables:
-       target   (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
-       data     (sample, dim_0) float64 dask.array<chunksize=(50, 4), meta=np.ndarray>
+      target   (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
+      data     (sample, dim_0) float64 dask.array<chunksize=(50, 4), meta=np.ndarray>
 
 You can see here that our ``samples`` were converted to a dataset of dask
 arrays. The dataset is made of two *dimensions*: ``sample`` and ``dim_0``. We
@@ -114,12 +114,11 @@ about ``data`` in our samples:
    >>> dataset = mario.xr.samples_to_dataset(samples, npartitions=3, meta=meta)
    >>> dataset  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (feature: 4, sample: 150)
-   Dimensions without coordinates: feature, sample
+   Dimensions:  (sample: 150, feature: 4)
+   Dimensions without coordinates: sample, feature
    Data variables:
       target   (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
       data     (sample, feature) float64 dask.array<chunksize=(50, 4), meta=np.ndarray>
-
 
 Now, we want to build a pipeline that instead of numpy arrays, processes this
 dataset instead. We can do that with our :any:`DatasetPipeline`. A dataset
@@ -167,12 +166,11 @@ output of ``lda.decision_function``.
    >>> ds = pipeline.decision_function(dataset)
    >>> ds  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (c: 3, sample: 150)
-   Dimensions without coordinates: c, sample
+   Dimensions:  (sample: 150, c: 3)
+   Dimensions without coordinates: sample, c
    Data variables:
       target   (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
       data     (sample, c) float64 dask.array<chunksize=(50, 3), meta=np.ndarray>
-
 
 To get the results as numpy arrays you can call ``.compute()`` on xarray
 or dask objects:
@@ -181,8 +179,8 @@ or dask objects:
 
    >>> ds.compute()  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (c: 3, sample: 150)
-   Dimensions without coordinates: c, sample
+   Dimensions:  (sample: 150, c: 3)
+   Dimensions without coordinates: sample, c
    Data variables:
       target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
       data     (sample, c) float64 28.42 -15.84 -59.68 20.69 ... -57.81 3.79 6.92
@@ -220,8 +218,8 @@ For new and unknown dimension sizes use `np.nan`.
    >>> ds = pipeline.fit(dataset).decision_function(dataset)
    >>> ds  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (class: 3, sample: 150)
-   Dimensions without coordinates: class, sample
+   Dimensions:  (sample: 150, class: 3)
+   Dimensions without coordinates: sample, class
    Data variables:
       target   (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
       data     (sample, class) float64 dask.array<chunksize=(50, 3), meta=np.ndarray>
@@ -234,8 +232,8 @@ This time nothing was computed. We can get the results by calling
 
    >>> ds.compute()  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (class: 3, sample: 150)
-   Dimensions without coordinates: class, sample
+   Dimensions:  (sample: 150, class: 3)
+   Dimensions without coordinates: sample, class
    Data variables:
       target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
       data     (sample, class) float64 28.42 -15.84 -59.68 ... -57.81 3.79 6.92
@@ -272,8 +270,8 @@ features. Let's add the ``key`` metadata to our dataset first:
    >>> dataset = mario.xr.samples_to_dataset(samples, npartitions=3, meta=meta)
    >>> dataset  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (feature: 4, sample: 150)
-   Dimensions without coordinates: feature, sample
+   Dimensions:  (sample: 150, feature: 4)
+   Dimensions without coordinates: sample, feature
    Data variables:
       target   (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
       key      (sample) int64 dask.array<chunksize=(50,), meta=np.ndarray>
@@ -312,12 +310,12 @@ features:
    >>> ds = pipeline.fit(dataset).decision_function(dataset)
    >>> ds.compute()  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (class: 3, sample: 150)
-   Dimensions without coordinates: class, sample
+   Dimensions:  (sample: 150, class: 3)
+   Dimensions without coordinates: sample, class
    Data variables:
-       target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
-       key      (sample) int64 0 1 2 3 4 5 6 7 ... 142 143 144 145 146 147 148 149
-       data     (sample, class) float64 28.42 -15.84 -59.68 ... -57.81 3.79 6.92
+      target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
+      key      (sample) int64 0 1 2 3 4 5 6 7 ... 142 143 144 145 146 147 148 149
+      data     (sample, class) float64 28.42 -15.84 -59.68 ... -57.81 3.79 6.92
 
 Now if you repeat the operations, the checkpoints will be used:
 
@@ -326,12 +324,12 @@ Now if you repeat the operations, the checkpoints will be used:
    >>> ds = pipeline.fit(dataset).decision_function(dataset)
    >>> ds.compute()  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (class: 3, sample: 150)
-   Dimensions without coordinates: class, sample
+   Dimensions:  (sample: 150, class: 3)
+   Dimensions without coordinates: sample, class
    Data variables:
-       target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
-       key      (sample) int64 0 1 2 3 4 5 6 7 ... 142 143 144 145 146 147 148 149
-       data     (sample, class) float64 28.42 -15.84 -59.68 ... -57.81 3.79 6.92
+      target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
+      key      (sample) int64 0 1 2 3 4 5 6 7 ... 142 143 144 145 146 147 148 149
+      data     (sample, class) float64 28.42 -15.84 -59.68 ... -57.81 3.79 6.92
 
    >>> ds.data.data.visualize(format="svg")  # doctest: +SKIP
 
@@ -386,12 +384,12 @@ Now in our pipeline, we want to drop ``nan`` samples after PCA transformations:
    >>> ds = pipeline.fit(dataset).decision_function(dataset)
    >>> ds.compute()  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
-   Dimensions:  (class: 3, sample: 75)
-   Dimensions without coordinates: class, sample
+   Dimensions:  (sample: 75, class: 3)
+   Dimensions without coordinates: sample, class
    Data variables:
-       target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
-       key      (sample) int64 1 3 5 7 9 11 13 15 ... 137 139 141 143 145 147 149
-       data     (sample, class) float64 21.74 -13.45 -54.81 ... -58.76 4.178 8.07
+      target   (sample) int64 0 0 0 0 0 0 0 0 0 0 0 0 ... 2 2 2 2 2 2 2 2 2 2 2 2
+      key      (sample) int64 1 3 5 7 9 11 13 15 ... 137 139 141 143 145 147 149
+      data     (sample, class) float64 21.74 -13.45 -54.81 ... -58.76 4.178 8.07
 
 You can see that we have 75 samples now instead of 150 samples. The
 ``dataset_map`` option is generic. You can apply any operation in this function.
