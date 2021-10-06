@@ -7,7 +7,7 @@ package:
 
 build:
   number: {{ environ.get('BOB_BUILD_NUMBER', 0) }}
-  ruin_exports:
+  run_exports:
     - {{ pin_subpackage(name) }}
   script:
     - cd {{ project_dir }}
