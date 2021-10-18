@@ -98,7 +98,7 @@ Dask provides generic :doc:`deployment <dask-jobqueue:examples>` mechanism for S
 
   1. It assumes that a :doc:`dask graph <dask:graphs>` runs in an homogeneous grid setup. For instance, if parts your graph needs a specific resource that it's avaible in other SGE queues (e.g q_gpu, q_long_gpu, IO_BIG), the scheduler is not able to request those resources on the fly.
 
-  2. As a result of 1., the mechanism of :doc:`adaptive deployment <dask:setup/adaptive>` is not able to handle job submissions of two or more queues.
+  2. As a result of 1., the mechanism of :doc:`adaptive deployment <dask:how-to/adaptive>` is not able to handle job submissions of two or more queues.
 
 For this reason the generic SGE laucher was extended to this one :any:`bob.pipelines.distributed.sge.SGEMultipleQueuesCluster`. Next subsections presents some code samples using this launcher in the most common cases you will probably find in your daily job.
 
