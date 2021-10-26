@@ -140,7 +140,7 @@ def test_failing_sample_transformer():
 
     X = np.zeros(shape=(10, 2))
     samples = [mario.Sample(data) for i, data in enumerate(X)]
-    expected = np.full_like(X, 2, dtype=np.object)
+    expected = np.full_like(X, 2, dtype=object)
     expected[::2] = None
     expected[1::4] = None
 
