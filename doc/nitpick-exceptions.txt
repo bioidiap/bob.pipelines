@@ -7,3 +7,7 @@ py:class sklearn.base.MetaEstimatorMixin
 py:class sklearn.utils.metaestimators._BaseComposition
 py:class bob.pipelines.sample._ReprMixin
 py:obj dask.distributed.Adaptive
+py:class PeriodicCallback
+py:class defaultdict
+py:class WorkerState
+py:class deque
