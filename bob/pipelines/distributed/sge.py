@@ -54,13 +54,20 @@ class SGEIdiapJob(Job):
         if job_extra is None:
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
+        # Resources
+        resources = None
+
+        if "resources" in kwargs or kwargs["resources"]:
+            resources = kwargs.pop("resources")
+
         super().__init__(
             *args, config_name=config_name, death_timeout=10000, **kwargs
         )
 
         # Amending the --resources in the `distributed.cli.dask_worker` CLI command
-        if "resources" in kwargs and kwargs["resources"]:
-            resources = kwargs["resources"]
+        # if "resources" in kwargs and kwargs["resources"]:
+        if not resources:
+            # resources = kwargs["resources"]
 
             # Preparing the string to be sent to `dask-worker` command
             def _resource_to_str(resources):
@@ -292,6 +299,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         )
 
         max_jobs = get_max_jobs(sge_job_spec)
+
         self.scale(max_jobs)
         # Adapting to minimim 1 job to maximum 48 jobs
         # interval: Milliseconds between checks from the scheduler
