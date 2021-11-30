@@ -43,14 +43,14 @@ requirements:
     - python
     - setuptools
     - {{ pin_compatible('numpy') }}
-    - {{ pin_compatible('dask') }}
-    - {{ pin_compatible('dask-jobqueue') }}
-    - {{ pin_compatible('distributed') }}
+    - {{ pin_compatible('dask', max_pin='x.x') }}
+    - {{ pin_compatible('dask-jobqueue', max_pin='x.x') }}
+    - {{ pin_compatible('distributed', max_pin='x.x') }}
     - {{ pin_compatible('scikit-learn') }}
     - {{ pin_compatible('xarray') }}
     - {{ pin_compatible('h5py') }}
   run_constrained:
-    - {{ pin_compatible('dask-ml') }}
+    - {{ pin_compatible('dask-ml', max_pin='x.x') }}
 
 test:
   imports:
