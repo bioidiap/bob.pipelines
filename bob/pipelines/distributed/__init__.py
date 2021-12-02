@@ -66,3 +66,30 @@ def dask_get_partition_size(cluster, n_objects, lower_bound=200):
         if n_objects > max_jobs
         else n_objects
     )
+
+
+def get_local_parallel_client(parallel=None, processes=True):
+    """Returns a local Dask client with the given parameters, see the dask documentation for details: https://docs.dask.org/en/latest/how-to/deploy-dask/single-distributed.html?highlight=localcluster#localcluster
+
+    Parameters
+    ----------
+
+        parallel: int or None
+            The number of workers (processes or threads) to use; if `None`, take as many processors as we have on the system
+
+        processes: boolean
+            Shall the dask client start processes (True, recommended) or threads (False). Note that threads in pure pyton do not run in parallel, see: https://www.quantstart.com/articles/Parallelising-Python-with-Threading-and-Multiprocessing/
+    """
+
+    from multiprocessing import cpu_count
+
+    from dask.distributed import Client, LocalCluster
+
+    parallel = parallel or cpu_count()
+
+    cluster = LocalCluster(
+        processes=processes,
+        n_workers=parallel if processes else 1,
+        threads_per_worker=1 if processes else parallel,
+    )
+    return Client(cluster)

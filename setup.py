@@ -39,6 +39,10 @@ setup(
     entry_points={
         "dask.client": [
             "local-parallel  = bob.pipelines.config.distributed.local_parallel:dask_client",
+            "local-p4        = bob.pipelines.config.distributed.local_p4:dask_client",
+            "local-p8        = bob.pipelines.config.distributed.local_p8:dask_client",
+            "local-p16       = bob.pipelines.config.distributed.local_p16:dask_client",
+            "local-p32       = bob.pipelines.config.distributed.local_p32:dask_client",
             "sge             = bob.pipelines.config.distributed.sge_default:dask_client",
             "sge-gpu         = bob.pipelines.config.distributed.sge_gpu:dask_client",
         ],
