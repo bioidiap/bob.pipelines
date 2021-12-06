@@ -7,9 +7,8 @@ from functools import partial
 from pathlib import Path
 
 import cloudpickle
-import dask.bag
-
 import dask.array as da
+import dask.bag
 import numpy as np
 
 from dask import delayed
@@ -231,7 +230,9 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
             if len(tags["bob_transform_input"]) > 1
             else tuple()
         )
-        self.fit_extra_arguments = fit_extra_arguments or tags["bob_fit_extra_input"]
+        self.fit_extra_arguments = (
+            fit_extra_arguments or tags["bob_fit_extra_input"]
+        )
         self.output_attribute = output_attribute or tags["bob_output"]
 
     def _samples_transform(self, samples, method_name):
@@ -393,7 +394,9 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         if sample_attribute is not None:
             forced_tags["bob_output"] = sample_attribute
 
-        estimator_tags = get_bob_tags(estimator=estimator, force_tags=forced_tags)
+        estimator_tags = get_bob_tags(
+            estimator=estimator, force_tags=forced_tags
+        )
         self.extension = estimator_tags["bob_checkpoint_extension"]
         self.save_func = estimator_tags["bob_features_save_fn"]
         self.load_func = estimator_tags["bob_features_load_fn"]
@@ -649,13 +652,20 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
                 lambda samples: [[s.data.shape for s in samples]]
             ).compute()
             dtype, X = None, []
-            for l, s, d in zip(lengths, shapes, delayeds):
-                d._length = l
-                for shape, ds in zip(s, d):
+            for length_, shape_, delayed_samples_list in zip(
+                lengths, shapes, delayeds
+            ):
+                delayed_samples_list._length = length_
+                for shape, delayed_sample in zip(shape_, delayed_samples_list):
                     if dtype is None:
-                        dtype = np.array(ds.data).dtype
-                    darray = da.from_delayed(ds.data, shape, dtype=dtype, name=False)
+                        dtype = np.array(delayed_sample.data.compute()).dtype
+                    darray = da.from_delayed(
+                        delayed_sample.data, shape, dtype=dtype, name=False
+                    )
                     X.append(darray)
+
+            self.estimator.fit(X, y, **fit_params)
+            return self
 
         def _fit(X, y, **fit_params):
             try:
@@ -672,7 +682,6 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         _fit.__name__ = f"{_frmt(self)}.fit"
 
         self._dask_state = delayed(_fit)(X, y)
-
 
         if self.fit_tag is not None:
             # If you do `delayed(_fit)(X, y)`, two tasks are generated;
