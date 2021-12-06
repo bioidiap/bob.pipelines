@@ -640,6 +640,23 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
         logger.debug(f"{_frmt(self)}.fit")
 
+        if get_bob_tags(self.estimator)["bob_fit_supports_dask_array"]:
+            # convert X which is a dask bag to a dask array
+            X = X.persist()
+            delayeds = X.to_delayed()
+            lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
+            shapes = X.map_partitions(
+                lambda samples: [[s.data.shape for s in samples]]
+            ).compute()
+            dtype, X = None, []
+            for l, s, d in zip(lengths, shapes, delayeds):
+                d._length = l
+                for shape, ds in zip(s, d):
+                    if dtype is None:
+                        dtype = np.array(ds.data).dtype
+                    darray = da.from_delayed(ds.data, shape, dtype=dtype, name=False)
+                    X.append(darray)
+
         def _fit(X, y, **fit_params):
             try:
                 self.estimator = self.estimator.fit(X, y, **fit_params)
@@ -654,25 +671,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
 
-        if not get_bob_tags(self.estimator)["bob_fit_supports_dask_array"]:
-            self._dask_state = delayed(_fit)(X, y)
-        else:
-            # convert X which is a dask bag to a dask array
-            X = X.persist()
-            delayeds = X.to_delayed()
-            lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
-            shapes = X.map_partitions(
-                lambda samples: [[s.data.shape for s in samples]]
-            ).compute()
-            dtype, X = None, []
-            for l, s, d in zip(lengths, shapes, delayeds):
-                d._length = l
-                for shape, ds in zip(s, d):
-                    if dtype is None:
-                        dtype = np.array(ds.data.compute()).dtype
-                    darray = da.from_delayed(ds.data, shape, dtype=dtype, name=False)
-                    X.append(darray)
-            self._dask_state = delayed(_fit)(X, y)
+        self._dask_state = delayed(_fit)(X, y)
 
 
         if self.fit_tag is not None:
