@@ -9,6 +9,9 @@ from pathlib import Path
 import cloudpickle
 import dask.bag
 
+import dask.array as da
+import numpy as np
+
 from dask import delayed
 from sklearn.base import BaseEstimator, MetaEstimatorMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
@@ -51,7 +54,7 @@ def copy_learned_attributes(from_estimator, to_estimator):
         setattr(to_estimator, k, v)
 
 
-def get_bob_tags(estimator=None, force_tags={}):
+def get_bob_tags(estimator=None, force_tags=None):
     """Returns the default tags of a Transformer unless forced or specified.
 
     Relies on the tags API of sklearn to set and retrieve the tags.
@@ -104,6 +107,7 @@ def get_bob_tags(estimator=None, force_tags={}):
     dict[str, Any]
         The resulting tags with a value (either specified, forced, or default)
     """
+    force_tags = force_tags or {}
     default_tags = {
         "bob_transform_input": (
             "data",
@@ -113,6 +117,7 @@ def get_bob_tags(estimator=None, force_tags={}):
         "bob_checkpoint_extension": ".h5",
         "bob_features_save_fn": bob.io.base.save,  # Function used to checkpoint
         "bob_features_load_fn": bob.io.base.load,  # Function used to restore
+        "bob_fit_supports_dask_array": False,
     }
     estimator_tags = estimator._get_tags()
     return {**default_tags, **estimator_tags, **force_tags}
@@ -648,10 +653,31 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
-        self._dask_state = delayed(_fit)(X, y)
+
+        if not get_bob_tags(self.estimator)["bob_fit_supports_dask_array"]:
+            self._dask_state = delayed(_fit)(X, y)
+        else:
+            # convert X which is a dask bag to a dask array
+            X = X.persist()
+            delayeds = X.to_delayed()
+            lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
+            shapes = X.map_partitions(
+                lambda samples: [[s.data.shape for s in samples]]
+            ).compute()
+            dtype, X = None, []
+            for l, s, d in zip(lengths, shapes, delayeds):
+                d._length = l
+                for shape, ds in zip(s, d):
+                    if dtype is None:
+                        dtype = np.array(ds.data.compute()).dtype
+                    darray = da.from_delayed(ds.data, shape, dtype=dtype, name=False)
+                    X.append(darray)
+            self._dask_state = delayed(_fit)(X, y)
+
+
         if self.fit_tag is not None:
             # If you do `delayed(_fit)(X, y)`, two tasks are generated;
-            # the `finlize-TASK` and `TASK`. With this, we make sure
+            # the `finalize-TASK` and `TASK`. With this, we make sure
             # that the two are annotated
             self.resource_tags[
                 tuple(
