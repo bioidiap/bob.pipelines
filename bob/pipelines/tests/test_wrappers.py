@@ -91,9 +91,24 @@ class FullFailingDummyTransformer(DummyTransformer):
 
 
 class DummyWithTags(DummyTransformer):
+    """Transformer that specifies tags"""
+    def transform(self, X, extra_arg_1, extra_arg_2):
+        np.testing.assert_equal(np.array(X), extra_arg_1)
+        np.testing.assert_equal(np.array(X), extra_arg_2)
+        return super().transform(X)
+
+    def fit(self, X, y, extra):
+        np.testing.assert_equal(np.array(X), y)
+        np.testing.assert_equal(np.array(X)+1, extra)
+        return self
+
     def _more_tags(self):
         return {
+            "stateless": False,
+            "requires_fit": True,
             "bob_output": "annotations",
+            "bob_transform_input": ["data", ("extra_arg_1", "data"), ("extra_arg_2", "data")],
+            "bob_fit_extra_input": [("y", "data"), ("extra", "annotations")]
         }
 
 
@@ -153,9 +168,7 @@ def test_tagged_sample_transformer():
     features = transformer.transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.annotations for s in features])
     _assert_all_close_numpy_array(X, [s.data for s in features])
-
-
-# TODO add more tags tests
+    transformer.fit(samples)
 
 
 def test_failing_sample_transformer():

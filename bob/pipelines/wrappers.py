@@ -220,20 +220,31 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
+        self.transform_extra_arguments = transform_extra_arguments
+        self.fit_extra_arguments = fit_extra_arguments
+        self.output_attribute = output_attribute
+        self.input_attribute = input_attribute
 
-        # Tagged parameters
-        tags = get_bob_tags(estimator=estimator)
+        # Tagged parameters override
+        forced_tags = dict()
+        for tag, param_name in [
+            ("bob_fit_extra_input", "fit_extra_arguments"),
+            ("bob_output", "output_attribute"),
+        ]:
+            param = getattr(self, param_name)
+            if param is not None:
+                forced_tags[tag] = param_name
+            setattr(self, param_name, get_bob_tags(estimator, forced_tags)[tag])
 
-        self.input_attribute = input_attribute or tags["bob_transform_input"][0]
-        self.transform_extra_arguments = transform_extra_arguments or (
-            tags["bob_transform_input"][1:]
-            if len(tags["bob_transform_input"]) > 1
-            else tuple()
+        # Special case for transform input
+        input_tag = get_bob_tags(estimator=estimator)["bob_transform_input"]
+        if self.input_attribute is None:
+            self.input_attribute = input_tag[0] or "data"
+        if self.transform_extra_arguments is None:
+            self.transform_extra_arguments = (
+                input_tag[1:] if len(input_tag) > 1 else tuple()
         )
-        self.fit_extra_arguments = (
-            fit_extra_arguments or tags["bob_fit_extra_input"]
-        )
-        self.output_attribute = output_attribute or tags["bob_output"]
+
 
     def _samples_transform(self, samples, method_name):
         # Transform either samples or samplesets
@@ -382,25 +393,23 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         self.features_dir = features_dir
         self.hash_fn = hash_fn
         self.attempts = attempts
+        self.extension = extension
+        self.save_func = save_func
+        self.load_func = load_func
+        self.sample_attribute = sample_attribute
 
-        # Tagged parameters
+        # Tagged parameters override
         forced_tags = dict()
-        if extension is not None:
-            forced_tags["bob_checkpoint_extension"] = extension
-        if save_func is not None:
-            forced_tags["bob_features_save_fn"] = save_func
-        if load_func is not None:
-            forced_tags["bob_features_load_fn"] = load_func
-        if sample_attribute is not None:
-            forced_tags["bob_output"] = sample_attribute
-
-        estimator_tags = get_bob_tags(
-            estimator=estimator, force_tags=forced_tags
-        )
-        self.extension = estimator_tags["bob_checkpoint_extension"]
-        self.save_func = estimator_tags["bob_features_save_fn"]
-        self.load_func = estimator_tags["bob_features_load_fn"]
-        self.sample_attribute = estimator_tags["bob_output"]
+        for tag, param_name in [
+            ("bob_checkpoint_extension", "extension"),
+            ("bob_features_save_fn", "save_func"),
+            ("bob_features_load_fn", "load_func"),
+            ("bob_output", "sample_attribute"),
+        ]:
+            param = getattr(self, param_name)
+            if param is not None:
+                forced_tags[tag] = param_name
+            setattr(self, param_name, get_bob_tags(estimator, forced_tags)[tag])
 
         # Paths check
         if model_path is None and features_dir is None:
