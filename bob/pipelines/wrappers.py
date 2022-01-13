@@ -267,6 +267,9 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
        files can't be saved. This argument sets the maximum number of attempts
        to checkpoint a sample.
 
+    force: bool
+        If True, will recompute the checkpoints even if they exists
+
     """
 
     def __init__(
@@ -280,9 +283,11 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         sample_attribute="data",
         hash_fn=None,
         attempts=10,
+        force=False,
         **kwargs,
     ):
         super().__init__(**kwargs)
+        self.force = force
         self.estimator = estimator
         self.model_path = model_path
         self.features_dir = features_dir
@@ -318,7 +323,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         def _transform_samples(samples):
             paths = [self.make_path(s) for s in samples]
             should_compute_list = [
-                p is None or not os.path.isfile(p) for p in paths
+                self.force or p is None or not os.path.isfile(p) for p in paths
             ]
             # call method on non-checkpointed samples
             non_existing_samples = [
@@ -335,6 +340,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             )
             # return computed features and checkpointed features
             features, com_feat_index = [], 0
+
             for s, p, should_compute in zip(
                 samples, paths, should_compute_list
             ):
