@@ -378,13 +378,14 @@ def _build_estimator(path, i):
     return transformer
 
 
-def _build_transformer(path, i):
+def _build_transformer(path, i, force=False):
 
     features_dir = os.path.join(path, f"transformer{i}")
     estimator = mario.wrap(
         [DummyTransformer, "sample", "checkpoint"],
         i=i,
         features_dir=features_dir,
+        force=force,
     )
     return estimator
 
@@ -439,6 +440,39 @@ def test_checkpoint_transform_pipeline():
 
     _run(dask_enabled=True)
     _run(dask_enabled=False)
+
+
+def test_checkpoint_transform_pipeline_force():
+
+    with tempfile.TemporaryDirectory() as d:
+
+        def _run():
+
+            X = np.ones(shape=(10, 2), dtype=int)
+            samples_transform = [
+                mario.Sample(data, key=str(i)) for i, data in enumerate(X)
+            ]
+            offset = 2
+            oracle = X + offset
+
+            pipeline = Pipeline(
+                [
+                    (f"{i}", _build_transformer(d, i, force=True))
+                    for i in range(offset)
+                ]
+            )
+
+            pipeline = mario.wrap(["dask"], pipeline)
+            transformed_samples = pipeline.transform(samples_transform).compute(
+                scheduler="single-threaded"
+            )
+
+            _assert_all_close_numpy_array(
+                oracle, [s.data for s in transformed_samples]
+            )
+
+        _run()
+        _run()
 
 
 def test_checkpoint_fit_transform_pipeline():
