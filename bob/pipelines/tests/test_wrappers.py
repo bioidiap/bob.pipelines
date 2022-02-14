@@ -2,15 +2,16 @@ import os
 import shutil
 import tempfile
 
+import dask.array as da
 import numpy as np
 
-import dask.array as da
-
-from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.base import BaseEstimator
+from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
-from sklearn.utils.validation import check_array, check_is_fitted
+from sklearn.utils.validation import check_array
+from sklearn.utils.validation import check_is_fitted
 
 import bob.pipelines as mario
 
@@ -94,6 +95,7 @@ class FullFailingDummyTransformer(DummyTransformer):
 
 class DummyWithTags(DummyTransformer):
     """Transformer that specifies tags"""
+
     def transform(self, X, extra_arg_1, extra_arg_2):
         np.testing.assert_equal(np.array(X), extra_arg_1)
         np.testing.assert_equal(np.array(X), extra_arg_2)
@@ -101,7 +103,7 @@ class DummyWithTags(DummyTransformer):
 
     def fit(self, X, y, extra):
         np.testing.assert_equal(np.array(X), y)
-        np.testing.assert_equal(np.array(X)+1, extra)
+        np.testing.assert_equal(np.array(X) + 1, extra)
         return self
 
     def _more_tags(self):
@@ -109,21 +111,25 @@ class DummyWithTags(DummyTransformer):
             "stateless": False,
             "requires_fit": True,
             "bob_output": "annotations",
-            "bob_transform_extra_input": (("extra_arg_1","data"), ("extra_arg_2","data")),
-            "bob_fit_extra_input": (("y","data"), ("extra","annotations")),
+            "bob_transform_extra_input": (
+                ("extra_arg_1", "data"),
+                ("extra_arg_2", "data"),
+            ),
+            "bob_fit_extra_input": (("y", "data"), ("extra", "annotations")),
         }
 
 
 class DummyWithTagsNotData(DummyTransformer):
     """Transformer that specifies a different field than `data` for argument 1."""
+
     def transform(self, X, extra_arg_1, extra_arg_2):
         np.testing.assert_equal(np.array(X), extra_arg_1)
-        np.testing.assert_equal(np.array(X)-1, extra_arg_2)
+        np.testing.assert_equal(np.array(X) - 1, extra_arg_2)
         return super().transform(X)
 
     def fit(self, X, y, extra):
         np.testing.assert_equal(np.array(X), y)
-        np.testing.assert_equal(np.array(X)-1, extra)
+        np.testing.assert_equal(np.array(X) - 1, extra)
         return self
 
     def _more_tags(self):
@@ -132,7 +138,10 @@ class DummyWithTagsNotData(DummyTransformer):
             "requires_fit": True,
             "bob_output": "annotations_2",
             "bob_input": "annotations",
-            "bob_transform_extra_input": (("extra_arg_1", "annotations"), ("extra_arg_2", "data")),
+            "bob_transform_extra_input": (
+                ("extra_arg_1", "annotations"),
+                ("extra_arg_2", "data"),
+            ),
             "bob_fit_extra_input": (("y", "annotations"), ("extra", "data")),
         }
 
@@ -243,7 +252,9 @@ def test_dask_tag_transformer():
     transformer = mario.wrap([DummyWithDask, "dask"])
 
     transformer.fit(sample_bags)
-    np.testing.assert_equal(transformer.estimator.model_.compute().compute(), X.sum(axis=0))
+    np.testing.assert_equal(
+        transformer.estimator.model_.compute().compute(), X.sum(axis=0)
+    )
 
 
 def test_dask_tag_checkpoint_transformer():
@@ -253,14 +264,21 @@ def test_dask_tag_checkpoint_transformer():
     sample_bags = mario.ToDaskBag().transform(samples)
 
     with tempfile.TemporaryDirectory() as d:
-        transformer = mario.wrap([DummyWithDask, "checkpoint", "dask"], model_path=d+"ckpt.h5")
+        transformer = mario.wrap(
+            [DummyWithDask, "checkpoint", "dask"], model_path=d + "ckpt.h5"
+        )
         transformer.fit(sample_bags)
-        np.testing.assert_equal(transformer.estimator.model_.compute().compute(), X.sum(axis=0))
+        np.testing.assert_equal(
+            transformer.estimator.model_.compute().compute(), X.sum(axis=0)
+        )
         # Fit with no data to verify loading from checkpoint
-        transformer_2 = mario.wrap([DummyWithDask, "checkpoint", "dask"], model_path=d+"ckpt.h5")
+        transformer_2 = mario.wrap(
+            [DummyWithDask, "checkpoint", "dask"], model_path=d + "ckpt.h5"
+        )
         transformer_2.fit(None)
-        np.testing.assert_equal(transformer_2.estimator.model_.compute().compute(), X.sum(axis=0))
-
+        np.testing.assert_equal(
+            transformer_2.estimator.model_.compute().compute(), X.sum(axis=0)
+        )
 
 
 def test_failing_sample_transformer():
@@ -641,7 +659,8 @@ def test_checkpoint_fit_transform_pipeline():
 
 
 def _get_local_client():
-    from dask.distributed import Client, LocalCluster
+    from dask.distributed import Client
+    from dask.distributed import LocalCluster
 
     cluster = LocalCluster(
         nanny=False, processes=False, n_workers=1, threads_per_worker=1

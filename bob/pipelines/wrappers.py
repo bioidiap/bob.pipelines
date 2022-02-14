@@ -12,13 +12,17 @@ import dask.bag
 import numpy as np
 
 from dask import delayed
-from sklearn.base import BaseEstimator, MetaEstimatorMixin, TransformerMixin
+from sklearn.base import BaseEstimator
+from sklearn.base import MetaEstimatorMixin
+from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 import bob.io.base
 
-from .sample import DelayedSample, SampleBatch, SampleSet
+from .sample import DelayedSample
+from .sample import SampleBatch
+from .sample import SampleSet
 from .utils import is_estimator_stateless
 from .utils import isinstance_nested
 
@@ -161,7 +165,6 @@ class BaseWrapper(MetaEstimatorMixin, BaseEstimator):
         return self.estimator._more_tags()
 
 
-
 def _make_kwargs_from_samples(samples, arg_attr_list):
     kwargs = {
         arg: [getattr(s, attr) for s in samples] for arg, attr in arg_attr_list
@@ -256,10 +259,13 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
 
         bob_tags = get_bob_tags(self.estimator)
         self.input_attribute = input_attribute or bob_tags["bob_input"]
-        self.transform_extra_arguments = transform_extra_arguments or bob_tags["bob_transform_extra_input"]
-        self.fit_extra_arguments = fit_extra_arguments or bob_tags["bob_fit_extra_input"]
+        self.transform_extra_arguments = (
+            transform_extra_arguments or bob_tags["bob_transform_extra_input"]
+        )
+        self.fit_extra_arguments = (
+            fit_extra_arguments or bob_tags["bob_fit_extra_input"]
+        )
         self.output_attribute = output_attribute or bob_tags["bob_output"]
-
 
     def _samples_transform(self, samples, method_name):
         # Transform either samples or samplesets
@@ -677,7 +683,9 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
                 # convert X which is a dask bag to a dask array
                 X = X.persist()
                 delayeds = X.to_delayed()
-                lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
+                lengths = X.map_partitions(
+                    lambda samples: [len(samples)]
+                ).compute()
                 shapes = X.map_partitions(
                     lambda samples: [[s.data.shape for s in samples]]
                 ).compute()
@@ -686,15 +694,21 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
                     lengths, shapes, delayeds
                 ):
                     delayed_samples_list._length = length_
-                    for shape, delayed_sample in zip(shape_, delayed_samples_list):
+                    for shape, delayed_sample in zip(
+                        shape_, delayed_samples_list
+                    ):
                         if dtype is None:
-                            dtype = np.array(delayed_sample.data.compute()).dtype
+                            dtype = np.array(
+                                delayed_sample.data.compute()
+                            ).dtype
                         darray = da.from_delayed(
                             delayed_sample.data, shape, dtype=dtype, name=False
                         )
                         X.append(darray)
             else:
-                logger.info("Ignoring conversion to dask array (checkpoint detected)")
+                logger.info(
+                    "Ignoring conversion to dask array (checkpoint detected)"
+                )
 
             self.estimator.fit(X, y, **fit_params)
             return self
