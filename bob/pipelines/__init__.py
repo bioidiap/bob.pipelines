@@ -10,7 +10,6 @@ from .sample import (
     SampleBatch,
     SampleSet,
 )
-from .wrappers import get_default_tags  # noqa: F401
 from .wrappers import dask_tags  # noqa: F401
 from .wrappers import wrap  # noqa: F401
 from .wrappers import (

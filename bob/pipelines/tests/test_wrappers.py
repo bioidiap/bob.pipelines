@@ -4,6 +4,8 @@ import tempfile
 
 import numpy as np
 
+import dask.array as da
+
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
@@ -107,8 +109,54 @@ class DummyWithTags(DummyTransformer):
             "stateless": False,
             "requires_fit": True,
             "bob_output": "annotations",
-            "bob_transform_input": ["data", ("extra_arg_1", "data"), ("extra_arg_2", "data")],
-            "bob_fit_extra_input": [("y", "data"), ("extra", "annotations")]
+            "bob_transform_extra_input": (("extra_arg_1","data"), ("extra_arg_2","data")),
+            "bob_fit_extra_input": (("y","data"), ("extra","annotations")),
+        }
+
+
+class DummyWithTagsNotData(DummyTransformer):
+    """Transformer that specifies a different field than `data` for argument 1."""
+    def transform(self, X, extra_arg_1, extra_arg_2):
+        np.testing.assert_equal(np.array(X), extra_arg_1)
+        np.testing.assert_equal(np.array(X)-1, extra_arg_2)
+        return super().transform(X)
+
+    def fit(self, X, y, extra):
+        np.testing.assert_equal(np.array(X), y)
+        np.testing.assert_equal(np.array(X)-1, extra)
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": False,
+            "requires_fit": True,
+            "bob_output": "annotations_2",
+            "bob_input": "annotations",
+            "bob_transform_extra_input": (("extra_arg_1", "annotations"), ("extra_arg_2", "data")),
+            "bob_fit_extra_input": (("y", "annotations"), ("extra", "data")),
+        }
+
+
+class DummyWithDask(DummyTransformer):
+    """Transformer that specifies tags"""
+
+    def __init__(self):
+        self.model_ = np.zeros(2)
+
+    def transform(self, X):
+        return X
+
+    def fit(self, X, y=None):
+        X = da.vstack(X)
+        self.model_ = X.sum(axis=0) + self.model_
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": False,
+            "requires_fit": True,
+            "bob_output": "annotations",
+            "bob_fit_supports_dask_array": True,
         }
 
 
@@ -169,6 +217,50 @@ def test_tagged_sample_transformer():
     _assert_all_close_numpy_array(X + 1, [s.annotations for s in features])
     _assert_all_close_numpy_array(X, [s.data for s in features])
     transformer.fit(samples)
+
+
+def test_tagged_input_sample_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+
+    # Mixing up with an object
+    annotator = mario.wrap([DummyWithTags, "sample"])
+    features = annotator.transform(samples)
+    transformer = mario.wrap([DummyWithTagsNotData, "sample"])
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(X + 2, [s.annotations_2 for s in features])
+    _assert_all_close_numpy_array(X, [s.data for s in features])
+    transformer.fit(samples)
+
+
+def test_dask_tag_transformer():
+
+    X = da.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+    sample_bags = mario.ToDaskBag().transform(samples)
+
+    transformer = mario.wrap([DummyWithDask, "dask"])
+
+    transformer.fit(sample_bags)
+    np.testing.assert_equal(transformer.estimator.model_.compute().compute(), X.sum(axis=0))
+
+
+def test_dask_tag_checkpoint_transformer():
+
+    X = da.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+    sample_bags = mario.ToDaskBag().transform(samples)
+
+    with tempfile.TemporaryDirectory() as d:
+        transformer = mario.wrap([DummyWithDask, "checkpoint", "dask"], model_path=d+"ckpt.h5")
+        transformer.fit(sample_bags)
+        np.testing.assert_equal(transformer.estimator.model_.compute().compute(), X.sum(axis=0))
+        # Fit with no data to verify loading from checkpoint
+        transformer_2 = mario.wrap([DummyWithDask, "checkpoint", "dask"], model_path=d+"ckpt.h5")
+        transformer_2.fit(None)
+        np.testing.assert_equal(transformer_2.estimator.model_.compute().compute(), X.sum(axis=0))
+
 
 
 def test_failing_sample_transformer():
