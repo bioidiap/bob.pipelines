@@ -12,19 +12,14 @@ import dask.bag
 import numpy as np
 
 from dask import delayed
-from sklearn.base import BaseEstimator
-from sklearn.base import MetaEstimatorMixin
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, MetaEstimatorMixin, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 import bob.io.base
 
-from .sample import DelayedSample
-from .sample import SampleBatch
-from .sample import SampleSet
-from .utils import is_estimator_stateless
-from .utils import isinstance_nested
+from .sample import DelayedSample, SampleBatch, SampleSet
+from .utils import is_estimator_stateless, isinstance_nested
 
 logger = logging.getLogger(__name__)
 

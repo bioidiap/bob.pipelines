@@ -7,13 +7,11 @@ import dask_ml.cluster
 import dask_ml.datasets
 import numpy as np
 
-from sklearn.base import BaseEstimator
-from sklearn.base import TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
-from sklearn.utils.validation import check_array
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_array, check_is_fitted
 
 import bob.pipelines as mario
 
@@ -713,8 +711,7 @@ def test_checkpoint_fit_transform_pipeline():
 
 
 def _get_local_client():
-    from dask.distributed import Client
-    from dask.distributed import LocalCluster
+    from dask.distributed import Client, LocalCluster
 
     cluster = LocalCluster(
         nanny=False, processes=False, n_workers=1, threads_per_worker=1
