@@ -323,7 +323,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
             raise TypeError(
                 "We don't accept `y` in fit arguments because `y` should be part of "
                 "the sample. To pass `y` to the wrapped estimator, use "
-                "`fit_extra_arguments` or the `fit_input` tag."
+                "`fit_extra_arguments` tag."
             )
 
         if is_estimator_stateless(self.estimator):
