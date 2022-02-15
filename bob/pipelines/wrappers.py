@@ -7,7 +7,9 @@ from functools import partial
 from pathlib import Path
 
 import cloudpickle
+import dask.array as da
 import dask.bag
+import numpy as np
 
 from dask import delayed
 from sklearn.base import BaseEstimator, MetaEstimatorMixin, TransformerMixin
@@ -17,7 +19,7 @@ from sklearn.preprocessing import FunctionTransformer
 import bob.io.base
 
 from .sample import DelayedSample, SampleBatch, SampleSet
-from .utils import is_estimator_stateless
+from .utils import is_estimator_stateless, isinstance_nested
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,106 @@ def copy_learned_attributes(from_estimator, to_estimator):
 
     for k, v in attrs.items():
         setattr(to_estimator, k, v)
+
+
+def get_bob_tags(estimator=None, force_tags=None):
+    """Returns the default tags of a Transformer unless forced or specified.
+
+    Relies on the tags API of sklearn to set and retrieve the tags.
+
+    Specify an estimator tag values with ``estimator._more_tags``:
+
+    ```
+    class My_annotator_transformer(sklearn.base.BaseEstimator):
+        def _more_tags(self):
+            return {"bob_output": "annotations"}
+    ```
+
+    The returned tags will take their value with the following priority:
+
+    1. key:value in `force_tags`, if it is present;
+    2. key:value in `estimator` tags (set with `estimator._more_tags()`) if it exists;
+    3. the default value for that tag if none of the previous exist.
+
+    Tags format
+    -----------
+    bob_input: str
+        The Sample attribute passed to the first argument of the fit or transform method.
+        Example:
+            `{"bob_input": ("annotations")}`
+        will result in:
+            `estimator.transform(sample.annotations)`
+        Default:
+            `{"bob_input": "data"}`
+    bob_transform_extra_input: tuple of str
+        Each element of the tuple is a str representing an attribute of a Sample
+        object. Each attribute of the sample will be passed as argument to the transform
+        method in that order.
+        Example:
+            `{"bob_transform_extra_input": (("arg_0","data"), ("arg_1","annotations"))}`
+        will result in:
+            `estimator.transform(sample.data, arg_0=sample.data, arg_1=sample.annotations)`
+        Default:
+            `{"bob_transform_extra_input": tuple()}`
+    bob_fit_extra_input: tuple of str
+        Each element of the tuple is a str representing an attribute of a Sample
+        object. Each attribute of the sample will be passed as argument to the fit
+        method in that order.
+        Example:
+            `{"bob_fit_extra_input": (("y", "annotations"), ("extra "metadata"))}`
+        will result in:
+            `estimator.fit(sample.data, y=sample.annotations, extra=sample.metadata)`
+        Default:
+            `{"bob_fit_extra_input": tuple()}`
+    bob_output: str
+        The Sample attribute in which the output of the transform is stored.
+        Default:
+            `{"bob_output": "data"}`
+    bob_checkpoint_extension: str
+        The extension of each checkpoint file.
+        Default:
+            `{"bob_checkpoint_extension": ".h5"}`
+    bob_features_save_fn: func
+        The function used to save each checkpoint file.
+        Default:
+            `{"bob_features_save_fn": bob.io.base.save}`
+    bob_features_load_fn: func
+        The function used to load each checkpoint file.
+        Default:
+            `{"bob_features_load_fn": bob.io.base.load}`
+    bob_fit_supports_dask_array: bool
+        Indicates that the fit method of that estimator accepts dask arrays as input.
+        Default:
+            `{"bob_fit_supports_dask_array": False}`
+
+    Parameters
+    ----------
+    estimator: sklearn.BaseEstimator or None
+        An estimator class with tags that will overwrite the default values. Setting to
+        None will return the default values of every tags.
+    force_tags: dict[str, Any] or None
+        Tags with a non-default value that will overwrite the default and the estimator
+        tags.
+
+    Returns
+    -------
+    dict[str, Any]
+        The resulting tags with a value (either specified in the estimator, forced by
+        the arguments, or default)
+    """
+    force_tags = force_tags or {}
+    default_tags = {
+        "bob_input": "data",
+        "bob_transform_extra_input": tuple(),
+        "bob_fit_extra_input": tuple(),
+        "bob_output": "data",
+        "bob_checkpoint_extension": ".h5",
+        "bob_features_save_fn": bob.io.base.save,
+        "bob_features_load_fn": bob.io.base.load,
+        "bob_fit_supports_dask_array": False,
+    }
+    estimator_tags = estimator._get_tags()
+    return {**default_tags, **estimator_tags, **force_tags}
 
 
 class BaseWrapper(MetaEstimatorMixin, BaseEstimator):
@@ -143,16 +245,22 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         estimator,
         transform_extra_arguments=None,
         fit_extra_arguments=None,
-        output_attribute="data",
-        input_attribute="data",
+        output_attribute=None,
+        input_attribute=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.estimator = estimator
-        self.transform_extra_arguments = transform_extra_arguments or tuple()
-        self.fit_extra_arguments = fit_extra_arguments or tuple()
-        self.output_attribute = output_attribute
-        self.input_attribute = input_attribute
+
+        bob_tags = get_bob_tags(self.estimator)
+        self.input_attribute = input_attribute or bob_tags["bob_input"]
+        self.transform_extra_arguments = (
+            transform_extra_arguments or bob_tags["bob_transform_extra_input"]
+        )
+        self.fit_extra_arguments = (
+            fit_extra_arguments or bob_tags["bob_fit_extra_input"]
+        )
+        self.output_attribute = output_attribute or bob_tags["bob_output"]
 
     def _samples_transform(self, samples, method_name):
         # Transform either samples or samplesets
@@ -208,9 +316,9 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
     def fit(self, samples, y=None):
         if y is not None:
             raise TypeError(
-                "We don't accept `y` in fit arguments because "
-                "`y` should be part of the sample. To pass `y` "
-                "to the wrapped estimator, use `fit_extra_arguments`."
+                "We don't accept `y` in fit arguments because `y` should be part of "
+                "the sample. To pass `y` to the wrapped estimator, use "
+                "`fit_extra_arguments` tag."
             )
 
         if is_estimator_stateless(self.estimator):
@@ -220,7 +328,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         logger.debug(f"{_frmt(self)}.fit")
         kwargs = _make_kwargs_from_samples(samples, self.fit_extra_arguments)
 
-        X = SampleBatch(samples)
+        X = SampleBatch(samples, sample_attribute=self.input_attribute)
 
         self.estimator = self.estimator.fit(X, **kwargs)
         copy_learned_attributes(self.estimator, self)
@@ -244,16 +352,24 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
        Saves the transformed data in this directory
 
     extension: str
-       Default extension of the transformed features
+       Default extension of the transformed features.
+       If None, will use the ``bob_checkpoint_extension`` tag in the estimator, or
+       default to ``.h5``.
 
     save_func
-       Pointer to a customized function that saves transformed features to disk
+       Pointer to a customized function that saves transformed features to disk.
+       If None, will use the ``bob_feature_save_fn`` tag in the estimator, or default
+       to ``bob.io.base.save``.
 
     load_func
-       Pointer to a customized function that loads transformed features from disk
+       Pointer to a customized function that loads transformed features from disk.
+       If None, will use the ``bob_feature_load_fn`` tag in the estimator, or default
+       to ``bob.io.base.load``.
 
     sample_attribute: str
-       Defines the payload attribute of the sample (Defaul: `data`)
+       Defines the payload attribute of the sample.
+       If None, will use the ``bob_output`` tag in the estimator, or default to
+       ``data``.
 
     hash_fn
        Pointer to a hash function. This hash function maps
@@ -277,10 +393,10 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         estimator,
         model_path=None,
         features_dir=None,
-        extension=".h5",
+        extension=None,
         save_func=None,
         load_func=None,
-        sample_attribute="data",
+        sample_attribute=None,
         hash_fn=None,
         attempts=10,
         force=False,
@@ -291,20 +407,16 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         self.estimator = estimator
         self.model_path = model_path
         self.features_dir = features_dir
-        self.extension = extension
-        self.save_func = (
-            save_func
-            or estimator._get_tags().get("bob_features_save_fn")
-            or bob.io.base.save
-        )
-        self.load_func = (
-            load_func
-            or estimator._get_tags().get("bob_features_load_fn")
-            or bob.io.base.load
-        )
-        self.sample_attribute = sample_attribute
         self.hash_fn = hash_fn
         self.attempts = attempts
+
+        bob_tags = get_bob_tags(self.estimator)
+        self.extension = extension or bob_tags["bob_checkpoint_extension"]
+        self.save_func = save_func or bob_tags["bob_features_save_fn"]
+        self.load_func = load_func or bob_tags["bob_features_load_fn"]
+        self.sample_attribute = sample_attribute or bob_tags["bob_output"]
+
+        # Paths check
         if model_path is None and features_dir is None:
             logger.warning(
                 "Both model_path and features_dir are None. "
@@ -471,6 +583,42 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         return self
 
 
+def is_checkpointed(estimator):
+    return isinstance_nested(estimator, "estimator", CheckpointWrapper)
+
+
+def getattr_nested(estimator, attr):
+    if hasattr(estimator, attr):
+        return getattr(estimator, attr)
+    elif hasattr(estimator, "estimator"):
+        return getattr_nested(estimator.estimator, attr)
+    return None
+
+
+def _array_from_sample_bags(X, attribute):
+    delayeds = X.to_delayed()
+    lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
+    shapes = X.map_partitions(
+        lambda samples: [[getattr(s, attribute).shape for s in samples]]
+    ).compute()
+    dtype, X = None, []
+    for length_, shape_, delayed_samples_list in zip(lengths, shapes, delayeds):
+        delayed_samples_list._length = length_
+        for shape, delayed_sample in zip(shape_, delayed_samples_list):
+            if dtype is None:
+                dtype = np.array(
+                    getattr(delayed_sample, attribute).compute()
+                ).dtype
+            darray = da.from_delayed(
+                getattr(delayed_sample, attribute),
+                shape,
+                dtype=dtype,
+                name=False,
+            )
+            X.append(darray)
+    return X
+
+
 class DaskWrapper(BaseWrapper, TransformerMixin):
     """Wraps Scikit estimators to handle Dask Bags as input.
 
@@ -495,6 +643,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         estimator,
         fit_tag=None,
         transform_tag=None,
+        fit_supports_dask_array=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -503,6 +652,10 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         self.resource_tags = dict()
         self.fit_tag = fit_tag
         self.transform_tag = transform_tag
+        self.fit_supports_dask_array = (
+            fit_supports_dask_array
+            or get_bob_tags(self.estimator)["bob_fit_supports_dask_array"]
+        )
 
     def _make_dask_resource_tag(self, tag):
         return {tag: 1}
@@ -539,11 +692,51 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     def score(self, samples):
         return self._dask_transform(samples, "score")
 
+    def _get_fit_params_from_sample_bags(self, bags):
+        logger.debug("Converting dask bag to dask array")
+
+        input_attribute = getattr_nested(self, "input_attribute")
+        fit_extra_arguments = getattr_nested(self, "fit_extra_arguments")
+
+        # convert X which is a dask bag to a dask array
+        bags = bags.persist()
+        X = _array_from_sample_bags(bags, input_attribute)
+        kwargs = dict()
+        for arg, attr in fit_extra_arguments:
+            kwargs[arg] = _array_from_sample_bags(bags, attr)
+        return X, kwargs
+
     def fit(self, X, y=None, **fit_params):
         if is_estimator_stateless(self.estimator):
             return self
 
         logger.debug(f"{_frmt(self)}.fit")
+
+        if self.fit_supports_dask_array:
+            if y is not None or fit_params:
+                raise ValueError(
+                    "y or fit_params should be passed through fit_extra_arguments of the SampleWrapper"
+                )
+
+            model_path = None
+            if is_checkpointed(self):
+                model_path = getattr_nested(self, "model_path")
+            model_path = model_path or ""
+            if not os.path.isfile(model_path):
+                X, fit_params = self._get_fit_params_from_sample_bags(X)
+                # the estimators are supposed to be dask (self) | [checkpoint] | sample | estimator
+                estimator = self.estimator.estimator
+                if is_checkpointed(self):
+                    estimator = estimator.estimator
+                estimator.fit(X, **fit_params)
+                # if the estimator is checkpointed, we need to save the model
+                if is_checkpointed(self):
+                    self.estimator.save_model()
+                return self
+            else:
+                logger.info(
+                    "Ignoring conversion to dask array (checkpoint detected)"
+                )
 
         def _fit(X, y, **fit_params):
             try:
@@ -558,10 +751,12 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
 
         # change the name to have a better name in dask graphs
         _fit.__name__ = f"{_frmt(self)}.fit"
+
         self._dask_state = delayed(_fit)(X, y)
+
         if self.fit_tag is not None:
             # If you do `delayed(_fit)(X, y)`, two tasks are generated;
-            # the `finlize-TASK` and `TASK`. With this, we make sure
+            # the `finalize-TASK` and `TASK`. With this, we make sure
             # that the two are annotated
             self.resource_tags[
                 tuple(
@@ -613,12 +808,15 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
 def wrap(bases, estimator=None, **kwargs):
     """Wraps several estimators inside each other.
 
+    If ``estimator`` is a pipeline, the estimators in that pipeline are wrapped.
+
     Parameters
     ----------
     bases : list
-        A list of classes to be used
+        A list of classes to be used to wrap ``estimator``.
     estimator : :any:`object`, optional
-        An initial estimator to be wrapped inside other wrappers. If None, the first class will be used to initialize the estimator.
+        An initial estimator to be wrapped inside other wrappers.
+        If None, the first class will be used to initialize the estimator.
     **kwargs
         Extra parameters passed to the init of classes.
 

@@ -2,6 +2,9 @@ import os
 import shutil
 import tempfile
 
+import dask.array as da
+import dask_ml.cluster
+import dask_ml.datasets
 import numpy as np
 
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -13,6 +16,7 @@ from sklearn.utils.validation import check_array, check_is_fitted
 import bob.pipelines as mario
 
 from bob.pipelines.utils import hash_string
+from bob.pipelines.wrappers import getattr_nested
 
 
 def _offset_add_func(X, offset=1):
@@ -90,6 +94,84 @@ class FullFailingDummyTransformer(DummyTransformer):
         return [None] * len(X)
 
 
+class DummyWithTags(DummyTransformer):
+    """Transformer that specifies tags"""
+
+    def transform(self, X, extra_arg_1, extra_arg_2):
+        np.testing.assert_equal(np.array(X), extra_arg_1)
+        np.testing.assert_equal(np.array(X), extra_arg_2)
+        return super().transform(X)
+
+    def fit(self, X, y, extra):
+        np.testing.assert_equal(np.array(X), y)
+        np.testing.assert_equal(np.array(X) + 1, extra)
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": False,
+            "requires_fit": True,
+            "bob_output": "annotations",
+            "bob_transform_extra_input": (
+                ("extra_arg_1", "data"),
+                ("extra_arg_2", "data"),
+            ),
+            "bob_fit_extra_input": (("y", "data"), ("extra", "annotations")),
+        }
+
+
+class DummyWithTagsNotData(DummyTransformer):
+    """Transformer that specifies a different field than `data` for argument 1."""
+
+    def transform(self, X, extra_arg_1, extra_arg_2):
+        np.testing.assert_equal(np.array(X), extra_arg_1)
+        np.testing.assert_equal(np.array(X) - 1, extra_arg_2)
+        return super().transform(X)
+
+    def fit(self, X, y, extra):
+        np.testing.assert_equal(np.array(X), y)
+        np.testing.assert_equal(np.array(X) - 1, extra)
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": False,
+            "requires_fit": True,
+            "bob_output": "annotations_2",
+            "bob_input": "annotations",
+            "bob_transform_extra_input": (
+                ("extra_arg_1", "annotations"),
+                ("extra_arg_2", "data"),
+            ),
+            "bob_fit_extra_input": (("y", "annotations"), ("extra", "data")),
+        }
+
+
+class DummyWithDask(DummyTransformer):
+    """Transformer that specifies the supports_dask_array tag."""
+
+    def __init__(self):
+        self.model_ = np.zeros(2)
+
+    def transform(self, X):
+        return X
+
+    def fit(self, X, y=None):
+        X = np.vstack(X)
+        assert isinstance(X, da.Array)
+        self.model_ = X.sum(axis=0) + self.model_
+        self.model_ = self.model_.compute()
+        return self
+
+    def _more_tags(self):
+        return {
+            "stateless": False,
+            "requires_fit": True,
+            "bob_output": "annotations",
+            "bob_fit_supports_dask_array": True,
+        }
+
+
 def _assert_all_close_numpy_array(oracle, result):
     oracle, result = np.array(oracle), np.array(result)
     assert (
@@ -134,6 +216,121 @@ def test_fittable_sample_transformer():
 
     features = transformer.fit_transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
+
+
+def test_tagged_sample_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+
+    # Mixing up with an object
+    transformer = mario.wrap([DummyWithTags, "sample"])
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(X + 1, [s.annotations for s in features])
+    _assert_all_close_numpy_array(X, [s.data for s in features])
+    transformer.fit(samples)
+
+
+def test_tagged_input_sample_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+
+    # Mixing up with an object
+    annotator = mario.wrap([DummyWithTags, "sample"])
+    features = annotator.transform(samples)
+    transformer = mario.wrap([DummyWithTagsNotData, "sample"])
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(X + 2, [s.annotations_2 for s in features])
+    _assert_all_close_numpy_array(X, [s.data for s in features])
+    transformer.fit(samples)
+
+
+def test_dask_tag_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+    sample_bags = mario.ToDaskBag().transform(samples)
+
+    transformer = mario.wrap([DummyWithDask, "sample", "dask"])
+
+    transformer.fit(sample_bags)
+    model_ = getattr_nested(transformer, "model_")
+    np.testing.assert_equal(model_, X.sum(axis=0))
+
+
+def test_dask_tag_checkpoint_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+    sample_bags = mario.ToDaskBag().transform(samples)
+
+    with tempfile.TemporaryDirectory() as d:
+        transformer = mario.wrap(
+            [DummyWithDask, "sample", "checkpoint", "dask"],
+            model_path=d + "/ckpt.h5",
+        )
+        transformer.fit(sample_bags)
+        model_ = getattr_nested(transformer, "model_")
+        np.testing.assert_equal(model_, X.sum(axis=0))
+        # Fit with no data to verify loading from checkpoint
+        transformer_2 = mario.wrap(
+            [DummyWithDask, "sample", "checkpoint", "dask"],
+            model_path=d + "/ckpt.h5",
+        )
+        transformer_2.fit(None)
+        model_ = getattr_nested(transformer, "model_")
+        np.testing.assert_equal(model_, X.sum(axis=0))
+
+
+def test_dask_tag_daskml_estimator():
+
+    X, labels = dask_ml.datasets.make_blobs(
+        n_samples=1000,
+        chunks=300,
+        n_features=2,
+        random_state=0,
+        centers=[[-1, -1], [1, 1]],
+        cluster_std=0.1,  # Makes it easy to split
+    )
+    samples = [mario.Sample(data) for data in X]
+    sample_bags = mario.ToDaskBag().transform(samples)
+
+    estimator = dask_ml.cluster.KMeans(
+        n_clusters=2, init_max_iter=2, random_state=0
+    )
+
+    for fit_supports_dask_array in [True, False]:
+        transformer = mario.wrap(
+            ["sample", "dask"],
+            estimator=estimator,
+            fit_supports_dask_array=fit_supports_dask_array,
+        )
+        transformer.fit(sample_bags)
+        labels_ = getattr_nested(transformer, "labels_")
+        if labels_[0] != labels[0]:
+            # if the labels are flipped during kmeans
+            labels = 1 - labels
+        np.testing.assert_array_equal(labels_, labels)
+
+    for fit_supports_dask_array in [True, False]:
+        with tempfile.TemporaryDirectory() as d:
+            transformer = mario.wrap(
+                ["sample", "checkpoint", "dask"],
+                estimator=estimator,
+                fit_supports_dask_array=fit_supports_dask_array,
+                model_path=f"{d}/ckpt.pkl",
+            )
+            for i in range(2):
+                X = sample_bags
+                if i == 1:
+                    X = None
+                transformer.fit(X)
+                labels_ = getattr_nested(transformer, "labels_")
+                if labels_[0] != labels[0]:
+                    # if the labels are flipped during kmeans
+                    labels = 1 - labels
+                np.testing.assert_array_equal(labels_, labels)
 
 
 def test_failing_sample_transformer():
