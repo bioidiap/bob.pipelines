@@ -600,6 +600,30 @@ def getattr_nested(estimator, attr):
     return None
 
 
+def _array_from_sample_bags(X, attribute):
+    delayeds = X.to_delayed()
+    lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
+    shapes = X.map_partitions(
+        lambda samples: [[getattr(s, attribute).shape for s in samples]]
+    ).compute()
+    dtype, X = None, []
+    for length_, shape_, delayed_samples_list in zip(lengths, shapes, delayeds):
+        delayed_samples_list._length = length_
+        for shape, delayed_sample in zip(shape_, delayed_samples_list):
+            if dtype is None:
+                dtype = np.array(
+                    getattr(delayed_sample, attribute).compute()
+                ).dtype
+            darray = da.from_delayed(
+                getattr(delayed_sample, attribute),
+                shape,
+                dtype=dtype,
+                name=False,
+            )
+            X.append(darray)
+    return X
+
+
 class DaskWrapper(BaseWrapper, TransformerMixin):
     """Wraps Scikit estimators to handle Dask Bags as input.
 
@@ -624,6 +648,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         estimator,
         fit_tag=None,
         transform_tag=None,
+        fit_supports_dask_array=None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -632,6 +657,10 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         self.resource_tags = dict()
         self.fit_tag = fit_tag
         self.transform_tag = transform_tag
+        self.fit_supports_dask_array = (
+            fit_supports_dask_array
+            or get_bob_tags(self.estimator)["bob_fit_supports_dask_array"]
+        )
 
     def _make_dask_resource_tag(self, tag):
         return {tag: 1}
@@ -668,50 +697,51 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
     def score(self, samples):
         return self._dask_transform(samples, "score")
 
+    def _get_fit_params_from_sample_bags(self, bags):
+        logger.debug("Converting dask bag to dask array")
+
+        input_attribute = getattr_nested(self, "input_attribute")
+        fit_extra_arguments = getattr_nested(self, "fit_extra_arguments")
+
+        # convert X which is a dask bag to a dask array
+        bags = bags.persist()
+        X = _array_from_sample_bags(bags, input_attribute)
+        kwargs = dict()
+        for arg, attr in fit_extra_arguments:
+            kwargs[arg] = _array_from_sample_bags(bags, attr)
+        return X, kwargs
+
     def fit(self, X, y=None, **fit_params):
         if is_estimator_stateless(self.estimator):
             return self
 
         logger.debug(f"{_frmt(self)}.fit")
 
-        if get_bob_tags(self.estimator)["bob_fit_supports_dask_array"]:
-            if (not is_checkpointed(self)) or (
-                getattr_nested(self, "model_path") is not None
-                and not os.path.isfile(getattr_nested(self, "model_path"))
-            ):
-                logger.debug("Converting dask bag to dask array")
-                # convert X which is a dask bag to a dask array
-                X = X.persist()
-                delayeds = X.to_delayed()
-                lengths = X.map_partitions(
-                    lambda samples: [len(samples)]
-                ).compute()
-                shapes = X.map_partitions(
-                    lambda samples: [[s.data.shape for s in samples]]
-                ).compute()
-                dtype, X = None, []
-                for length_, shape_, delayed_samples_list in zip(
-                    lengths, shapes, delayeds
-                ):
-                    delayed_samples_list._length = length_
-                    for shape, delayed_sample in zip(
-                        shape_, delayed_samples_list
-                    ):
-                        if dtype is None:
-                            dtype = np.array(
-                                delayed_sample.data.compute()
-                            ).dtype
-                        darray = da.from_delayed(
-                            delayed_sample.data, shape, dtype=dtype, name=False
-                        )
-                        X.append(darray)
+        if self.fit_supports_dask_array:
+            if y is not None or fit_params:
+                raise ValueError(
+                    "y or fit_params should be passed through fit_extra_arguments of the SampleWrapper"
+                )
+
+            model_path = None
+            if is_checkpointed(self):
+                model_path = getattr_nested(self, "model_path")
+            model_path = model_path or ""
+            if not os.path.isfile(model_path):
+                X, fit_params = self._get_fit_params_from_sample_bags(X)
+                # the estimators are supposed to be dask (self) | [checkpoint] | sample | estimator
+                estimator = self.estimator.estimator
+                if is_checkpointed(self):
+                    estimator = estimator.estimator
+                estimator.fit(X, **fit_params)
+                # if the estimator is checkpointed, we need to save the model
+                if is_checkpointed(self):
+                    self.estimator.save_model()
+                return self
             else:
                 logger.info(
                     "Ignoring conversion to dask array (checkpoint detected)"
                 )
-
-            self.estimator.fit(X, y, **fit_params)
-            return self
 
         def _fit(X, y, **fit_params):
             try:

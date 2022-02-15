@@ -18,6 +18,7 @@ from sklearn.utils.validation import check_is_fitted
 import bob.pipelines as mario
 
 from bob.pipelines.utils import hash_string
+from bob.pipelines.wrappers import getattr_nested
 
 
 def _offset_add_func(X, offset=1):
@@ -249,40 +250,39 @@ def test_tagged_input_sample_transformer():
 
 def test_dask_tag_transformer():
 
-    X = da.ones(shape=(10, 2), dtype=int)
-    X.visualize("graph_init")
+    X = np.ones(shape=(10, 2), dtype=int)
     samples = [mario.Sample(data) for data in X]
     sample_bags = mario.ToDaskBag().transform(samples)
 
-    transformer = mario.wrap([DummyWithDask, "dask"])
+    transformer = mario.wrap([DummyWithDask, "sample", "dask"])
 
     transformer.fit(sample_bags)
-    np.testing.assert_equal(transformer.estimator.model_, X.sum(axis=0))
+    model_ = getattr_nested(transformer, "model_")
+    np.testing.assert_equal(model_, X.sum(axis=0))
 
 
 def test_dask_tag_checkpoint_transformer():
 
-    X = da.ones(shape=(10, 2), dtype=int)
+    X = np.ones(shape=(10, 2), dtype=int)
     samples = [mario.Sample(data) for data in X]
     sample_bags = mario.ToDaskBag().transform(samples)
 
     with tempfile.TemporaryDirectory() as d:
         transformer = mario.wrap(
-            [DummyWithDask, "checkpoint", "dask"], model_path=d + "/ckpt.h5"
+            [DummyWithDask, "sample", "checkpoint", "dask"],
+            model_path=d + "/ckpt.h5",
         )
         transformer.fit(sample_bags)
-        np.testing.assert_equal(transformer.estimator.model_, X.sum(axis=0))
+        model_ = getattr_nested(transformer, "model_")
+        np.testing.assert_equal(model_, X.sum(axis=0))
         # Fit with no data to verify loading from checkpoint
         transformer_2 = mario.wrap(
-            [DummyWithDask, "checkpoint", "dask"], model_path=d + "/ckpt.h5"
+            [DummyWithDask, "sample", "checkpoint", "dask"],
+            model_path=d + "/ckpt.h5",
         )
         transformer_2.fit(None)
-        np.testing.assert_equal(transformer_2.estimator.model_, X.sum(axis=0))
-
-
-class DaskMLTransformer(dask_ml.cluster.KMeans):
-    def _more_tags(self):
-        return {"bob_fit_supports_dask_array": True}
+        model_ = getattr_nested(transformer, "model_")
+        np.testing.assert_equal(model_, X.sum(axis=0))
 
 
 def test_dask_tag_daskml_estimator():
@@ -298,12 +298,41 @@ def test_dask_tag_daskml_estimator():
     samples = [mario.Sample(data) for data in X]
     sample_bags = mario.ToDaskBag().transform(samples)
 
-    transformer = DaskMLTransformer(
+    estimator = dask_ml.cluster.KMeans(
         n_clusters=2, init_max_iter=2, random_state=0
     )
-    transformer = mario.wrap(["dask"], estimator=transformer)
-    transformer.fit(sample_bags)
-    np.testing.assert_array_equal(transformer.estimator.labels_, labels)
+
+    for fit_supports_dask_array in [True, False]:
+        transformer = mario.wrap(
+            ["sample", "dask"],
+            estimator=estimator,
+            fit_supports_dask_array=fit_supports_dask_array,
+        )
+        transformer.fit(sample_bags)
+        labels_ = getattr_nested(transformer, "labels_")
+        if labels_[0] != labels[0]:
+            # if the labels are flipped during kmeans
+            labels = 1 - labels
+        np.testing.assert_array_equal(labels_, labels)
+
+    for fit_supports_dask_array in [True, False]:
+        with tempfile.TemporaryDirectory() as d:
+            transformer = mario.wrap(
+                ["sample", "checkpoint", "dask"],
+                estimator=estimator,
+                fit_supports_dask_array=fit_supports_dask_array,
+                model_path=f"{d}/ckpt.pkl",
+            )
+            for i in range(2):
+                X = sample_bags
+                if i == 1:
+                    X = None
+                transformer.fit(X)
+                labels_ = getattr_nested(transformer, "labels_")
+                if labels_[0] != labels[0]:
+                    # if the labels are flipped during kmeans
+                    labels = 1 - labels
+                np.testing.assert_array_equal(labels_, labels)
 
 
 def test_failing_sample_transformer():
