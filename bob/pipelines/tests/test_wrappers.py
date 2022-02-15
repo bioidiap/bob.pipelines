@@ -3,6 +3,8 @@ import shutil
 import tempfile
 
 import dask.array as da
+import dask_ml.cluster
+import dask_ml.datasets
 import numpy as np
 
 from sklearn.base import BaseEstimator
@@ -147,7 +149,7 @@ class DummyWithTagsNotData(DummyTransformer):
 
 
 class DummyWithDask(DummyTransformer):
-    """Transformer that specifies tags"""
+    """Transformer that specifies the supports_dask_array tag."""
 
     def __init__(self):
         self.model_ = np.zeros(2)
@@ -156,8 +158,10 @@ class DummyWithDask(DummyTransformer):
         return X
 
     def fit(self, X, y=None):
-        X = da.vstack(X)
+        X = np.vstack(X)
+        assert isinstance(X, da.Array)
         self.model_ = X.sum(axis=0) + self.model_
+        self.model_ = self.model_.compute()
         return self
 
     def _more_tags(self):
@@ -246,15 +250,14 @@ def test_tagged_input_sample_transformer():
 def test_dask_tag_transformer():
 
     X = da.ones(shape=(10, 2), dtype=int)
+    X.visualize("graph_init")
     samples = [mario.Sample(data) for data in X]
     sample_bags = mario.ToDaskBag().transform(samples)
 
     transformer = mario.wrap([DummyWithDask, "dask"])
 
     transformer.fit(sample_bags)
-    np.testing.assert_equal(
-        transformer.estimator.model_.compute().compute(), X.sum(axis=0)
-    )
+    np.testing.assert_equal(transformer.estimator.model_, X.sum(axis=0))
 
 
 def test_dask_tag_checkpoint_transformer():
@@ -265,20 +268,42 @@ def test_dask_tag_checkpoint_transformer():
 
     with tempfile.TemporaryDirectory() as d:
         transformer = mario.wrap(
-            [DummyWithDask, "checkpoint", "dask"], model_path=d + "ckpt.h5"
+            [DummyWithDask, "checkpoint", "dask"], model_path=d + "/ckpt.h5"
         )
         transformer.fit(sample_bags)
-        np.testing.assert_equal(
-            transformer.estimator.model_.compute().compute(), X.sum(axis=0)
-        )
+        np.testing.assert_equal(transformer.estimator.model_, X.sum(axis=0))
         # Fit with no data to verify loading from checkpoint
         transformer_2 = mario.wrap(
-            [DummyWithDask, "checkpoint", "dask"], model_path=d + "ckpt.h5"
+            [DummyWithDask, "checkpoint", "dask"], model_path=d + "/ckpt.h5"
         )
         transformer_2.fit(None)
-        np.testing.assert_equal(
-            transformer_2.estimator.model_.compute().compute(), X.sum(axis=0)
-        )
+        np.testing.assert_equal(transformer_2.estimator.model_, X.sum(axis=0))
+
+
+class DaskMLTransformer(dask_ml.cluster.KMeans):
+    def _more_tags(self):
+        return {"bob_fit_supports_dask_array": True}
+
+
+def test_dask_tag_daskml_estimator():
+
+    X, labels = dask_ml.datasets.make_blobs(
+        n_samples=1000,
+        chunks=300,
+        n_features=2,
+        random_state=0,
+        centers=[[-1, -1], [1, 1]],
+        cluster_std=0.1,  # Makes it easy to split
+    )
+    samples = [mario.Sample(data) for data in X]
+    sample_bags = mario.ToDaskBag().transform(samples)
+
+    transformer = DaskMLTransformer(
+        n_clusters=2, init_max_iter=2, random_state=0
+    )
+    transformer = mario.wrap(["dask"], estimator=transformer)
+    transformer.fit(sample_bags)
+    np.testing.assert_array_equal(transformer.estimator.labels_, labels)
 
 
 def test_failing_sample_transformer():
