@@ -149,12 +149,7 @@ def get_bob_tags(estimator=None, force_tags=None):
         "bob_features_load_fn": bob.io.base.load,
         "bob_fit_supports_dask_array": False,
     }
-    if hasattr(estimator, "_get_tags"):
-        estimator_tags = estimator._get_tags()
-    else:
-        estimator_tags = (
-            estimator._more_tags() if hasattr(estimator, "_more_tags") else {}
-        )
+    estimator_tags = estimator._get_tags() if estimator is not None else {}
     return {**default_tags, **estimator_tags, **force_tags}
 
 
