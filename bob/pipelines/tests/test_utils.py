@@ -25,27 +25,51 @@ def test_is_pipeline_wrapped():
         FunctionTransformer(do_something), FunctionTransformer(do_something)
     )
 
-    assert not np.alltrue(is_pipeline_wrapped(my_pipe, SampleWrapper))
-    assert not np.alltrue(is_pipeline_wrapped(my_pipe, CheckpointWrapper))
-    assert not np.alltrue(is_pipeline_wrapped(my_pipe, DaskWrapper))
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, SampleWrapper), [False, False]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, CheckpointWrapper), [False, False]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, DaskWrapper), [False, False]
+    )
 
     # Sample wrap
     my_pipe = wrap(["sample"], my_pipe)
-    assert np.alltrue(is_pipeline_wrapped(my_pipe, SampleWrapper))
-    assert not np.alltrue(is_pipeline_wrapped(my_pipe, CheckpointWrapper))
-    assert not np.alltrue(is_pipeline_wrapped(my_pipe, DaskWrapper))
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, SampleWrapper), [True, True]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, CheckpointWrapper), [False, False]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, DaskWrapper), [False, False]
+    )
 
     # Checkpoint wrap
     my_pipe = wrap(["checkpoint"], my_pipe)
-    assert np.alltrue(is_pipeline_wrapped(my_pipe, SampleWrapper))
-    assert np.alltrue(is_pipeline_wrapped(my_pipe, CheckpointWrapper))
-    assert not np.alltrue(is_pipeline_wrapped(my_pipe, DaskWrapper))
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, SampleWrapper), [True, True]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, CheckpointWrapper), [True, True]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, DaskWrapper), [False, False]
+    )
 
     # Dask wrap
     my_pipe = wrap(["dask"], my_pipe)
-    assert np.alltrue(is_pipeline_wrapped(my_pipe, SampleWrapper))
-    assert np.alltrue(is_pipeline_wrapped(my_pipe, CheckpointWrapper))
-    assert np.alltrue(is_pipeline_wrapped(my_pipe, DaskWrapper))
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, SampleWrapper), [False, True, True]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, CheckpointWrapper), [False, True, True]
+    )
+    np.testing.assert_array_equal(
+        is_pipeline_wrapped(my_pipe, DaskWrapper), [False, True, True]
+    )
 
 
 def test_isinstance_nested():

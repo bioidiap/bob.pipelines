@@ -153,10 +153,7 @@ def is_pipeline_wrapped(estimator, wrapper):
     if not isinstance(estimator, Pipeline):
         raise ValueError(f"{estimator} is not an instance of Pipeline")
 
-    from . import ToDaskBag
-
     return [
         isinstance_nested(trans, "estimator", wrapper)
         for _, _, trans in estimator._iter()
-        if not isinstance(trans, ToDaskBag)
     ]
