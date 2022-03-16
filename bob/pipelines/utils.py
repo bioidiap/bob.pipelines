@@ -3,6 +3,8 @@ import pickle
 
 import numpy as np
 
+from sklearn.pipeline import Pipeline
+
 
 def is_picklable(obj):
     """Test if an object is picklable or not."""
@@ -126,3 +128,32 @@ def flatten_samplesets(samplesets):
             new_samplesets.append(new_sset)
 
     return new_samplesets
+
+
+def is_pipeline_wrapped(estimator, wrapper):
+    """
+    Iterates over the transformers of :py:class:`sklearn.pipeline.Pipeline` checking and
+    checks if they were wrapped with `wrapper` class
+
+    Parameters
+    ----------
+
+    estimator: sklearn.pipeline.Pipeline
+        Pipeline to be checked
+
+    wrapper: class
+        Wrapper to be checked
+
+    Returns
+    -------
+       Returns a list of boolean values, where each value indicates if the corresponding estimator is wrapped or not
+
+    """
+
+    if not isinstance(estimator, Pipeline):
+        raise ValueError(f"{estimator} is not an instance of Pipeline")
+
+    return [
+        isinstance_nested(trans, "estimator", wrapper)
+        for _, _, trans in estimator._iter()
+    ]
