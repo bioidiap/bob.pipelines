@@ -9,7 +9,12 @@ import bob.pipelines as mario
 
 from bob.pipelines import Sample, SampleSet
 from bob.pipelines.utils import flatten_samplesets, is_estimator_wrapped
-from bob.pipelines.wrappers import CheckpointWrapper, SampleWrapper, wrap
+from bob.pipelines.wrappers import (
+    CheckpointWrapper,
+    DaskWrapper,
+    SampleWrapper,
+    wrap,
+)
 
 
 def test_is_estimator_wrapped():
@@ -20,18 +25,27 @@ def test_is_estimator_wrapped():
         FunctionTransformer(do_something), FunctionTransformer(do_something)
     )
 
-    assert is_estimator_wrapped(my_pipe, SampleWrapper) is False
-    assert is_estimator_wrapped(my_pipe, CheckpointWrapper) is False
+    assert not np.alltrue(is_estimator_wrapped(my_pipe, SampleWrapper))
+    assert not np.alltrue(is_estimator_wrapped(my_pipe, CheckpointWrapper))
+    assert not np.alltrue(is_estimator_wrapped(my_pipe, DaskWrapper))
 
     # Sample wrap
     my_pipe = wrap(["sample"], my_pipe)
-    assert is_estimator_wrapped(my_pipe, SampleWrapper)
-    assert is_estimator_wrapped(my_pipe, CheckpointWrapper) is False
+    assert np.alltrue(is_estimator_wrapped(my_pipe, SampleWrapper))
+    assert not np.alltrue(is_estimator_wrapped(my_pipe, CheckpointWrapper))
+    assert not np.alltrue(is_estimator_wrapped(my_pipe, DaskWrapper))
 
     # Checkpoint wrap
     my_pipe = wrap(["checkpoint"], my_pipe)
-    assert is_estimator_wrapped(my_pipe, SampleWrapper)
-    assert is_estimator_wrapped(my_pipe, CheckpointWrapper)
+    assert np.alltrue(is_estimator_wrapped(my_pipe, SampleWrapper))
+    assert np.alltrue(is_estimator_wrapped(my_pipe, CheckpointWrapper))
+    assert not np.alltrue(is_estimator_wrapped(my_pipe, DaskWrapper))
+
+    # Dask wrap
+    my_pipe = wrap(["dask"], my_pipe)
+    assert np.alltrue(is_estimator_wrapped(my_pipe, SampleWrapper))
+    assert np.alltrue(is_estimator_wrapped(my_pipe, CheckpointWrapper))
+    assert np.alltrue(is_estimator_wrapped(my_pipe, DaskWrapper))
 
 
 def test_isinstance_nested():

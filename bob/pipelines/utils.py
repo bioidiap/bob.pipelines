@@ -146,16 +146,17 @@ def is_estimator_wrapped(estimator, wrapper):
 
     Returns
     -------
-       Returns True if all the transformers were wrapped with `wrapper` class, otherwise False
+       Returns a list of boolean values, where each value indicates if the corresponding estimator is wrapped or not
 
     """
 
     if not isinstance(estimator, Pipeline):
         raise ValueError(f"{estimator} is not an instance of Pipeline")
 
-    # wrap inner steps
-    for _, _, trans in estimator._iter():
-        if not isinstance_nested(trans, "estimator", wrapper):
-            return False
-    else:
-        return True
+    from . import ToDaskBag
+
+    return [
+        isinstance_nested(trans, "estimator", wrapper)
+        for _, _, trans in estimator._iter()
+        if not isinstance(trans, ToDaskBag)
+    ]
