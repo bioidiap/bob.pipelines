@@ -130,7 +130,7 @@ def flatten_samplesets(samplesets):
     return new_samplesets
 
 
-def is_estimator_wrapped(estimator, wrapper):
+def is_pipeline_wrapped(estimator, wrapper):
     """
     Iterates over the transformers of :py:class:`sklearn.pipeline.Pipeline` checking and
     checks if they were wrapped with `wrapper` class
