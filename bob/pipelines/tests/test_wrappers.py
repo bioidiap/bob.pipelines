@@ -8,6 +8,7 @@ import dask_ml.datasets
 import numpy as np
 
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.datasets import make_blobs
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
@@ -157,7 +158,6 @@ class DummyWithDask(DummyTransformer):
         return X
 
     def fit(self, X, y=None):
-        X = np.vstack(X)
         assert isinstance(X, da.Array)
         self.model_ = X.sum(axis=0) + self.model_
         self.model_ = self.model_.compute()
@@ -285,16 +285,15 @@ def test_dask_tag_checkpoint_transformer():
 
 def test_dask_tag_daskml_estimator():
 
-    X, labels = dask_ml.datasets.make_blobs(
+    X, labels = make_blobs(
         n_samples=1000,
-        chunks=300,
         n_features=2,
         random_state=0,
         centers=[[-1, -1], [1, 1]],
         cluster_std=0.1,  # Makes it easy to split
     )
     samples = [mario.Sample(data) for data in X]
-    sample_bags = mario.ToDaskBag().transform(samples)
+    sample_bags = mario.ToDaskBag(partition_size=300).transform(samples)
 
     estimator = dask_ml.cluster.KMeans(
         n_clusters=2, init_max_iter=2, random_state=0

@@ -7,6 +7,7 @@ from functools import partial
 from pathlib import Path
 
 import cloudpickle
+import dask
 import dask.array as da
 import dask.bag
 import numpy as np
@@ -597,27 +598,55 @@ def getattr_nested(estimator, attr):
     return None
 
 
-def _array_from_sample_bags(X, attribute):
+def _sample_attribute(samples, attribute):
+    return [getattr(s, attribute) for s in samples]
+
+
+def _len_samples(samples):
+    return [len(samples)]
+
+
+def _shape_samples(samples):
+    return [[s.shape for s in samples]]
+
+
+def _array_from_sample_bags(X: dask.bag.Bag, attribute: str):
+
+    # because samples could be delayed samples, we convert sample bags to
+    # sample.attribute bags first and then persist
+    X = X.map_partitions(_sample_attribute, attribute=attribute).persist()
+
+    # convert sample.attribute bags to arrays
     delayeds = X.to_delayed()
-    lengths = X.map_partitions(lambda samples: [len(samples)]).compute()
-    shapes = X.map_partitions(
-        lambda samples: [[getattr(s, attribute).shape for s in samples]]
-    ).compute()
+    lengths = X.map_partitions(_len_samples)
+    shapes = X.map_partitions(_shape_samples)
+    lengths, shapes = dask.compute(lengths, shapes)
     dtype, X = None, []
     for length_, shape_, delayed_samples_list in zip(lengths, shapes, delayeds):
         delayed_samples_list._length = length_
-        for shape, delayed_sample in zip(shape_, delayed_samples_list):
-            if dtype is None:
-                dtype = np.array(
-                    getattr(delayed_sample, attribute).compute()
-                ).dtype
-            darray = da.from_delayed(
-                getattr(delayed_sample, attribute),
-                shape,
-                dtype=dtype,
-                name=False,
-            )
-            X.append(darray)
+
+        if dtype is None:
+            dtype = np.array(delayed_samples_list[0].compute()).dtype
+
+        # stack the data in each bag
+        stacked_samples = dask.delayed(np.vstack)(delayed_samples_list)
+        # make sure shapes are at least 2d
+        for i, s in enumerate(shape_):
+            if len(s) == 1:
+                shape_[i] = (1,) + s
+        stacked_shape = sum(s[0] for s in shape_)
+        stacked_shape = [stacked_shape] + list(shape_[0][1:])
+
+        darray = da.from_delayed(
+            stacked_samples,
+            stacked_shape,
+            dtype=dtype,
+            name=False,
+        )
+        X.append(darray)
+
+    # stack data from all bags
+    X = da.vstack(X)
     return X
 
 
@@ -701,7 +730,6 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         fit_extra_arguments = getattr_nested(self, "fit_extra_arguments")
 
         # convert X which is a dask bag to a dask array
-        bags = bags.persist()
         X = _array_from_sample_bags(bags, input_attribute)
         kwargs = dict()
         for arg, attr in fit_extra_arguments:
