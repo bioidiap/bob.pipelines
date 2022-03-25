@@ -44,6 +44,7 @@ setup(
             "local-p16       = bob.pipelines.config.distributed.local_p16:dask_client",
             "local-p32       = bob.pipelines.config.distributed.local_p32:dask_client",
             "sge             = bob.pipelines.config.distributed.sge_default:dask_client",
+            "sge-io-big      = bob.pipelines.config.distributed.sge_io_big:dask_client",
             "sge-gpu         = bob.pipelines.config.distributed.sge_gpu:dask_client",
         ],
     },
