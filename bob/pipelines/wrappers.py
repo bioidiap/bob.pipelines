@@ -574,7 +574,17 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             estimator = cloudpickle.load(f)
             # we don't do self.estimator = estimator, because self.estimator
             # might be used elsewhere
-            self.estimator.__dict__.update(estimator.__dict__)
+            if isinstance(self.estimator, SampleWrapper):
+                # Fix for the case where we are checkpointing a sample-wrapped estimator
+                self.estimator.estimator.__dict__.update(
+                    estimator.estimator.__dict__
+                )
+                # Update other keys in __dict__
+                for k, v in estimator.__dict__.items():
+                    if k != "estimator":
+                        setattr(self.estimator, k, v)
+            else:
+                self.estimator.__dict__.update(estimator.__dict__)
             return self
 
     def save_model(self):
@@ -765,7 +775,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
                 return self
             else:
                 logger.info(
-                    "Ignoring conversion to dask array (checkpoint detected)"
+                    f"Ignoring conversion to dask array (checkpoint detected at {model_path})"
                 )
 
         def _fit(X, y, **fit_params):
