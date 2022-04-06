@@ -646,6 +646,9 @@ def _array_from_sample_bags(X: dask.bag.Bag, attribute: str):
         for i, s in enumerate(shape_):
             if len(s) == 1:
                 shape_[i] = (1,) + s
+            elif len(s) == 0:
+                # if shape is empty, it means that the samples are scalars
+                shape_[i] = (1, 1)
         stacked_shape = sum(s[0] for s in shape_)
         stacked_shape = [stacked_shape] + list(shape_[0][1:])
 
