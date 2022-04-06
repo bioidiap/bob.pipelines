@@ -296,5 +296,11 @@ class SampleBatch(Sequence, _ReprMixin):
             # adding one more dimension to data so they get stacked sample-wise
             return getattr(s, self.sample_attribute)[None, ...]
 
-        arr = vstack_features(_reader, self.samples, dtype=dtype)
+        if self.samples and hasattr(
+            getattr(self.samples[0], self.sample_attribute), "shape"
+        ):
+            arr = vstack_features(_reader, self.samples, dtype=dtype)
+        else:
+            # to handle string data
+            arr = [getattr(s, self.sample_attribute) for s in self.samples]
         return np.asarray(arr, dtype, *args, **kwargs)
