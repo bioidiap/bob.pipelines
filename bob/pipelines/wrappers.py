@@ -2,6 +2,7 @@
 import logging
 import os
 import tempfile
+import traceback
 
 from functools import partial
 from pathlib import Path
@@ -551,9 +552,11 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
                 self.load_func(path)
                 break
             except Exception:
-                pass
+                error = traceback.format_exc()
         else:
-            raise RuntimeError(f"Could not save {to_save} doing {self}.save")
+            raise RuntimeError(
+                f"Could not save {to_save} using {self.save_func} with the following error: {error}"
+            )
 
     def load(self, sample, path):
         # because we are checkpointing, we return a DelayedSample
