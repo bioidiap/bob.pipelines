@@ -122,6 +122,8 @@ def get_bob_tags(estimator=None, force_tags=None):
             `{"bob_features_load_fn": bob.io.base.load}`
     bob_fit_supports_dask_array: bool
         Indicates that the fit method of that estimator accepts dask arrays as input.
+        You may only use this tag if you accept X (N, M) and optionally y (N) as input.
+        The fit function may not accept any other input.
         Default:
             `{"bob_fit_supports_dask_array": False}`
 
@@ -622,7 +624,15 @@ def _shape_samples(samples):
     return [[s.shape for s in samples]]
 
 
-def _array_from_sample_bags(X: dask.bag.Bag, attribute: str):
+def _array_from_sample_bags(X: dask.bag.Bag, attribute: str, ndim: int = 2):
+
+    if ndim not in (1, 2):
+        raise NotImplementedError(f"ndim must be 1 or 2. Got: {ndim}")
+
+    if ndim == 1:
+        stack_function = np.concatenate
+    else:
+        stack_function = np.vstack
 
     # because samples could be delayed samples, we convert sample bags to
     # sample.attribute bags first and then persist
@@ -641,14 +651,17 @@ def _array_from_sample_bags(X: dask.bag.Bag, attribute: str):
             dtype = np.array(delayed_samples_list[0].compute()).dtype
 
         # stack the data in each bag
-        stacked_samples = dask.delayed(np.vstack)(delayed_samples_list)
+        stacked_samples = dask.delayed(stack_function)(delayed_samples_list)
         # make sure shapes are at least 2d
         for i, s in enumerate(shape_):
-            if len(s) == 1:
+            if len(s) == 1 and ndim == 2:
                 shape_[i] = (1,) + s
             elif len(s) == 0:
                 # if shape is empty, it means that the samples are scalars
-                shape_[i] = (1, 1)
+                if ndim == 1:
+                    shape_[i] = (1,)
+                else:
+                    shape_[i] = (1, 1)
         stacked_shape = sum(s[0] for s in shape_)
         stacked_shape = [stacked_shape] + list(shape_[0][1:])
 
@@ -661,7 +674,7 @@ def _array_from_sample_bags(X: dask.bag.Bag, attribute: str):
         X.append(darray)
 
     # stack data from all bags
-    X = da.vstack(X)
+    X = stack_function(X)
     return X
 
 
@@ -745,10 +758,17 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         fit_extra_arguments = getattr_nested(self, "fit_extra_arguments")
 
         # convert X which is a dask bag to a dask array
-        X = _array_from_sample_bags(bags, input_attribute)
+        X = _array_from_sample_bags(bags, input_attribute, ndim=2)
         kwargs = dict()
         for arg, attr in fit_extra_arguments:
-            kwargs[arg] = _array_from_sample_bags(bags, attr)
+            # we only create a dask array if the arg is named ``y``
+            if arg == "y":
+                kwargs[arg] = _array_from_sample_bags(bags, attr, ndim=1)
+            else:
+                raise NotImplementedError(
+                    f"fit_extra_arguments: {arg} is not supported, only ``y`` is supported."
+                )
+
         return X, kwargs
 
     def fit(self, X, y=None, **fit_params):

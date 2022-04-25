@@ -15,13 +15,10 @@ import pathlib
 
 from collections.abc import Iterable
 
-from bob.db.base.utils import (
-    check_parameter_for_validity,
-    check_parameters_for_validity,
-)
 from bob.extension.download import list_dir, search_file
 
 from .sample import Sample
+from .utils import check_parameter_for_validity, check_parameters_for_validity
 
 
 def _maybe_open_file(path, **kwargs):
