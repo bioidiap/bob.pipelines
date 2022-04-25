@@ -6,15 +6,19 @@
 Base mechanism that converts CSV lines to Samples
 """
 
+import collections
 import csv
 import functools
+import json
+import logging
 import os
 
 from sklearn.base import BaseEstimator, TransformerMixin
 
-import bob.db.base
-
+from bob.extension.download import search_file
 from bob.pipelines import DelayedSample
+
+logger = logging.getLogger(__name__)
 
 
 class CSVToSampleLoader(TransformerMixin, BaseEstimator):
@@ -117,14 +121,14 @@ class CSVToSampleLoader(TransformerMixin, BaseEstimator):
             ),
             key=path,
             reference_id=reference_id,
-            **kwargs
+            **kwargs,
         )
 
 
 class AnnotationsLoader(TransformerMixin, BaseEstimator):
     """
     Metadata loader that loads annotations in the Idiap format using the function
-    :any:`bob.db.base.read_annotation_file`
+    :any:`read_annotation_file`
 
     Parameters
     ----------
@@ -167,7 +171,7 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
                     x._load,
                     parent=x,
                     delayed_attributes=dict(
-                        annotations=lambda: bob.db.base.read_annotation_file(
+                        annotations=lambda: read_annotation_file(
                             annotation_file, self.annotation_type
                         )
                     ),
@@ -184,3 +188,68 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
             "stateless": True,
             "requires_fit": False,
         }
+
+
+def read_annotation_file(file_name, annotation_type):
+    """This function provides default functionality to read annotation files.
+
+    Parameters
+    ----------
+    file_name : str
+            The full path of the annotation file to read. The path can also be like
+            ``base_path:relative_path`` where the base_path can be both a directory or
+            a tarball. This allows you to read annotations from inside a tarball.
+    annotation_type : str
+            The type of the annotation file that should be read. The following
+            annotation_types are supported:
+
+                * ``json``: The file contains annotations of any format, dumped in a
+                    text json file.
+
+    Returns
+    -------
+    dict
+            A python dictionary with the keypoint name as key and the
+            position ``(y,x)`` as value, and maybe some additional annotations.
+
+    Raises
+    ------
+    IOError
+            If the annotation file is not found.
+    ValueError
+            If the annotation type is not known.
+    """
+    if not file_name:
+        return None
+
+    if annotation_type != "json":
+        raise ValueError(
+            f"The annotation type {annotation_type} is not supported."
+        )
+
+    if ":" in file_name:
+        base_path, tail = file_name.split(":", maxsplit=1)
+        f = search_file(base_path, [tail])
+    else:
+        if not os.path.exists(file_name):
+            raise IOError("The annotation file '%s' was not found" % file_name)
+        f = open(file_name)
+
+    annotations = {}
+
+    try:
+        annotations = json.load(f, object_pairs_hook=collections.OrderedDict)
+    finally:
+        f.close()
+
+    if (
+        annotations is not None
+        and "leye" in annotations
+        and "reye" in annotations
+        and annotations["leye"][1] < annotations["reye"][1]
+    ):
+        logger.warn(
+            "The eye annotations in file '%s' might be exchanged!" % file_name
+        )
+
+    return annotations
