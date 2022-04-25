@@ -6,7 +6,6 @@ import pkg_resources
 from sklearn.pipeline import make_pipeline
 
 import bob.io.base
-import bob.io.image
 
 from bob.pipelines.sample_loaders import AnnotationsLoader, CSVToSampleLoader
 
