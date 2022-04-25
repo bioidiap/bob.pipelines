@@ -28,7 +28,6 @@ requirements:
     # bob dependencies
     - bob.extension
     - bob.io.base
-    - bob.db.base
     # other libraries
     - numpy {{ numpy }}
     - dask {{ dask }}
