@@ -298,22 +298,6 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             name=name,
         )
 
-        max_jobs = get_max_jobs(sge_job_spec)
-
-        self.scale(max_jobs)
-        # Adapting to minimim 1 job to maximum 48 jobs
-        # interval: Milliseconds between checks from the scheduler
-        # wait_count: Number of consecutive times that a worker should be suggested for
-        #             removal before we remove it.
-
-        self.adapt(
-            minimum=min_jobs,
-            maximum=max_jobs,
-            wait_count=5,
-            interval=10,
-            target_duration="10s",
-        )
-
     def _get_worker_spec_options(self, job_spec):
         """Craft a dask worker_spec to be used in the qsub command."""
 
