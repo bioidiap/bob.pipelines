@@ -11,3 +11,4 @@ py:class PeriodicCallback
 py:class defaultdict
 py:class WorkerState
 py:class deque
+py:class sklearn.BaseEstimator
