@@ -60,13 +60,11 @@ def get_bob_tags(estimator=None, force_tags=None):
 
     Relies on the tags API of sklearn to set and retrieve the tags.
 
-    Specify an estimator tag values with ``estimator._more_tags``:
+    Specify an estimator tag values with ``estimator._more_tags``::
 
-    ```
-    class My_annotator_transformer(sklearn.base.BaseEstimator):
-        def _more_tags(self):
-            return {"bob_output": "annotations"}
-    ```
+        class My_annotator_transformer(sklearn.base.BaseEstimator):
+            def _more_tags(self):
+                return {"bob_output": "annotations"}
 
     The returned tags will take their value with the following priority:
 
@@ -74,69 +72,75 @@ def get_bob_tags(estimator=None, force_tags=None):
     2. key:value in `estimator` tags (set with `estimator._more_tags()`) if it exists;
     3. the default value for that tag if none of the previous exist.
 
-    Tags format
-    -----------
+    Examples
+    --------
     bob_input: str
         The Sample attribute passed to the first argument of the fit or transform method.
-        Example:
-            `{"bob_input": ("annotations")}`
-        will result in:
-            `estimator.transform(sample.annotations)`
-        Default:
-            `{"bob_input": "data"}`
+        Default value is ``data``.
+        Example::
+
+            {"bob_input": ("annotations")}
+
+        will result in::
+
+            estimator.transform(sample.annotations)
+
     bob_transform_extra_input: tuple of str
         Each element of the tuple is a str representing an attribute of a Sample
         object. Each attribute of the sample will be passed as argument to the transform
-        method in that order.
-        Example:
-            `{"bob_transform_extra_input": (("arg_0","data"), ("arg_1","annotations"))}`
-        will result in:
-            `estimator.transform(sample.data, arg_0=sample.data, arg_1=sample.annotations)`
-        Default:
-            `{"bob_transform_extra_input": tuple()}`
+        method in that order. Default value is an empty tuple ``(,)``.
+        Example::
+
+            {"bob_transform_extra_input": (("arg_0","data"), ("arg_1","annotations"))}
+
+        will result in::
+
+            estimator.transform(sample.data, arg_0=sample.data, arg_1=sample.annotations)
+
     bob_fit_extra_input: tuple of str
         Each element of the tuple is a str representing an attribute of a Sample
         object. Each attribute of the sample will be passed as argument to the fit
-        method in that order.
-        Example:
-            `{"bob_fit_extra_input": (("y", "annotations"), ("extra "metadata"))}`
-        will result in:
-            `estimator.fit(sample.data, y=sample.annotations, extra=sample.metadata)`
-        Default:
-            `{"bob_fit_extra_input": tuple()}`
+        method in that order. Default value is an empty tuple ``(,)``.
+        Example::
+
+            {"bob_fit_extra_input": (("y", "annotations"), ("extra "metadata"))}
+
+        will result in::
+
+            estimator.fit(sample.data, y=sample.annotations, extra=sample.metadata)
+
     bob_output: str
         The Sample attribute in which the output of the transform is stored.
-        Default:
-            `{"bob_output": "data"}`
+        Default value is ``data``.
+
     bob_checkpoint_extension: str
         The extension of each checkpoint file.
-        Default:
-            `{"bob_checkpoint_extension": ".h5"}`
+        Default value is ``.h5``.
+
     bob_features_save_fn: func
         The function used to save each checkpoint file.
-        Default:
-            `{"bob_features_save_fn": bob.io.base.save}`
+        Default value is :any:`bob.io.base.save`.
+
     bob_features_load_fn: func
         The function used to load each checkpoint file.
-        Default:
-            `{"bob_features_load_fn": bob.io.base.load}`
+        Default value is :any:`bob.io.base.load`.
+
     bob_fit_supports_dask_array: bool
         Indicates that the fit method of that estimator accepts dask arrays as
         input. You may only use this tag if you accept X (N, M) and optionally y
         (N) as input. The fit function may not accept any other input.
-        Default:
-            `{"bob_fit_supports_dask_array": False}`
+        Default value is ``False``.
+
     bob_fit_supports_dask_bag: bool
         Indicates that the fit method of that estimator accepts dask bags as
         input. If true, each input parameter of the fit will be a dask bag. You
         still can (and normally you should) wrap your estimator with the
         SampleWrapper so the same code runs with and without dask.
-        Default:
-            `{"bob_fit_supports_dask_bag": False}`
+        Default value is ``False``.
+
     bob_checkpoint_features: bool
         If False, the features of the estimator will never be saved.
-        Default:
-            `{"bob_checkpoint_features": True}`
+        Default value is ``True``.
 
     Parameters
     ----------
