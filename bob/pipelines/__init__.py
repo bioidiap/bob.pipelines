@@ -10,15 +10,16 @@ from .sample import (
     SampleBatch,
     SampleSet,
 )
-from .wrappers import dask_tags  # noqa: F401
 from .wrappers import wrap  # noqa: F401
-from .wrappers import (
+from .wrappers import (  # noqa: F401
     BaseWrapper,
     CheckpointWrapper,
     DaskWrapper,
     DelayedSamplesCall,
     SampleWrapper,
     ToDaskBag,
+    dask_tags,
+    get_bob_tags,
 )
 
 
