@@ -68,7 +68,6 @@ class CSVToSampleLoader(TransformerMixin, BaseEstimator):
 
     def _more_tags(self):
         return {
-            "stateless": True,
             "requires_fit": False,
         }
 
@@ -185,7 +184,6 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
 
     def _more_tags(self):
         return {
-            "stateless": True,
             "requires_fit": False,
         }
 

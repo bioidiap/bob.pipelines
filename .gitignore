@@ -19,3 +19,4 @@ record.txt
 miniconda.sh
 miniconda/
 *.DS_Store
+dask-worker-space
