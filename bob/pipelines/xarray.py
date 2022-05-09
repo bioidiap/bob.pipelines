@@ -16,7 +16,7 @@ from sklearn.pipeline import _name_estimators
 from sklearn.utils.metaestimators import _BaseComposition
 
 from .sample import SAMPLE_DATA_ATTRS, _ReprMixin
-from .utils import is_estimator_stateless
+from .utils import estimator_requires_fit
 
 logger = logging.getLogger(__name__)
 
@@ -496,7 +496,7 @@ class DatasetPipeline(_BaseComposition):
                 args = _get_dask_args_from_ds(ds, block.fit_input)
                 args = [d for d, dims in args]
                 estimator = block.estimator
-                if is_estimator_stateless(estimator):
+                if not estimator_requires_fit(estimator):
                     block.estimator_ = estimator
                 elif block.model_path is not None and os.path.isfile(
                     block.model_path

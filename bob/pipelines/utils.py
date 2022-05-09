@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
 
 
 def is_picklable(obj):
@@ -34,17 +35,19 @@ def assert_picklable(obj):
             assert v == new_obj[k]
 
 
-def is_estimator_stateless(estimator):
+def estimator_requires_fit(estimator):
     if not hasattr(estimator, "_get_tags"):
         raise ValueError(
             f"Passed estimator: {estimator} does not have the _get_tags method."
         )
+    # We check for the FunctionTransformer since theoretically it
+    # does require fit but it does not really need it.
+    if isinstance_nested(estimator, "estimator", FunctionTransformer):
+        return False
+    # if the estimator does not require fit, don't call fit
     # See: https://scikit-learn.org/stable/developers/develop.html
-    # if the estimator does not require fit or is stateless don't call fit
     tags = estimator._get_tags()
-    if tags["stateless"] or not tags["requires_fit"]:
-        return True
-    return False
+    return tags["requires_fit"]
 
 
 def isinstance_nested(instance, attribute, isinstance_of):

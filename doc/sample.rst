@@ -61,7 +61,7 @@ work:
    ...         pass
    ...
    ...     def _more_tags(self):
-   ...         return {"stateless": True, "requires_fit": False}
+   ...         return {"requires_fit": False}
    >>>
    >>>
    >>> # Creating X: 3 samples, 2 features
