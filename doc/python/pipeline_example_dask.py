@@ -20,7 +20,7 @@ class MyTransformer(TransformerMixin, BaseEstimator):
         pass
 
     def _more_tags(self):
-        return {"stateless": True, "requires_fit": False}
+        return {"requires_fit": False}
 
 
 class MyFitTranformer(TransformerMixin, BaseEstimator):

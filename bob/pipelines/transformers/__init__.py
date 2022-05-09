@@ -1,9 +1,4 @@
 from .file_loader import FileLoader
-from .function import (
-    CheckpointSampleFunctionTransformer,
-    SampleFunctionTransformer,
-    StatelessPipeline,
-)
 from .linearize import CheckpointSampleLinearize, Linearize, SampleLinearize
 from .pca import CheckpointSamplePCA, SamplePCA
 from .str_to_types import Str_To_Types  # noqa: F401
@@ -34,9 +29,6 @@ __appropriate__(
     CheckpointSampleLinearize,
     CheckpointSamplePCA,
     SamplePCA,
-    SampleFunctionTransformer,
-    CheckpointSampleFunctionTransformer,
-    StatelessPipeline,
     FileLoader,
 )
 

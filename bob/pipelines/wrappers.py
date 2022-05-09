@@ -22,7 +22,7 @@ from sklearn.preprocessing import FunctionTransformer
 import bob.io.base
 
 from .sample import DelayedSample, SampleBatch, SampleSet
-from .utils import is_estimator_stateless, isinstance_nested
+from .utils import estimator_requires_fit, isinstance_nested
 
 logger = logging.getLogger(__name__)
 
@@ -336,9 +336,9 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         return self._samples_transform(samples, "score")
 
     def fit(self, samples, y=None, **kwargs):
-        # If samples is a dask bag, pass the arguments unmodified
+        # If samples is a dask bag or array, pass the arguments unmodified
         # The data is already prepared in the DaskWrapper
-        if isinstance(samples, dask.bag.core.Bag):
+        if isinstance(samples, (dask.bag.core.Bag, dask.array.Array)):
             logger.debug(f"{_frmt(self)}.fit")
             self.estimator.fit(samples, y=y, **kwargs)
             return self
@@ -350,7 +350,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
                 "`fit_extra_arguments` tag."
             )
 
-        if is_estimator_stateless(self.estimator):
+        if not estimator_requires_fit(self.estimator):
             return self
 
         # if the estimator needs to be fitted.
@@ -543,7 +543,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
 
     def fit(self, samples, y=None, **kwargs):
 
-        if is_estimator_stateless(self.estimator):
+        if not estimator_requires_fit(self.estimator):
             return self
 
         # if the estimator needs to be fitted.
@@ -617,7 +617,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             return sample
 
     def load_model(self):
-        if is_estimator_stateless(self.estimator):
+        if not estimator_requires_fit(self.estimator):
             return self
         with open(self.model_path, "rb") as f:
             loaded_estimator = cloudpickle.load(f)
@@ -627,7 +627,10 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             return self
 
     def save_model(self):
-        if is_estimator_stateless(self.estimator) or self.model_path is None:
+        if (
+            not estimator_requires_fit(self.estimator)
+            or self.model_path is None
+        ):
             return self
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         with open(self.model_path, "wb") as f:
@@ -830,14 +833,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
             )
 
         X, fit_params = self._get_fit_params_from_sample_bags(bags)
-        # the estimators are supposed to be dask (self) | [checkpoint] | sample | estimator
-        estimator = self.estimator.estimator
-        if is_checkpointed(self):
-            estimator = estimator.estimator
-        estimator.fit(X, **fit_params)
-        # if the estimator is checkpointed, we need to save the model
-        if is_checkpointed(self):
-            self.estimator.save_model()
+        self.estimator.fit(X, **fit_params)
         return self
 
     def _fit_on_dask_bag(self, bags, y=None, **fit_params):
@@ -861,13 +857,10 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         }
 
         self.estimator.fit(X, **kwargs)
-        # if the estimator is checkpointed, we need to save the model
-        if is_checkpointed(self):
-            self.estimator.save_model()
         return self
 
     def fit(self, X, y=None, **fit_params):
-        if is_estimator_stateless(self.estimator):
+        if not estimator_requires_fit(self.estimator):
             return self
         logger.debug(f"{_frmt(self)}.fit")
 
@@ -953,7 +946,7 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
             return dask.bag.from_sequence(X, partition_size=self.partition_size)
 
     def _more_tags(self):
-        return {"stateless": True, "requires_fit": False}
+        return {"requires_fit": False}
 
 
 def wrap(bases, estimator=None, **kwargs):
