@@ -339,7 +339,7 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         # The data is already prepared in the DaskWrapper
         if isinstance(samples, dask.bag.core.Bag):
             logger.debug(f"{_frmt(self)}.fit")
-            self.estimator.fit(samples, y, **kwargs)
+            self.estimator.fit(samples, y=y, **kwargs)
             return self
 
         if y is not None:
@@ -529,7 +529,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
     def score(self, samples):
         return self.estimator.score(samples)
 
-    def fit(self, samples, y=None):
+    def fit(self, samples, y=None, **kwargs):
 
         if is_estimator_stateless(self.estimator):
             return self
@@ -541,7 +541,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             logger.info("Found a checkpoint for model. Loading ...")
             return self.load_model()
 
-        self.estimator = self.estimator.fit(samples, y=y)
+        self.estimator = self.estimator.fit(samples, y=y, **kwargs)
         copy_learned_attributes(self.estimator, self)
         return self.save_model()
 
@@ -863,7 +863,7 @@ class DaskWrapper(BaseWrapper, TransformerMixin):
         model_path = model_path or ""
         if os.path.isfile(model_path):
             logger.info(
-                f"Checkpointed estimator detected at {model_path}. The estimator will be loaded and training will not run."
+                f"Checkpointed estimator detected at {model_path}. The estimator ({_frmt(self)}) will be loaded and training will not run."
             )
         else:
             if self.fit_supports_dask_array:
