@@ -542,7 +542,7 @@ def test_checkpoint_fittable_sample_transformer():
             model_path=model_path,
             features_dir=features_dir,
         )
-        assert mario.utils.estimator_requires_fit(transformer)
+        assert mario.estimator_requires_fit(transformer)
         features = transformer.fit(samples).transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
