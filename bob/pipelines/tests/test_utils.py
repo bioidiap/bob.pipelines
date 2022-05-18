@@ -7,12 +7,14 @@ from sklearn.preprocessing import FunctionTransformer
 
 import bob.pipelines as mario
 
-from bob.pipelines import Sample, SampleSet
-from bob.pipelines.utils import flatten_samplesets, is_pipeline_wrapped
-from bob.pipelines.wrappers import (
+from bob.pipelines import (
     CheckpointWrapper,
     DaskWrapper,
+    Sample,
+    SampleSet,
     SampleWrapper,
+    flatten_samplesets,
+    is_pipeline_wrapped,
     wrap,
 )
 
@@ -85,14 +87,14 @@ def test_isinstance_nested():
             self.o = o
 
     o = C(B(A()))
-    assert mario.utils.isinstance_nested(o, "o", C)
-    assert mario.utils.isinstance_nested(o, "o", B)
-    assert mario.utils.isinstance_nested(o, "o", A)
+    assert mario.isinstance_nested(o, "o", C)
+    assert mario.isinstance_nested(o, "o", B)
+    assert mario.isinstance_nested(o, "o", A)
 
     o = C(B(object))
-    assert mario.utils.isinstance_nested(o, "o", C)
-    assert mario.utils.isinstance_nested(o, "o", B)
-    assert not mario.utils.isinstance_nested(o, "o", A)
+    assert mario.isinstance_nested(o, "o", C)
+    assert mario.isinstance_nested(o, "o", B)
+    assert not mario.isinstance_nested(o, "o", A)
 
 
 def test_break_sample_set():

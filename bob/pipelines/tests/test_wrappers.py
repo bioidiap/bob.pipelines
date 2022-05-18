@@ -31,21 +31,21 @@ class DummyWithFit(TransformerMixin, BaseEstimator):
 
     def fit(self, X, y=None):
         X = check_array(X)
-        self.n_features_ = X.shape[1]
+        self.n_features_in_ = X.shape[1]
 
-        self.model_ = np.ones((self.n_features_, 2))
+        self.model_ = np.ones((self.n_features_in_, 2))
 
         # Return the transformer
         return self
 
     def transform(self, X):
         # Check is fit had been called
-        check_is_fitted(self, "n_features_")
+        check_is_fitted(self, "n_features_in_")
         # Input validation
         X = check_array(X)
         # Check that the input is of the same shape as the one passed
         # during fit.
-        if X.shape[1] != self.n_features_:
+        if X.shape[1] != self.n_features_in_:
             raise ValueError(
                 "Shape of input is different from what was seen" "in `fit`"
             )
@@ -163,6 +163,7 @@ class DummyWithDask(DummyTransformer):
         return {
             "bob_output": "annotations",
             "bob_fit_supports_dask_array": True,
+            "requires_fit": True,
         }
 
 
@@ -801,3 +802,53 @@ def test_checkpoint_transform_pipeline_with_sampleset():
 
     _run(dask_enabled=True)
     _run(dask_enabled=False)
+
+
+def test_estimator_requires_fit():
+
+    all_wraps = [
+        ["sample"],
+        ["sample", "checkpoint"],
+        ["sample", "checkpoint", "dask"],
+        ["sample", "dask"],
+        ["checkpoint"],
+        ["checkpoint", "dask"],
+        ["dask"],
+    ]
+
+    for estimator, requires_fit in [
+        (DummyTransformer(), False),
+        (DummyWithFit(), True),
+    ]:
+        assert mario.estimator_requires_fit(estimator) is requires_fit
+
+        # test on a pipeline
+        pipeline = Pipeline([(f"{i}", estimator) for i in range(2)])
+        assert mario.estimator_requires_fit(pipeline) is requires_fit
+
+        # now test if wrapped, is also correct
+        for wraps in all_wraps:
+            est = mario.wrap(wraps, estimator)
+            assert mario.estimator_requires_fit(est) is requires_fit
+
+            # test on a pipeline
+            pipeline = Pipeline([(f"{i}", est) for i in range(2)])
+            assert mario.estimator_requires_fit(pipeline) is requires_fit
+
+    pipeline = Pipeline(
+        [
+            ("DummyTransformer", DummyTransformer()),
+            ("DummyWithFit", DummyWithFit()),
+        ]
+    )
+    assert mario.estimator_requires_fit(pipeline) is True
+    for wrap in all_wraps:
+        est = mario.wrap(wrap, pipeline)
+        assert mario.estimator_requires_fit(est) is True
+
+    # test with a FunctionTransformer
+    estimator = FunctionTransformer(lambda x: x)
+    assert mario.estimator_requires_fit(estimator) is False
+    for wrap in all_wraps:
+        est = mario.wrap(wrap, estimator)
+        assert mario.estimator_requires_fit(est) is False

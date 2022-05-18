@@ -1094,6 +1094,8 @@ def isinstance_nested(instance, attribute, isinstance_of):
             Instance class to be searched
 
     """
+    if isinstance(instance, isinstance_of):
+        return True
 
     if not hasattr(instance, attribute):
         return False
