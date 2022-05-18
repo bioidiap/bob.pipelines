@@ -55,28 +55,18 @@ class SGEIdiapJob(Job):
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
         # Resources
-        resources = None
-
-        if "resources" in kwargs or kwargs["resources"]:
-            resources = kwargs.pop("resources")
+        resources = kwargs.pop("resources", None)
 
         super().__init__(
             *args, config_name=config_name, death_timeout=10000, **kwargs
         )
 
         # Amending the --resources in the `distributed.cli.dask_worker` CLI command
-        # if "resources" in kwargs and kwargs["resources"]:
-        if not resources:
-            # resources = kwargs["resources"]
-
+        if resources:
             # Preparing the string to be sent to `dask-worker` command
-            def _resource_to_str(resources):
-                resources_str = ""
-                for k in resources:
-                    resources_str += f"{k}={resources[k]}"
-                return resources_str
-
-            resources_str = _resource_to_str(resources)
+            resources_str = ""
+            for k, v in resources.items():
+                resources_str += f"{k}={v}"
 
             self._command_template += f" --resources {resources_str}"
 
