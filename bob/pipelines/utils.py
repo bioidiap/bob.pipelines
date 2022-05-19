@@ -58,7 +58,7 @@ def flatten_samplesets(samplesets):
     Parameters
     ----------
 
-    samplesets: list of SampleSets
+    samplesets: list of :obj:`bob.pipelines.SampleSet`
       Input list of SampleSets (with one or multiple samples in each SampleSet
 
     """

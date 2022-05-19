@@ -74,7 +74,7 @@ def test_is_pipeline_wrapped():
     )
 
 
-def test_isinstance_nested():
+def test_is_instance_nested():
     class A:
         pass
 
@@ -87,14 +87,14 @@ def test_isinstance_nested():
             self.o = o
 
     o = C(B(A()))
-    assert mario.isinstance_nested(o, "o", C)
-    assert mario.isinstance_nested(o, "o", B)
-    assert mario.isinstance_nested(o, "o", A)
+    assert mario.is_instance_nested(o, "o", C)
+    assert mario.is_instance_nested(o, "o", B)
+    assert mario.is_instance_nested(o, "o", A)
 
     o = C(B(object))
-    assert mario.isinstance_nested(o, "o", C)
-    assert mario.isinstance_nested(o, "o", B)
-    assert not mario.isinstance_nested(o, "o", A)
+    assert mario.is_instance_nested(o, "o", C)
+    assert mario.is_instance_nested(o, "o", B)
+    assert not mario.is_instance_nested(o, "o", A)
 
 
 def test_break_sample_set():

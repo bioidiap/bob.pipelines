@@ -29,7 +29,7 @@ def save(data, path):
 
 def load(path):
     with h5py.File(path, "r") as f:
-        data = np.array(f["array"])
+        data = f["array"][()]
     return data
 
 

@@ -648,7 +648,7 @@ def _update_estimator(estimator, loaded_estimator):
 
 
 def is_checkpointed(estimator):
-    return isinstance_nested(estimator, "estimator", CheckpointWrapper)
+    return is_instance_nested(estimator, "estimator", CheckpointWrapper)
 
 
 def getattr_nested(estimator, attr):
@@ -1055,7 +1055,7 @@ def estimator_requires_fit(estimator):
         )
 
     # If the estimator is wrapped, check the wrapped estimator
-    if isinstance_nested(
+    if is_instance_nested(
         estimator, "estimator", (SampleWrapper, CheckpointWrapper, DaskWrapper)
     ):
         return estimator_requires_fit(estimator.estimator)
@@ -1066,7 +1066,7 @@ def estimator_requires_fit(estimator):
 
     # We check for the FunctionTransformer since theoretically it
     # does require fit but it does not really need it.
-    if isinstance_nested(estimator, "estimator", FunctionTransformer):
+    if is_instance_nested(estimator, "estimator", FunctionTransformer):
         return False
 
     # if the estimator does not require fit, don't call fit
@@ -1075,7 +1075,7 @@ def estimator_requires_fit(estimator):
     return tags["requires_fit"]
 
 
-def isinstance_nested(instance, attribute, isinstance_of):
+def is_instance_nested(instance, attribute, isinstance_of):
     """
     Check if an object and its nested objects is an instance of a class.
 
@@ -1107,7 +1107,7 @@ def isinstance_nested(instance, attribute, isinstance_of):
         return True
     else:
         # Recursive search
-        return isinstance_nested(
+        return is_instance_nested(
             getattr(instance, attribute), attribute, isinstance_of
         )
 
@@ -1123,19 +1123,19 @@ def is_pipeline_wrapped(estimator, wrapper):
     estimator: sklearn.pipeline.Pipeline
         Pipeline to be checked
 
-    wrapper: class
-        Wrapper to be checked
+    wrapper: type
+        The Wrapper class or a tuple of classes to be checked
 
     Returns
     -------
+    list
        Returns a list of boolean values, where each value indicates if the corresponding estimator is wrapped or not
-
     """
 
     if not isinstance(estimator, Pipeline):
         raise ValueError(f"{estimator} is not an instance of Pipeline")
 
     return [
-        isinstance_nested(trans, "estimator", wrapper)
+        is_instance_nested(trans, "estimator", wrapper)
         for _, _, trans in estimator._iter()
     ]

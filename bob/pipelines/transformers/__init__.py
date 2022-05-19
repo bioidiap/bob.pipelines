@@ -1,6 +1,3 @@
-from .file_loader import FileLoader
-from .linearize import CheckpointSampleLinearize, Linearize, SampleLinearize
-from .pca import CheckpointSamplePCA, SamplePCA
 from .str_to_types import Str_To_Types  # noqa: F401
 from .str_to_types import str_to_bool  # noqa: F401
 
@@ -23,14 +20,7 @@ def __appropriate__(*args):
         obj.__module__ = __name__
 
 
-__appropriate__(
-    Linearize,
-    SampleLinearize,
-    CheckpointSampleLinearize,
-    CheckpointSamplePCA,
-    SamplePCA,
-    FileLoader,
-)
+__appropriate__()
 
 # gets sphinx autodoc done right - don't remove it
 __all__ = [_ for _ in dir() if not _.startswith("_")]
