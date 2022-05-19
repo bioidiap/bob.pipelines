@@ -10,6 +10,14 @@ from .sample import (
     SampleBatch,
     SampleSet,
 )
+from .utils import (  # noqa: F401
+    assert_picklable,
+    check_parameter_for_validity,
+    check_parameters_for_validity,
+    flatten_samplesets,
+    hash_string,
+    is_picklable,
+)
 from .wrappers import wrap  # noqa: F401
 from .wrappers import (  # noqa: F401
     BaseWrapper,
@@ -19,7 +27,10 @@ from .wrappers import (  # noqa: F401
     SampleWrapper,
     ToDaskBag,
     dask_tags,
+    estimator_requires_fit,
     get_bob_tags,
+    is_instance_nested,
+    is_pipeline_wrapped,
 )
 
 

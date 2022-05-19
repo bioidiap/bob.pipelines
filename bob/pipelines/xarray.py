@@ -16,7 +16,7 @@ from sklearn.pipeline import _name_estimators
 from sklearn.utils.metaestimators import _BaseComposition
 
 from .sample import SAMPLE_DATA_ATTRS, _ReprMixin
-from .utils import estimator_requires_fit
+from .wrappers import estimator_requires_fit
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def save(data, path):
 
 def load(path):
     with h5py.File(path, "r") as f:
-        data = np.array(f["array"])
+        data = f["array"][()]
     return data
 
 

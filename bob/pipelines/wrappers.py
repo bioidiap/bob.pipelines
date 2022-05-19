@@ -22,7 +22,6 @@ from sklearn.preprocessing import FunctionTransformer
 import bob.io.base
 
 from .sample import DelayedSample, SampleBatch, SampleSet
-from .utils import estimator_requires_fit, isinstance_nested
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +91,11 @@ def get_bob_tags(estimator=None, force_tags=None):
         method in that order. Default value is an empty tuple ``(,)``.
         Example::
 
-            {"bob_transform_extra_input": (("arg_0","data"), ("arg_1","annotations"))}
+            {"bob_transform_extra_input": (("kwarg_1","annotations"), ("kwarg_2","gender"))}
 
         will result in::
 
-            estimator.transform(sample.data, arg_0=sample.data, arg_1=sample.annotations)
+            estimator.transform(sample.data, kwarg_1=sample.annotations, kwarg_2=sample.gender)
 
     bob_fit_extra_input: tuple of str
         Each element of the tuple is a str representing an attribute of a Sample
@@ -649,7 +648,7 @@ def _update_estimator(estimator, loaded_estimator):
 
 
 def is_checkpointed(estimator):
-    return isinstance_nested(estimator, "estimator", CheckpointWrapper)
+    return is_instance_nested(estimator, "estimator", CheckpointWrapper)
 
 
 def getattr_nested(estimator, attr):
@@ -1047,3 +1046,96 @@ def dask_tags(estimator):
         tags.update(estimator.resource_tags)
 
     return tags
+
+
+def estimator_requires_fit(estimator):
+    if not hasattr(estimator, "_get_tags"):
+        raise ValueError(
+            f"Passed estimator: {estimator} does not have the _get_tags method."
+        )
+
+    # If the estimator is wrapped, check the wrapped estimator
+    if is_instance_nested(
+        estimator, "estimator", (SampleWrapper, CheckpointWrapper, DaskWrapper)
+    ):
+        return estimator_requires_fit(estimator.estimator)
+
+    # If estimator is a Pipeline, check if any of the steps requires fit
+    if isinstance(estimator, Pipeline):
+        return any([estimator_requires_fit(e) for _, e in estimator.steps])
+
+    # We check for the FunctionTransformer since theoretically it
+    # does require fit but it does not really need it.
+    if is_instance_nested(estimator, "estimator", FunctionTransformer):
+        return False
+
+    # if the estimator does not require fit, don't call fit
+    # See: https://scikit-learn.org/stable/developers/develop.html
+    tags = estimator._get_tags()
+    return tags["requires_fit"]
+
+
+def is_instance_nested(instance, attribute, isinstance_of):
+    """
+    Check if an object and its nested objects is an instance of a class.
+
+    This is useful while using aggregation and it's necessary to check if some
+    functionally was aggregated
+
+    Parameters
+    ----------
+        instance:
+           Object to be searched
+
+        attribute:
+           Attribute name to be recursively searched
+
+        isinstance_of:
+            Instance class to be searched
+
+    """
+    if isinstance(instance, isinstance_of):
+        return True
+
+    if not hasattr(instance, attribute):
+        return False
+
+    # Checking the current object and its immediate nested
+    if isinstance(instance, isinstance_of) or isinstance(
+        getattr(instance, attribute), isinstance_of
+    ):
+        return True
+    else:
+        # Recursive search
+        return is_instance_nested(
+            getattr(instance, attribute), attribute, isinstance_of
+        )
+
+
+def is_pipeline_wrapped(estimator, wrapper):
+    """
+    Iterates over the transformers of :py:class:`sklearn.pipeline.Pipeline` checking and
+    checks if they were wrapped with `wrapper` class
+
+    Parameters
+    ----------
+
+    estimator: sklearn.pipeline.Pipeline
+        Pipeline to be checked
+
+    wrapper: type
+        The Wrapper class or a tuple of classes to be checked
+
+    Returns
+    -------
+    list
+       Returns a list of boolean values, where each value indicates if the corresponding estimator is wrapped or not
+    """
+
+    if not isinstance(estimator, Pipeline):
+        raise ValueError(f"{estimator} is not an instance of Pipeline")
+
+    return [
+        is_instance_nested(trans, "estimator", wrapper)
+        for _, _, trans in estimator._iter()
+    ]
