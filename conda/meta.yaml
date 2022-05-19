@@ -45,8 +45,8 @@ requirements:
     - {{ pin_compatible('dask', max_pin='x.x') }}
     - {{ pin_compatible('dask-jobqueue', max_pin='x.x') }}
     - {{ pin_compatible('distributed', max_pin='x.x') }}
-    - {{ pin_compatible('scikit-learn') }}
-    - {{ pin_compatible('xarray') }}
+    - {{ pin_compatible('scikit-learn', max_pin='x.x') }}
+    - {{ pin_compatible('xarray', max_pin='x.x') }}
     - {{ pin_compatible('h5py') }}
   run_constrained:
     - {{ pin_compatible('dask-ml', max_pin='x.x') }}

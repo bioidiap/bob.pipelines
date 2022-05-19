@@ -3,9 +3,6 @@ import pickle
 
 import numpy as np
 
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer
-
 
 def is_picklable(obj):
     """Test if an object is picklable or not."""
@@ -35,56 +32,6 @@ def assert_picklable(obj):
             assert v == new_obj[k]
 
 
-def estimator_requires_fit(estimator):
-    if not hasattr(estimator, "_get_tags"):
-        raise ValueError(
-            f"Passed estimator: {estimator} does not have the _get_tags method."
-        )
-    # We check for the FunctionTransformer since theoretically it
-    # does require fit but it does not really need it.
-    if isinstance_nested(estimator, "estimator", FunctionTransformer):
-        return False
-    # if the estimator does not require fit, don't call fit
-    # See: https://scikit-learn.org/stable/developers/develop.html
-    tags = estimator._get_tags()
-    return tags["requires_fit"]
-
-
-def isinstance_nested(instance, attribute, isinstance_of):
-    """
-    Check if an object and its nested objects is an instance of a class.
-
-    This is useful while using aggregation and it's necessary to check if some
-    functionally was aggregated
-
-    Parameters
-    ----------
-        instance:
-           Object to be searched
-
-        attribute:
-           Attribute name to be recursively searched
-
-        isinstance_of:
-            Instance class to be searched
-
-    """
-
-    if not hasattr(instance, attribute):
-        return False
-
-    # Checking the current object and its immediate nested
-    if isinstance(instance, isinstance_of) or isinstance(
-        getattr(instance, attribute), isinstance_of
-    ):
-        return True
-    else:
-        # Recursive search
-        return isinstance_nested(
-            getattr(instance, attribute), attribute, isinstance_of
-        )
-
-
 def hash_string(key, bucket_size=1000):
     """
     Generates a hash code given a string.
@@ -111,7 +58,7 @@ def flatten_samplesets(samplesets):
     Parameters
     ----------
 
-    samplesets: list of SampleSets
+    samplesets: list of :obj:`bob.pipelines.SampleSet`
       Input list of SampleSets (with one or multiple samples in each SampleSet
 
     """
@@ -131,35 +78,6 @@ def flatten_samplesets(samplesets):
             new_samplesets.append(new_sset)
 
     return new_samplesets
-
-
-def is_pipeline_wrapped(estimator, wrapper):
-    """
-    Iterates over the transformers of :py:class:`sklearn.pipeline.Pipeline` checking and
-    checks if they were wrapped with `wrapper` class
-
-    Parameters
-    ----------
-
-    estimator: sklearn.pipeline.Pipeline
-        Pipeline to be checked
-
-    wrapper: class
-        Wrapper to be checked
-
-    Returns
-    -------
-       Returns a list of boolean values, where each value indicates if the corresponding estimator is wrapped or not
-
-    """
-
-    if not isinstance(estimator, Pipeline):
-        raise ValueError(f"{estimator} is not an instance of Pipeline")
-
-    return [
-        isinstance_nested(trans, "estimator", wrapper)
-        for _, _, trans in estimator._iter()
-    ]
 
 
 def check_parameters_for_validity(
