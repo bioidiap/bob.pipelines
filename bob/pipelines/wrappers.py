@@ -26,15 +26,15 @@ from .sample import DelayedSample, SampleBatch, SampleSet
 logger = logging.getLogger(__name__)
 
 
-def _frmt(estimator, limit=30):
+def _frmt(estimator, limit=30, attr="estimator"):
     # default value of limit is chosen so the log can be seen in dask graphs
     def _n(e):
         return e.__class__.__name__.replace("Wrapper", "")
 
     name = ""
-    while hasattr(estimator, "estimator"):
+    while hasattr(estimator, attr):
         name += f"{_n(estimator)}|"
-        estimator = estimator.estimator
+        estimator = getattr(estimator, attr)
 
     if (
         isinstance(estimator, FunctionTransformer)
@@ -286,7 +286,6 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
     def _samples_transform(self, samples, method_name):
         # Transform either samples or samplesets
         method = getattr(self.estimator, method_name)
-        logger.debug(f"{_frmt(self)}.{method_name}")
         func_name = f"{self}.{method_name}"
 
         if isinstance(samples[0], SampleSet):
@@ -320,18 +319,23 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
             return new_samples
 
     def transform(self, samples):
+        logger.debug(f"{_frmt(self)}.transform")
         return self._samples_transform(samples, "transform")
 
     def decision_function(self, samples):
+        logger.debug(f"{_frmt(self)}.decision_function")
         return self._samples_transform(samples, "decision_function")
 
     def predict(self, samples):
+        logger.debug(f"{_frmt(self)}.predict")
         return self._samples_transform(samples, "predict")
 
     def predict_proba(self, samples):
+        logger.debug(f"{_frmt(self)}.predict_proba")
         return self._samples_transform(samples, "predict_proba")
 
     def score(self, samples):
+        logger.debug(f"{_frmt(self)}.score")
         return self._samples_transform(samples, "score")
 
     def fit(self, samples, y=None, **kwargs):
@@ -461,7 +465,6 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
     def _checkpoint_transform(self, samples, method_name):
         # Transform either samples or samplesets
         method = getattr(self.estimator, method_name)
-        logger.debug(f"{_frmt(self)}.{method_name}")
 
         # if features_dir is None, just transform all samples at once
         if self.features_dir is None:
@@ -526,18 +529,23 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
             return _transform_samples(samples)
 
     def transform(self, samples):
+        logger.debug(f"{_frmt(self)}.transform")
         return self._checkpoint_transform(samples, "transform")
 
     def decision_function(self, samples):
+        logger.debug(f"{_frmt(self)}.decision_function")
         return self.estimator.decision_function(samples)
 
     def predict(self, samples):
+        logger.debug(f"{_frmt(self)}.predict")
         return self.estimator.predict(samples)
 
     def predict_proba(self, samples):
+        logger.debug(f"{_frmt(self)}.predict_proba")
         return self.estimator.predict_proba(samples)
 
     def score(self, samples):
+        logger.debug(f"{_frmt(self)}.score")
         return self.estimator.score(samples)
 
     def fit(self, samples, y=None, **kwargs):
@@ -600,7 +608,7 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
                 time.sleep(0.1)
         else:
             raise RuntimeError(
-                f"Could not save {to_save} using {self.save_func} with the following error: {error}"
+                f"Could not save {to_save} of type {type(to_save)} using {self.save_func} with the following error: {error}"
             )
 
     def load(self, sample, path):

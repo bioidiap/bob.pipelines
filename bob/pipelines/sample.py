@@ -299,7 +299,16 @@ class SampleBatch(Sequence, _ReprMixin):
         if self.samples and hasattr(
             getattr(self.samples[0], self.sample_attribute), "shape"
         ):
-            arr = vstack_features(_reader, self.samples, dtype=dtype)
+            try:
+                arr = vstack_features(_reader, self.samples, dtype=dtype)
+            except Exception as e:
+                try:
+                    # try computing one feature to show a better traceback
+                    _ = getattr(self.samples[0], self.sample_attribute)
+                    raise e
+                except Exception as e2:
+                    raise e2 from e
+
         else:
             # to handle string data
             arr = [getattr(s, self.sample_attribute) for s in self.samples]

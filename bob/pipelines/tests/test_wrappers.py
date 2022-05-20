@@ -16,7 +16,7 @@ from sklearn.utils.validation import check_array, check_is_fitted
 
 import bob.pipelines as mario
 
-from bob.pipelines.utils import hash_string
+from bob.pipelines import hash_string
 from bob.pipelines.wrappers import getattr_nested
 
 
