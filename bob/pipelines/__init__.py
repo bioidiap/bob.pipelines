@@ -29,6 +29,7 @@ from .wrappers import (  # noqa: F401
     dask_tags,
     estimator_requires_fit,
     get_bob_tags,
+    getattr_nested,
     is_instance_nested,
     is_pipeline_wrapped,
 )
