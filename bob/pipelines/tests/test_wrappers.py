@@ -144,6 +144,21 @@ class DummyWithTagsNotData(DummyTransformer):
         }
 
 
+class DummyWithOutputs(DummyTransformer):
+    """Transformer that specifies multiple outputs."""
+
+    def transform(self, X):
+        out_a = super().transform(X)
+        out_b = X
+        return [(a, b) for a, b in zip(out_a, out_b)]
+
+    def fit(self, X, y=None):
+        return self
+
+    def _more_tags(self):
+        return {"bob_output": ("data", "annotations")}
+
+
 class DummyWithDask(DummyTransformer):
     """Transformer that specifies the supports_dask_array tag."""
 
@@ -180,7 +195,7 @@ def test_sklearn_compatible_estimator():
     check_estimator(DummyWithFit())
 
 
-def test_function_sample_transfomer():
+def test_function_sample_transformer():
 
     X = np.zeros(shape=(10, 2), dtype=int)
     samples = [mario.Sample(data) for data in X]
@@ -234,11 +249,25 @@ def test_tagged_input_sample_transformer():
     # Mixing up with an object
     annotator = mario.wrap([DummyWithTags, "sample"])
     features = annotator.transform(samples)
-    transformer = mario.wrap([DummyWithTagsNotData, "sample"])
-    features = transformer.transform(samples)
-    _assert_all_close_numpy_array(X + 2, [s.annotations_2 for s in features])
+    _assert_all_close_numpy_array(X + 1, [s.annotations for s in features])
     _assert_all_close_numpy_array(X, [s.data for s in features])
+    transformer = mario.wrap([DummyWithTagsNotData, "sample"])
+    features_2 = transformer.transform(features)
+    _assert_all_close_numpy_array(X + 2, [s.annotations_2 for s in features_2])
+    _assert_all_close_numpy_array(X + 1, [s.annotations for s in features_2])
+    _assert_all_close_numpy_array(X, [s.data for s in features_2])
     transformer.fit(samples)
+
+
+def test_tagged_output_sample_transformer():
+
+    X = np.ones(shape=(10, 2), dtype=int)
+    samples = [mario.Sample(data) for data in X]
+
+    transformer = mario.wrap([DummyWithOutputs, "sample"])
+    features = transformer.transform(samples)
+    _assert_all_close_numpy_array(X + 1, [s.data for s in features])
+    _assert_all_close_numpy_array(X, [s.annotations for s in features])
 
 
 def test_dask_tag_transformer():
@@ -469,7 +498,7 @@ def _assert_delayed_samples(samples):
         assert isinstance(s, mario.DelayedSample)
 
 
-def test_checkpoint_function_sample_transfomer():
+def test_checkpoint_function_sample_transformer():
 
     X = np.arange(20, dtype=int).reshape(10, 2)
     samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]

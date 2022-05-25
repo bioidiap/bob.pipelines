@@ -111,7 +111,21 @@ def get_bob_tags(estimator=None, force_tags=None):
 
     bob_output: str
         The Sample attribute in which the output of the transform is stored.
+        If bob_output is a Tuple, a corresponding tuple must be returned by the
+        estimator, and each element will be mapped to the corresponding attribute.
         Default value is ``data``.
+        Example::
+
+            # with bob_output = ("data", "other")
+            transform(samples):
+                return [(1,"a"), (2,"b"), (3,"c")]
+
+        Will result in::
+
+            Sample(data=1, other="a")
+            Sample(data=2, other="b")
+            Sample(data=3, other="c")
+
 
     bob_checkpoint_extension: str
         The extension of each checkpoint file.
@@ -251,11 +265,14 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
         passing samples to the fit method and want to pass ``subject`` attributes of
         samples as the ``y`` argument to the fit method, you can provide ``[("y",
         "subject")]`` as the value for this attribute.
-    output_attribute : str
+    output_attribute : str or tuple[str]
         The name of a Sample attribute where the output of the estimator will be
-        saved to [Default is ``data``]. For example, if ``output_attribute`` is
+        saved to. [Default is ``data``]. For example, if ``output_attribute`` is
         ``"annotations"``, then ``sample.annotations`` will contain the output of
         the estimator.
+        If ``output_attribute`` is a tuple of strings, then each element returned by
+        the estimator must be a tuple of the same length. The elements of the tuple
+        will be saved to the corresponding attributes of the samples.
     transform_extra_arguments : [tuple]
         Similar to ``fit_extra_arguments`` but for the transform and other similar
         methods.
@@ -306,16 +323,53 @@ class SampleWrapper(BaseWrapper, TransformerMixin):
                 samples,
                 sample_attribute=self.input_attribute,
             )
-            if self.output_attribute != "data":
-                # Edit the sample.<output_attribute> instead of data
-                for i, s in enumerate(samples):
-                    setattr(s, self.output_attribute, delayed(i))
-                new_samples = samples
-            else:
+            if self.output_attribute == "data":  # Normal case
                 new_samples = [
                     DelayedSample(partial(delayed, index=i), parent=s)
                     for i, s in enumerate(samples)
                 ]
+            elif isinstance(
+                self.output_attribute, str
+            ):  # Single attribute but not data
+                if not isinstance(samples[0], DelayedSample):
+                    new_samples = [
+                        DelayedSample(
+                            partial(lambda: s.data),
+                            delayed_attributes={
+                                self.output_attribute: partial(delayed, index=i)
+                            },
+                        )
+                        for i, s in enumerate(samples)
+                    ]
+                else:
+                    for i, s in enumerate(samples):
+                        setattr(s, self.output_attribute, None)
+                        samples[i]._delayed_attributes.update(
+                            {
+                                self.output_attribute: partial(
+                                    delayed, index=i
+                                ),
+                            }
+                        )
+                    new_samples = samples
+            elif "data" in self.output_attribute:  # TODO YD20220525
+                # Special case where the output is a tuple and contains "data"
+                data_idx = self.output_attribute.index("data")
+                new_samples = [
+                    DelayedSample(partial(delayed(i), index=i), parent=s)
+                    for i, s in enumerate(samples)
+                ]
+                for i, s in enumerate(new_samples):
+                    if i != data_idx:
+                        for attr_idx, attr_name in enumerate(
+                            self.output_attribute
+                        ):
+                            setattr(s, attr_name, delayed(i)[attr_idx])
+            else:  # TODO YD20220525
+                for i, s in enumerate(samples):
+                    for attr_idx, attr_name in enumerate(self.output_attribute):
+                        setattr(s, attr_name, delayed(i)[attr_idx])
+                new_samples = samples
             return new_samples
 
     def transform(self, samples):
