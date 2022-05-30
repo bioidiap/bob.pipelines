@@ -1,7 +1,7 @@
 """Base definition of sample."""
 
 from collections.abc import MutableSequence, Sequence
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 
@@ -181,6 +181,25 @@ class DelayedSample(Sample):
                 del delayed_attributes[name]
 
         super().__setattr__(name, value)
+
+    def set_delayed_attribute(self, name: str, value: Callable) -> None:
+        """Sets a delayed attribute.
+
+        Parameters
+        ----------
+
+        name
+            Name of the attribute to set
+
+        value
+            Callable that returns the attribute when getattribute is called
+        """
+        delayed_attributes = getattr(self, "_delayed_attributes", None)
+        if delayed_attributes is None:
+            super().__setattr__("_delayed_attributes", {name: value})
+        else:
+            delayed_attributes[name] = value
+        super().__setattr__(name, None)
 
     @property
     def data(self):
