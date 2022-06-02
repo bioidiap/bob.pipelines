@@ -43,6 +43,9 @@ Each row will contain exactly **one** sample (e.g. one image) and
 each column will represent one attribute of samples (e.g. path to data or other
 metadata).
 
+An Example
+----------
+
 Below is an example of creating the iris database. The ``.csv`` files are
 distributed with this package have the following format::
 
@@ -63,7 +66,6 @@ As you can see there is only protocol called ``default`` and two groups
 
     >>> import pkg_resources
     >>> import bob.pipelines as mario
-    >>> import os
     >>> dataset_protocols_path = pkg_resources.resource_filename(
     ...     'bob.pipelines', 'tests/data/iris_database')
     >>> database = mario.FileListDatabase(
@@ -77,6 +79,10 @@ As you can see there is only protocol called ``default`` and two groups
 
 As you can see, all attributes are strings. Furthermore, we may want to
 *transform* our samples further before using them.
+
+Transforming Samples
+--------------------
+
 :any:`bob.pipelines.FileListDatabase` accepts a transformer that will be applied
 to all samples:
 
@@ -112,9 +118,14 @@ to all samples:
     load the data from disk in this transformer and return delayed samples.
 
 Now our samples are ready to be used and we can run a simple experiment with
-them. Here, we want to train an Linear Discriminant Analysis (LDA) on the data.
-Before that, we want to normalize the range of our data and convert the
-``target`` labels to integers.
+them.
+
+Running An Experiment
+---------------------
+
+Here, we want to train an Linear Discriminant Analysis (LDA) on the data. Before
+that, we want to normalize the range of our data and convert the ``target``
+labels to integers.
 
 .. doctest:: csv_iris_database
 
