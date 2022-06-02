@@ -46,5 +46,6 @@ User Guide
    sample
    checkpoint
    dask
+   datasets
    xarray
    py_api

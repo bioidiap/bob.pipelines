@@ -1,3 +1,4 @@
+# isort: skip_file
 from . import distributed  # noqa: F401
 from . import transformers  # noqa: F401
 from . import utils  # noqa: F401
@@ -33,6 +34,7 @@ from .wrappers import (  # noqa: F401
     is_instance_nested,
     is_pipeline_wrapped,
 )
+from .datasets import FileListToSamples, CSVToSamples, FileListDatabase
 
 
 def __appropriate__(*args):
@@ -66,6 +68,9 @@ __appropriate__(
     CheckpointWrapper,
     DaskWrapper,
     ToDaskBag,
+    FileListToSamples,
+    CSVToSamples,
+    FileListDatabase,
 )
 
 # gets sphinx autodoc done right - don't remove it

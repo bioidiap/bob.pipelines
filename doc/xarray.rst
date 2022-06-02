@@ -3,6 +3,11 @@
 Efficient pipelines with dask and xarray
 ========================================
 
+.. note::
+
+   This section of the API is not used by ``bob.bio`` and ``bob.pad`` packages.
+   If you are only interested in learning those packages, you can skip this page.
+
 In this guide, we will see an alternative method to what was discussed before
 about sample-based processing, checkpointing, dask integration. We will be doing
 the same concepts as discussed before but try to do it in a more efficient way.
@@ -12,7 +17,7 @@ In this guide we are interested in several things:
 #. Sample-based processing and carrying the sample metadata over the
    pipeline.
 #. Checkpointing: we may want to save intermediate steps.
-#. Lazy operations and graph optimizations. We’ll define all operations using
+#. Lazy operations and graph optimizations. We'll define all operations using
    dask and we will benefit from lazy operations and graph optimizations.
 #. Failed sample handling: we may want to drop some samples in the pipeline if
    we fail to process them.
@@ -23,7 +28,7 @@ This guide builds upon `scikit-learn`_, `dask`_, and `xarray`_. If you are
 not familiar with those libraries, you may want to get familiar with those
 libraries first.
 
-First, let’s run our example classification problem without using the tools here
+First, let's run our example classification problem without using the tools here
 to get familiar with our examples. We are going to do an Scaler+PCA+LDA example
 on the iris dataset:
 
@@ -54,13 +59,13 @@ on the iris dataset:
 As you can see here, the example ran fine. The ``iris.data`` was transformed
 twice using ``scaler.transform`` and ``pca.transform`` but that's ok and we
 could have avoided that at the cost of complexity and more memory usage.
-Let’s go through through this example again and increase its complexity
+Let's go through through this example again and increase its complexity
 as we progress.
 
 Sample-based processing
 -----------------------
 
-First, let’s look at how we can turn this into a sample-based pipeline. We need
+First, let's look at how we can turn this into a sample-based pipeline. We need
 to convert our dataset to a list of samples first:
 
 .. doctest::
@@ -80,7 +85,7 @@ to convert our dataset to a list of samples first:
 
 You may be already familiar with our sample concept. If not, please read more on
 :ref:`bob.pipelines.sample`. Now, to optimize our process, we will represent our
-samples in an :any:`xarray.Dataset` using :any:`dask.array.Array`’s:
+samples in an :any:`xarray.Dataset` using :any:`dask.array.Array`'s:
 
 .. doctest::
 
@@ -146,10 +151,10 @@ dictionary instead.
    DatasetPipeline(...)
 
 
-The dictionaries are used to construct :any:`Block`’s. You can checkout
+The dictionaries are used to construct :any:`Block`'s. You can checkout
 that class to see what options are possible.
 
-Now let’s fit our pipeline with our xarray dataset. Ideally, we want
+Now let's fit our pipeline with our xarray dataset. Ideally, we want
 this fit step be postponed until the we call :any:`dask.compute` on our
 results. But this does not happen here which we will explain later.
 
@@ -157,7 +162,7 @@ results. But this does not happen here which we will explain later.
 
    >>> _ = pipeline.fit(dataset)
 
-Now let’s call ``decision_function`` on our pipeline. What will be
+Now let's call ``decision_function`` on our pipeline. What will be
 returned is a new dataset with the ``data`` variable changed to the
 output of ``lda.decision_function``.
 
