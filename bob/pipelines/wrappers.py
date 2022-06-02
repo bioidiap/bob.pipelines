@@ -961,6 +961,9 @@ def wrap(bases, estimator=None, **kwargs):
 
     If ``estimator`` is a pipeline, the estimators in that pipeline are wrapped.
 
+    The default behavior of wrappers can be customized through the tags; see
+    :any:`bob.pipelines.get_bob_tags` for more information.
+
     Parameters
     ----------
     bases : list
