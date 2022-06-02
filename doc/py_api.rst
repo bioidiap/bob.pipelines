@@ -30,9 +30,9 @@ Wrapper's API
 Database's API
 --------------
 .. autosummary::
-    bob.pipelines.datasets.FileListDatabase
-    bob.pipelines.datasets.FileListToSamples
-    bob.pipelines.datasets.CSVToSamples
+    bob.pipelines.FileListDatabase
+    bob.pipelines.FileListToSamples
+    bob.pipelines.CSVToSamples
 
 Transformers' API
 -----------------
@@ -77,7 +77,3 @@ Transformers
 xarray Wrapper
 ==============
 .. automodule:: bob.pipelines.xarray
-
-Filelist Datasets
-=================
-.. automodule:: bob.pipelines.datasets
