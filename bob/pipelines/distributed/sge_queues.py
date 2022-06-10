@@ -44,6 +44,18 @@ QUEUE_DEFAULT = {
     },
 }
 
+QUEUE_MTH = {
+    "default": {
+        "queue": "q_1day_mth",
+        "memory": "8GB",
+        "io_big": False,
+        "job_extra": ["-pe pe_mth 2"],
+        "resource_spec": "",
+        "max_jobs": 70,
+        "resources": {"default": 1},
+    },
+}
+
 QUEUE_IOBIG = {
     "default": {
         "queue": "q_1day",
