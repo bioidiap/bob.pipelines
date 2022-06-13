@@ -166,9 +166,8 @@ class AnnotationsLoader(TransformerMixin, BaseEstimator):
             )
 
             annotated_samples.append(
-                DelayedSample(
-                    x._load,
-                    parent=x,
+                DelayedSample.from_sample(
+                    x,
                     delayed_attributes=dict(
                         annotations=lambda: read_annotation_file(
                             annotation_file, self.annotation_type
