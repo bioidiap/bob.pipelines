@@ -132,27 +132,27 @@ class DelayedSample(Sample):
         self.__running_init__ = True
         # Merge parent's and param's delayed_attributes
         parent_attr = getattr(parent, "_delayed_attributes", None)
-        self._delayed_attributes = (
-            None if parent_attr is None else parent_attr.copy()
-        )
-        if (
-            self._delayed_attributes is not None
-            and delayed_attributes is not None
-        ):
-            self._delayed_attributes.update(delayed_attributes)
-        elif self._delayed_attributes is None:
-            self._delayed_attributes = delayed_attributes
+        self._delayed_attributes = None
+        if parent_attr is not None:
+            self._delayed_attributes = parent_attr.copy()
+
+        if delayed_attributes is not None:
+            if self._delayed_attributes is None:
+                self._delayed_attributes = delayed_attributes.copy()
+            else:
+                self._delayed_attributes.update(delayed_attributes)
+
         # Inherit attributes from parent, without calling delayed_attributes
         for key in getattr(parent, "__dict__", []):
-            if (
-                not key.startswith("_")
-                and key not in SAMPLE_DATA_ATTRS
-                and (
-                    self._delayed_attributes is None
-                    or key not in self._delayed_attributes
-                )
-            ):
-                setattr(self, key, getattr(parent, key))
+            if key.startswith("_"):
+                continue
+            if key in SAMPLE_DATA_ATTRS:
+                continue
+            if self._delayed_attributes is not None:
+                if key in self._delayed_attributes:
+                    continue
+            setattr(self, key, getattr(parent, key))
+
         # Create the delayed attributes, but leave their values as None for now.
         if self._delayed_attributes is not None:
             kwargs.update({k: None for k in self._delayed_attributes})
