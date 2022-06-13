@@ -53,22 +53,18 @@ class CSVToSamples(FileListToSamples):
         self,
         list_file,
         transformer=None,
-        fieldnames=None,
         dict_reader_kwargs=None,
         **kwargs,
     ):
         list_file = _maybe_open_file(list_file, newline="")
         super().__init__(list_file=list_file, transformer=transformer, **kwargs)
-        self.fieldnames = fieldnames
         self.dict_reader_kwargs = dict_reader_kwargs
 
     @property
     def rows(self):
         self.list_file.seek(0)
         kw = self.dict_reader_kwargs or {}
-        reader = csv.DictReader(
-            self.list_file, fieldnames=self.fieldnames, **kw
-        )
+        reader = csv.DictReader(self.list_file, **kw)
         return reader
 
 

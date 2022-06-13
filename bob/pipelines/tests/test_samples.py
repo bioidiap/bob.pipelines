@@ -82,6 +82,21 @@ def test_delayed_samples():
     def load_annot_variant():
         return "annotation_variant"
 
+    delayed_sample = DelayedSample(
+        load_data, delayed_attributes=dict(annot=load_annot)
+    )
+    assert delayed_sample.data == 0
+    assert delayed_sample.annot == "annotation"
+
+    child_sample = Sample(1, parent=delayed_sample)
+    assert child_sample.data == 1
+    assert child_sample.annot == "annotation"
+    assert child_sample.__dict__ == {
+        "data": 1,
+        "annot": "annotation",
+    }
+
+    # Overwriting and adding delayed_attributes to the child
     delayed_attr_read = False
 
     def load_check():
@@ -89,21 +104,6 @@ def test_delayed_samples():
         delayed_attr_read = True
         return "delayed_attr_data"
 
-    delayed_sample = DelayedSample(
-        load_data, delayed_attributes=dict(annot=load_annot)
-    )
-    assert delayed_sample.data == 0, delayed_sample.data
-    assert delayed_sample.annot == "annotation", delayed_sample.annot
-
-    child_sample = Sample(1, parent=delayed_sample)
-    assert child_sample.data == 1, child_sample.data
-    assert child_sample.annot == "annotation", child_sample.annot
-    assert child_sample.__dict__ == {
-        "data": 1,
-        "annot": "annotation",
-    }, child_sample.__dict__
-
-    # Overwriting and adding delayed_attributes to the child
     new_delayed_attr = {
         "annot": load_annot_variant,  # Override parent's annot
         "new_annot": load_annot,  # Add the new_annot attribute
@@ -114,30 +114,29 @@ def test_delayed_samples():
     )
 
     assert delayed_sample._delayed_attributes == dict(annot=load_annot)
-    assert child_sample.data == 0, child_sample.data
-    assert child_sample.annot == "annotation_variant", child_sample.annot
-    assert child_sample.new_annot == "annotation", child_sample.new_annot
+    assert child_sample.data == 0
+    assert child_sample.annot == "annotation_variant"
+    assert child_sample.new_annot == "annotation"
     assert not delayed_attr_read, "delayed attribute has been read early"
-    assert (
-        child_sample.read_check == "delayed_attr_data"
-    ), child_sample.read_check
+    assert child_sample.read_check == "delayed_attr_data"
     assert delayed_attr_read, "delayed attribute should have been read by now"
 
     delayed_sample.annot = "changed"
-    assert delayed_sample.annot == "changed", delayed_sample.annot
+    assert delayed_sample.annot == "changed"
 
     # test DelayedSample.from_smaple
 
     # check if a non-delayed sample is correctly converted to a delayed sample
     non_delayed_sample = Sample(1)
     delayed_sample = DelayedSample.from_sample(non_delayed_sample, annot="test")
-    assert delayed_sample.data == 1, delayed_sample.data
-    assert delayed_sample.annot == "test", delayed_sample.annot
+    assert delayed_sample.data == 1
+    assert delayed_sample.annot == "test"
 
-    # check if converting a delayed sample will not load the data
+    # check if converting a delayed sample will not load the data and delayed attributes
     raise_error = True
 
     def never_load():
+        nonlocal raise_error
         if raise_error:
             raise ValueError("never_load should not be called")
         return 0
@@ -149,5 +148,5 @@ def test_delayed_samples():
     child_sample = DelayedSample.from_sample(delayed_sample)
 
     raise_error = False
-    assert child_sample.data == 0, child_sample.data
-    assert child_sample.annot == 0, child_sample.annot
+    assert child_sample.data == 0
+    assert child_sample.annot == 0
