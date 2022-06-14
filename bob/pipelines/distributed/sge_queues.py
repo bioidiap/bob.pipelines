@@ -54,6 +54,36 @@ QUEUE_MTH = {
         "max_jobs": 70,
         "resources": {"default": 1},
     },
+    "q_1week": {
+        "queue": "q_1week",
+        "memory": "4GB",
+        "io_big": True,
+        "resource_spec": "",
+        "max_jobs": 24,
+        "resources": {"q_1week": 1},
+    },
+    "q_long_gpu": {
+        "queue": "q_long_gpu",
+        "memory": "30GB",
+        "io_big": False,
+        "resource_spec": "",
+        "resources": {"q_long_gpu": 1},
+    },
+    "q_gpu": {
+        "queue": "q_gpu",
+        "memory": "30GB",
+        "io_big": False,
+        "resource_spec": "",
+        "resources": {"q_gpu": 1},
+    },
+    "q_short_gpu": {
+        "queue": "q_short_gpu",
+        "memory": "30GB",
+        "io_big": False,
+        "resource_spec": "",
+        "max_jobs": 45,
+        "resources": {"q_short_gpu": 1},
+    },
 }
 
 QUEUE_IOBIG = {
