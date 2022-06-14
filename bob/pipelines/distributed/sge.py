@@ -291,10 +291,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
     def _get_worker_spec_options(self, job_spec):
         """Craft a dask worker_spec to be used in the qsub command."""
 
-        def _get_key_from_spec(spec, key):
-            return spec[key] if key in spec else ""
-
-        new_resource_spec = _get_key_from_spec(job_spec, "resource_spec")
+        new_resource_spec = job_spec.get("resource_spec", "")
 
         # IO_BIG
         new_resource_spec += (
@@ -303,10 +300,10 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             else ""
         )
 
-        memory = _get_key_from_spec(job_spec, "memory")[:-1]
+        memory = job_spec.get("memory", "")[:-1]
         new_resource_spec += f"mem_free={memory},"
 
-        queue = _get_key_from_spec(job_spec, "queue")
+        queue = job_spec.get("queue", "")
         if queue != "all.q":
             new_resource_spec += f"{queue}=TRUE"
 
@@ -317,7 +314,8 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         return {
             "queue": queue,
             "project": self.project,
-            "memory": _get_key_from_spec(job_spec, "memory"),
+            "memory": job_spec.get("memory", ""),
+            "job_extra": job_spec.get("job_extra", None),
             "cores": 1,
             "processes": 1,
             "log_directory": self.log_directory,
@@ -326,7 +324,7 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             "interface": None,
             "protocol": self.protocol,
             "security": None,
-            "resources": _get_key_from_spec(job_spec, "resources"),
+            "resources": job_spec.get("resources", ""),
             "env_extra": self.env_extra,
         }
 
