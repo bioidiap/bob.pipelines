@@ -6,7 +6,7 @@
  Bob Pipelines
 ===============
 
-Easily boost your :doc:`Scikit Learn Pipelines <modules/generated/sklearn.pipeline.Pipeline>` with powerful features, such as:
+Easily boost your :any:`sklearn.pipeline.Pipeline` with powerful features, such as:
 
 * Scaling experiments on dask_.
 * Wrapping data-points with metadata and passing them to the `estimator.fit` and `estimator.transform` methods.
