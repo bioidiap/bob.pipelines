@@ -150,3 +150,28 @@ def test_delayed_samples():
     raise_error = False
     assert child_sample.data == 0
     assert child_sample.annot == 0
+
+    # If attribute is in kwargs and delayed_sample, it should raise exception
+    has_throw = False
+    try:
+        DelayedSample(
+            load_data,
+            delayed_attributes={"annotations": load_annot},
+            annotations="some_other_annotations",
+        )
+    except ValueError:
+        has_throw = True
+    assert has_throw, "Duplicated attributes not detected"
+
+    # kwargs should take precedence overr parent's delayed_attributes
+    parent = DelayedSample(
+        load_data,
+        delayed_attributes={"annotation": load_annot},
+        non_delay_attribute=4,
+    )
+    # annotation=100 takes over parent.annotation
+    child = DelayedSample(lambda: 12, parent=parent, annotation=100)
+
+    assert child.data == 12
+    assert child._delayed_attributes is None
+    assert child.annotation == 100

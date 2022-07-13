@@ -137,6 +137,14 @@ class DelayedSample(Sample):
             self._delayed_attributes = parent_attr.copy()
 
         if delayed_attributes is not None:
+            # Sanity check, `delayed_attributes` can not be present in `kwargs`
+            # as well
+            for name, attr in delayed_attributes.items():
+                if name in kwargs:
+                    raise ValueError(
+                        "`{}` can not be in both `delayed_attributes` and "
+                        "`kwargs` inputs".format(name)
+                    )
             if self._delayed_attributes is None:
                 self._delayed_attributes = delayed_attributes.copy()
             else:
@@ -155,7 +163,17 @@ class DelayedSample(Sample):
 
         # Create the delayed attributes, but leave their values as None for now.
         if self._delayed_attributes is not None:
-            kwargs.update({k: None for k in self._delayed_attributes})
+            update = {}
+            for k in list(self._delayed_attributes):
+                if k not in kwargs:
+                    update[k] = None
+                else:
+                    # k is not a delay_attribute anymore
+                    del self._delayed_attributes[k]
+            if len(self._delayed_attributes) == 0:
+                self._delayed_attributes = None
+            kwargs.update(update)
+            # kwargs.update({k: None for k in self._delayed_attributes})
         # Set attribute from kwargs
         _copy_attributes(self, None, kwargs)
         self._load = load
