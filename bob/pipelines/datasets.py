@@ -110,7 +110,6 @@ class FileListDatabase:
         ValueError
             If the dataset_protocols_path does not exist.
         """
-        super().__init__(**kwargs)
         if not os.path.exists(dataset_protocols_path):
             raise ValueError(
                 f"The path `{dataset_protocols_path}` was not found"
@@ -121,6 +120,7 @@ class FileListDatabase:
         self.readers = dict()
         self._protocol = None
         self.protocol = protocol
+        super().__init__(**kwargs)
 
     @property
     def protocol(self):
