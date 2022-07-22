@@ -5,6 +5,7 @@ import pickle
 import tempfile
 
 import numpy as np
+import pytest
 
 from bob.pipelines import (
     DelayedSample,
@@ -124,15 +125,15 @@ def test_delayed_samples():
     delayed_sample.annot = "changed"
     assert delayed_sample.annot == "changed"
 
-    # test DelayedSample.from_smaple
+    # Test DelayedSample.from_sample
 
-    # check if a non-delayed sample is correctly converted to a delayed sample
+    # Check if a non-delayed sample is correctly converted to a delayed sample
     non_delayed_sample = Sample(1)
     delayed_sample = DelayedSample.from_sample(non_delayed_sample, annot="test")
     assert delayed_sample.data == 1
     assert delayed_sample.annot == "test"
 
-    # check if converting a delayed sample will not load the data and delayed attributes
+    # Check if converting a delayed sample will not load the data and delayed attributes
     raise_error = True
 
     def never_load():
@@ -144,32 +145,28 @@ def test_delayed_samples():
     delayed_sample = DelayedSample(
         never_load, delayed_attributes=dict(annot=never_load)
     )
-    # should not raise an error when creating the delayed sample
+    # Should not raise an error when creating the delayed sample
     child_sample = DelayedSample.from_sample(delayed_sample)
 
     raise_error = False
     assert child_sample.data == 0
     assert child_sample.annot == 0
 
-    # If attribute is in kwargs and delayed_sample, it should raise exception
-    has_throw = False
-    try:
+    # If attribute is in kwargs and delayed_sample, it should raise an exception
+    with pytest.raises(ValueError):
         DelayedSample(
             load_data,
             delayed_attributes={"annotations": load_annot},
             annotations="some_other_annotations",
         )
-    except ValueError:
-        has_throw = True
-    assert has_throw, "Duplicated attributes not detected"
 
-    # kwargs should take precedence overr parent's delayed_attributes
+    # kwargs should take precedence over the parent's delayed_attributes
     parent = DelayedSample(
         load_data,
         delayed_attributes={"annotation": load_annot},
         non_delay_attribute=4,
     )
-    # annotation=100 takes over parent.annotation
+    # annotation=100 overwrites parent.annotation
     child = DelayedSample(lambda: 12, parent=parent, annotation=100)
 
     assert child.data == 12
