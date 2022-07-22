@@ -229,7 +229,7 @@ def test_dataset_pipeline_with_dask_ml():
 
     scaler = dask_ml.preprocessing.StandardScaler()
     pca = dask_ml.decomposition.PCA(n_components=3, random_state=0)
-    clf = SGDClassifier(random_state=0, loss="log", penalty="l2", tol=1e-3)
+    clf = SGDClassifier(random_state=0, loss="log_loss", penalty="l2", tol=1e-3)
     clf = dask_ml.wrappers.Incremental(clf, scoring="accuracy")
 
     iris_ds = _build_iris_dataset(shuffle=True)
