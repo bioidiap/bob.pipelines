@@ -41,7 +41,7 @@ requirements:
   run:
     - python
     - setuptools
-    - {{ pin_compatible('numpy') }}
+    - {{ pin_compatible('numpy', max_pin='x.x') }}
     - {{ pin_compatible('dask', max_pin='x.x') }}
     - {{ pin_compatible('dask-jobqueue', max_pin='x.x') }}
     - {{ pin_compatible('distributed', max_pin='x.x') }}
