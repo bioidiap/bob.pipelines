@@ -1,5 +1,6 @@
-from .sge import SchedulerResourceRestriction
 from pkgutil import extend_path
+
+from .sge import SchedulerResourceRestriction
 
 # see https://docs.python.org/3/library/pkgutil.html
 __path__ = extend_path(__path__, __name__)
