@@ -1,7 +1,9 @@
-# see https://docs.python.org/3/library/pkgutil.html
+from .sge import SchedulerResourceRestriction
 from pkgutil import extend_path
 
+# see https://docs.python.org/3/library/pkgutil.html
 __path__ = extend_path(__path__, __name__)
+
 
 # DASK-click VALID_DASK_CLIENT_STRINGS
 # TO BE USED IN:
@@ -93,3 +95,26 @@ def get_local_parallel_client(parallel=None, processes=True):
         threads_per_worker=1 if processes else parallel,
     )
     return Client(cluster)
+
+
+def __appropriate__(*args):
+    """Says object was actually declared here, and not in the import module.
+    Fixing sphinx warnings of not being able to find classes, when path is
+    shortened.
+
+    Parameters
+    ----------
+    *args
+        The objects that you want sphinx to believe that are defined here.
+
+    Resolves `Sphinx referencing issues <https//github.com/sphinx-
+    doc/sphinx/issues/3048>`
+    """
+
+    for obj in args:
+        obj.__module__ = __name__
+
+
+__appropriate__(
+    SchedulerResourceRestriction,
+)
