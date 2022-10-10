@@ -38,7 +38,9 @@ def _build_toy_samples(delayed=False):
             for i in range(len(X))
         ]
     else:
-        samples = [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples = [
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
     return X, samples
 
 

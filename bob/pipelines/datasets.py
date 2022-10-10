@@ -14,7 +14,7 @@ import os
 import pathlib
 
 from collections.abc import Iterable
-from typing import Dict, List
+from typing import Dict
 
 from bob.extension.download import list_dir, search_file
 
@@ -59,7 +59,7 @@ class FileListToSamples(Iterable):
                 yield sample
 
     @property
-    def rows(self) -> Dict[str,any]:
+    def rows(self) -> Dict[str, any]:
         with open(self.list_file, "rt") as f:
             for line in f:
                 yield dict(line.split(self.separator))

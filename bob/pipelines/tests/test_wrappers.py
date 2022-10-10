@@ -472,7 +472,9 @@ def _assert_delayed_samples(samples):
 def test_checkpoint_function_sample_transfomer():
 
     X = np.arange(20, dtype=int).reshape(10, 2)
-    samples = [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     offset = 3
     oracle = X + offset
 
@@ -531,7 +533,9 @@ def test_checkpoint_function_sample_transfomer():
 
 def test_checkpoint_fittable_sample_transformer():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     oracle = X + 1
 
     with tempfile.TemporaryDirectory() as d:
@@ -586,7 +590,9 @@ def _build_transformer(path, i, force=False):
 def test_checkpoint_fittable_pipeline():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     samples_transform = [
         bob.pipelines.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
     ]
@@ -643,7 +649,8 @@ def test_checkpoint_transform_pipeline_force():
 
             X = np.ones(shape=(10, 2), dtype=int)
             samples_transform = [
-                bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+                bob.pipelines.Sample(data, key=str(i))
+                for i, data in enumerate(X)
             ]
             offset = 2
             oracle = X + offset
@@ -671,9 +678,12 @@ def test_checkpoint_transform_pipeline_force():
 def test_checkpoint_fit_transform_pipeline():
     def _run(dask_enabled):
         X = np.ones(shape=(10, 2), dtype=int)
-        samples = [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples = [
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
         samples_transform = [
-            bob.pipelines.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+            bob.pipelines.Sample(data, key=str(i + 10))
+            for i, data in enumerate(X)
         ]
         oracle = X + 2
 
@@ -719,9 +729,12 @@ def _get_local_client():
 def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
     def _run(dask_enabled):
         X = np.ones(shape=(10, 2), dtype=int)
-        samples = [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples = [
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
         samples_transform = [
-            bob.pipelines.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+            bob.pipelines.Sample(data, key=str(i + 10))
+            for i, data in enumerate(X)
         ]
         oracle = X + 2
 
@@ -772,7 +785,10 @@ def test_checkpoint_transform_pipeline_with_sampleset():
 
         X = np.ones(shape=(10, 2), dtype=int)
         samples_transform = bob.pipelines.SampleSet(
-            [bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)],
+            [
+                bob.pipelines.Sample(data, key=str(i))
+                for i, data in enumerate(X)
+            ],
             key="1",
         )
         offset = 2
@@ -833,7 +849,9 @@ def test_estimator_requires_fit():
 
             # test on a pipeline
             pipeline = Pipeline([(f"{i}", est) for i in range(2)])
-            assert bob.pipelines.estimator_requires_fit(pipeline) is requires_fit
+            assert (
+                bob.pipelines.estimator_requires_fit(pipeline) is requires_fit
+            )
 
     pipeline = Pipeline(
         [
