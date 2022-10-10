@@ -14,6 +14,7 @@ import os
 import pathlib
 
 from collections.abc import Iterable
+from typing import Dict, List
 
 from bob.extension.download import list_dir, search_file
 
@@ -28,22 +29,40 @@ def _maybe_open_file(path, **kwargs):
 
 
 class FileListToSamples(Iterable):
-    """Converts a list of files to a list of samples."""
+    """Converts a list of paths and metadata to a list of samples.
 
-    def __init__(self, list_file, transformer=None, **kwargs):
+    This class reads a file containing paths and optionally metadata and returns a list
+    of `bob.pipelines.Sample`s when called.
+
+    A separator character can be set (defaults is space) to split the rows.
+    No escaping is done (no quotes).
+
+    A Transformer can be given to apply a transform on each sample. (Keep in mind this
+    will not be distributed on Dask; Prefer applying Transformer in a
+    `bob.pipelines.Pipeline`.)
+    """
+
+    def __init__(self, list_file, separator=" ", transformer=None, **kwargs):
         super().__init__(**kwargs)
         self.list_file = list_file
         self.transformer = transformer
+        self.separator = separator
 
     def __iter__(self):
         for row_dict in self.rows:
             sample = Sample(None, **row_dict)
             if self.transformer is not None:
-                # the transofmer might convert one sample to several samples
+                # The transformer might convert one sample to several samples
                 for s in self.transformer.transform([sample]):
                     yield s
             else:
                 yield sample
+
+    @property
+    def rows(self) -> Dict[str,any]:
+        with open(self.list_file, "rt") as f:
+            for line in f:
+                yield dict(line.split(self.separator))
 
 
 class CSVToSamples(FileListToSamples):
