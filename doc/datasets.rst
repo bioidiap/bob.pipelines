@@ -54,7 +54,7 @@ distributed with this package have the following format::
             train.csv
             test.csv
 
-As you can see there is only protocol called ``default`` and two groups
+As you can see there is only one protocol called ``default`` and two groups
 ``train`` and ``test``. Moreover, ``.csv`` files have the following format::
 
     sepal_length,sepal_width,petal_length,petal_width,target
@@ -65,10 +65,10 @@ As you can see there is only protocol called ``default`` and two groups
 .. doctest:: csv_iris_database
 
     >>> import pkg_resources
-    >>> import bob.pipelines as mario
+    >>> import bob.pipelines
     >>> dataset_protocols_path = pkg_resources.resource_filename(
     ...     'bob.pipelines', 'tests/data/iris_database')
-    >>> database = mario.FileListDatabase(
+    >>> database = bob.pipelines.FileListDatabase(
     ...     dataset_protocols_path,
     ...     protocol="default",
     ... )
@@ -99,9 +99,9 @@ to all samples:
     ...     )
 
     >>> def prepare_iris_samples(samples):
-    ...     return [mario.Sample(prepare_data(sample), parent=sample) for sample in samples]
+    ...     return [bob.pipelines.Sample(prepare_data(sample), parent=sample) for sample in samples]
 
-    >>> database = mario.FileListDatabase(
+    >>> database = bob.pipelines.FileListDatabase(
     ...     dataset_protocols_path,
     ...     protocol="default",
     ...     transformer=FunctionTransformer(prepare_iris_samples),
@@ -123,7 +123,7 @@ them.
 Running An Experiment
 ---------------------
 
-Here, we want to train an Linear Discriminant Analysis (LDA) on the data. Before
+Here, we want to train a Linear Discriminant Analysis (LDA) on the data. Before
 that, we want to normalize the range of our data and convert the ``target``
 labels to integers.
 
@@ -136,9 +136,9 @@ labels to integers.
     >>> encoder = LabelEncoder()
     >>> lda = LinearDiscriminantAnalysis()
 
-    >>> scaler = mario.wrap(["sample"], scaler)
-    >>> encoder = mario.wrap(["sample"], encoder, input_attribute="target", output_attribute="y")
-    >>> lda = mario.wrap(["sample"], lda, fit_extra_arguments=[("y", "y")])
+    >>> scaler = bob.pipelines.wrap(["sample"], scaler)
+    >>> encoder = bob.pipelines.wrap(["sample"], encoder, input_attribute="target", output_attribute="y")
+    >>> lda = bob.pipelines.wrap(["sample"], lda, fit_extra_arguments=[("y", "y")])
 
     >>> pipeline = Pipeline([('scaler', scaler), ('encoder', encoder), ('lda', lda)])
     >>> pipeline.fit(database.samples(groups="train"))

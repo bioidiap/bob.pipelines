@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer
 
-import bob.pipelines as mario
+import bob.pipelines
 
 from bob.pipelines import (
     CheckpointWrapper,
@@ -87,14 +87,14 @@ def test_is_instance_nested():
             self.o = o
 
     o = C(B(A()))
-    assert mario.is_instance_nested(o, "o", C)
-    assert mario.is_instance_nested(o, "o", B)
-    assert mario.is_instance_nested(o, "o", A)
+    assert bob.pipelines.is_instance_nested(o, "o", C)
+    assert bob.pipelines.is_instance_nested(o, "o", B)
+    assert bob.pipelines.is_instance_nested(o, "o", A)
 
     o = C(B(object))
-    assert mario.is_instance_nested(o, "o", C)
-    assert mario.is_instance_nested(o, "o", B)
-    assert not mario.is_instance_nested(o, "o", A)
+    assert bob.pipelines.is_instance_nested(o, "o", C)
+    assert bob.pipelines.is_instance_nested(o, "o", B)
+    assert not bob.pipelines.is_instance_nested(o, "o", A)
 
 
 def test_break_sample_set():

@@ -1,13 +1,13 @@
-import bob.pipelines as mario
+import bob.pipelines
 
 
 def test_str_to_types():
     samples = [
-        mario.Sample(None, id="1", flag="True"),
-        mario.Sample(None, id="2", flag="False"),
+        bob.pipelines.Sample(None, id="1", flag="True"),
+        bob.pipelines.Sample(None, id="2", flag="False"),
     ]
-    transformer = mario.transformers.Str_To_Types(
-        fieldtypes=dict(id=int, flag=mario.transformers.str_to_bool)
+    transformer = bob.pipelines.transformers.Str_To_Types(
+        fieldtypes=dict(id=int, flag=bob.pipelines.transformers.str_to_bool)
     )
     transformer.transform(samples)
     assert samples[0].id == 1
