@@ -14,7 +14,7 @@ import os
 import pathlib
 
 from collections.abc import Iterable
-from typing import Dict
+from typing import Any, Dict
 
 from bob.extension.download import list_dir, search_file
 
@@ -32,14 +32,14 @@ class FileListToSamples(Iterable):
     """Converts a list of paths and metadata to a list of samples.
 
     This class reads a file containing paths and optionally metadata and returns a list
-    of `bob.pipelines.Sample`s when called.
+    of :py:class:`bob.pipelines.Sample`\\ s when called.
 
     A separator character can be set (defaults is space) to split the rows.
     No escaping is done (no quotes).
 
     A Transformer can be given to apply a transform on each sample. (Keep in mind this
     will not be distributed on Dask; Prefer applying Transformer in a
-    `bob.pipelines.Pipeline`.)
+    ``bob.pipelines.Pipeline``.)
     """
 
     def __init__(self, list_file, separator=" ", transformer=None, **kwargs):
@@ -59,7 +59,7 @@ class FileListToSamples(Iterable):
                 yield sample
 
     @property
-    def rows(self) -> Dict[str, any]:
+    def rows(self) -> Dict[str, Any]:
         with open(self.list_file, "rt") as f:
             for line in f:
                 yield dict(line.split(self.separator))
