@@ -18,11 +18,10 @@ The example below shows how this can be used to wrap a :any:`numpy.array`.
 
 .. doctest::
 
-   >>> # by convention, we import bob.pipelines as mario, because mario works with pipes ;)
-   >>> import bob.pipelines as mario
+   >>> import bob.pipelines
    >>> import numpy as np
    >>> data = np.array([1, 3])
-   >>> sample = mario.Sample(data)
+   >>> sample = bob.pipelines.Sample(data)
    >>> sample
    Sample(data=array([1, 3]))
    >>> sample.data is data
@@ -36,7 +35,7 @@ Metadata can be added as keyword arguments in :any:`Sample`, like:
 
 .. doctest::
 
-   >>> sample = mario.Sample(data, gender="Male")
+   >>> sample = bob.pipelines.Sample(data, gender="Male")
    >>> sample
    Sample(data=array([1, 3]), gender='Male')
    >>> sample.gender
@@ -94,7 +93,7 @@ samples to the wrapped estimator:
 .. doctest::
 
    >>> # construct a list of samples from the data we had before
-   >>> samples = [mario.Sample(x, offset=o) for x, o in zip(X, offsets)]
+   >>> samples = [bob.pipelines.Sample(x, offset=o) for x, o in zip(X, offsets)]
    >>> samples[1]
    Sample(data=array([0., 0.]), offset=array([1]))
 
@@ -106,7 +105,7 @@ that maps sample metadata to arguments of the transformer:
 .. doctest::
 
    >>> transform_extra_arguments=[("sample_specific_offsets", "offset")]
-   >>> sample_transformer = mario.SampleWrapper(transformer, transform_extra_arguments)
+   >>> sample_transformer = bob.pipelines.SampleWrapper(transformer, transform_extra_arguments)
    >>> transformed_samples = sample_transformer.transform(samples)
    >>> # transformed values will be stored in sample.data
    >>> np.array([s.data for s in transformed_samples])
@@ -155,7 +154,7 @@ Below, follow an example on how to use :any:`DelayedSample`.
    ...     # load data (usually from disk) and return
    ...     print("Loading data from disk!")
    ...     return np.zeros((2,))
-   >>> delayed_sample = mario.DelayedSample(load, metadata=1)
+   >>> delayed_sample = bob.pipelines.DelayedSample(load, metadata=1)
    >>> delayed_sample
    DelayedSample(metadata=1)
 
@@ -176,7 +175,7 @@ transparently:
    >>> def load_ith_data(i):
    ...     return np.zeros((2,)) + i
    >>>
-   >>> delayed_samples = [mario.DelayedSample(partial(load_ith_data, i), offset=[i]) for i in range(3)]
+   >>> delayed_samples = [bob.pipelines.DelayedSample(partial(load_ith_data, i), offset=[i]) for i in range(3)]
    >>> np.array([s.data for s in sample_pipeline.transform(delayed_samples)])
    array([[0., 0.],
           [2., 2.],
@@ -199,8 +198,8 @@ Below, follow an snippet on how to use :any:`SampleSet`.
 .. doctest::
 
    >>> sample_sets = [
-   ...     mario.SampleSet(samples, class_name="A"),
-   ...     mario.SampleSet(delayed_samples, class_name="B"),
+   ...     bob.pipelines.SampleSet(samples, class_name="A"),
+   ...     bob.pipelines.SampleSet(delayed_samples, class_name="B"),
    ... ]
    >>> sample_sets[0]
    SampleSet(samples=[Sample(data=array([0., 0.]), offset=array([0])), Sample(data=array([0., 0.]), offset=array([1])), Sample(data=array([0., 0.]), offset=array([2]))], class_name='A')

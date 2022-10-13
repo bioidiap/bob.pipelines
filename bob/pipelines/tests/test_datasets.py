@@ -16,7 +16,7 @@ from bob.pipelines.datasets import FileListDatabase
 from bob.pipelines.transformers import Str_To_Types
 
 
-def iris_data_tranform(samples):
+def iris_data_transform(samples):
     for s in samples:
         data = np.array(
             [s.sepal_length, s.sepal_width, s.petal_length, s.petal_width]
@@ -26,11 +26,11 @@ def iris_data_tranform(samples):
 
 
 def test_iris_list_database():
-    dataset_protocol_path = pkg_resources.resource_filename(
+    dataset_protocols_path = pkg_resources.resource_filename(
         __name__, os.path.join("data", "iris_database")
     )
 
-    database = FileListDatabase(dataset_protocol_path, None)
+    database = FileListDatabase(dataset_protocols_path, None)
     assert database.protocol == "default"
     assert database.protocols() == ["default"]
     assert database.groups() == ["test", "train"]
@@ -56,7 +56,7 @@ def test_iris_list_database():
                 petal_width=float,
             )
         ),
-        FunctionTransformer(iris_data_tranform),
+        FunctionTransformer(iris_data_transform),
     )
     samples = database.samples(groups="train")
     assert len(samples) == 75

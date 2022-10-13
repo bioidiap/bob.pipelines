@@ -70,14 +70,14 @@ to convert our dataset to a list of samples first:
 
 .. doctest::
 
-   >>> import bob.pipelines as mario
+   >>> import bob.pipelines
    >>> from functools import partial
 
    >>> def load(i):
    ...     return iris.data[i]
 
    >>> samples = [
-   ...     mario.DelayedSample(partial(load, i), target=y)
+   ...     bob.pipelines.DelayedSample(partial(load, i), target=y)
    ...     for i, y in enumerate(iris.target)
    ... ]
    >>> samples[0]
@@ -89,7 +89,7 @@ samples in an :any:`xarray.Dataset` using :any:`dask.array.Array`'s:
 
 .. doctest::
 
-   >>> dataset = mario.xr.samples_to_dataset(samples, npartitions=3)
+   >>> dataset = bob.pipelines.xr.samples_to_dataset(samples, npartitions=3)
    >>> dataset  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
    Dimensions:  (sample: 150, dim_0: 4)
@@ -116,7 +116,7 @@ about ``data`` in our samples:
 
    >>> # construct the meta from one sample
    >>> meta = xr.DataArray(samples[0].data, dims=("feature"))
-   >>> dataset = mario.xr.samples_to_dataset(samples, npartitions=3, meta=meta)
+   >>> dataset = bob.pipelines.xr.samples_to_dataset(samples, npartitions=3, meta=meta)
    >>> dataset  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
    Dimensions:  (sample: 150, feature: 4)
@@ -140,7 +140,7 @@ dictionary instead.
 
 .. doctest::
 
-   >>> pipeline = mario.xr.DatasetPipeline(
+   >>> pipeline = bob.pipelines.xr.DatasetPipeline(
    ...     [
    ...         scaler,
    ...         pca,
@@ -205,7 +205,7 @@ For new and unknown dimension sizes use `np.nan`.
 
 .. doctest::
 
-   >>> pipeline = mario.xr.DatasetPipeline(
+   >>> pipeline = bob.pipelines.xr.DatasetPipeline(
    ...     [
    ...         # scaler output is the same size as input `feature`
    ...         dict(estimator=scaler, output_dims=[("feature", None)]),
@@ -264,7 +264,7 @@ features. Let's add the ``key`` metadata to our dataset first:
    ...     return iris.data[i]
 
    >>> samples = [
-   ...     mario.DelayedSample(partial(load, i), target=y, key=i)
+   ...     bob.pipelines.DelayedSample(partial(load, i), target=y, key=i)
    ...     for i, y in enumerate(iris.target)
    ... ]
    >>> samples[0]
@@ -272,7 +272,7 @@ features. Let's add the ``key`` metadata to our dataset first:
 
    >>> # construct the meta from one sample
    >>> meta = xr.DataArray(samples[0].data, dims=("feature"))
-   >>> dataset = mario.xr.samples_to_dataset(samples, npartitions=3, meta=meta)
+   >>> dataset = bob.pipelines.xr.samples_to_dataset(samples, npartitions=3, meta=meta)
    >>> dataset  # doctest: +NORMALIZE_WHITESPACE
    <xarray.Dataset>
    Dimensions:  (sample: 150, feature: 4)
@@ -301,7 +301,7 @@ features:
    >>> pca_features = os.path.join(tempdir, "pca_features")
    >>> lda_model = os.path.join(tempdir, "lda.pkl")
 
-   >>> pipeline = mario.xr.DatasetPipeline(
+   >>> pipeline = bob.pipelines.xr.DatasetPipeline(
    ...     [
    ...         dict(estimator=scaler, output_dims=[("feature", None)],
    ...              model_path=scaler_model),
@@ -378,7 +378,7 @@ Now in our pipeline, we want to drop ``nan`` samples after PCA transformations:
 .. doctest::
 
    >>> failing_pca = FailingPCA(n_components=3, random_state=0)
-   >>> pipeline = mario.xr.DatasetPipeline(
+   >>> pipeline = bob.pipelines.xr.DatasetPipeline(
    ...     [
    ...         dict(estimator=scaler, output_dims=[("feature", None)]),
    ...         dict(estimator=failing_pca, output_dims=[("pca_feature", 3)]),
@@ -412,7 +412,7 @@ provide dask-ml estimators, set ``input_dask_array`` as ``True``.
 
    >>> # It's always a good idea to shuffle the samples if you are doing
    >>> # partial_fit.
-   >>> dataset = mario.xr.samples_to_dataset(
+   >>> dataset = bob.pipelines.xr.samples_to_dataset(
    ...     samples, npartitions=3, meta=meta, shuffle=True)
 
    >>> from sklearn.linear_model import SGDClassifier
@@ -423,7 +423,7 @@ provide dask-ml estimators, set ``input_dask_array`` as ``True``.
    >>> clf = SGDClassifier(random_state=0, loss='log_loss', penalty='l2', tol=1e-3)
    >>> clf = dask_ml.wrappers.Incremental(clf, scoring="accuracy")
 
-   >>> pipeline = mario.xr.DatasetPipeline(
+   >>> pipeline = bob.pipelines.xr.DatasetPipeline(
    ...     [
    ...         dict(
    ...             estimator=scaler,

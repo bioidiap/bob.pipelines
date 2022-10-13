@@ -30,8 +30,7 @@ transformer.
 
 .. doctest::
 
-   >>> # by convention, we import bob.pipelines as mario, because mario works with pipes ;)
-   >>> import bob.pipelines as mario
+   >>> import bob.pipelines
    >>> import numpy as np
    >>> from sklearn.base import TransformerMixin, BaseEstimator
    >>>
@@ -50,7 +49,7 @@ For that, we can use :any:`SampleWrapper`:
 .. doctest::
 
    >>> transform_extra_arguments=[("sample_specific_offsets", "offset")]
-   >>> sample_transformer = mario.SampleWrapper(MyTransformer(), transform_extra_arguments)
+   >>> sample_transformer = bob.pipelines.SampleWrapper(MyTransformer(), transform_extra_arguments)
 
 Then, we wrap it with :any:`CheckpointWrapper`:
 
@@ -62,7 +61,7 @@ Then, we wrap it with :any:`CheckpointWrapper`:
    >>> # 3 offsets: one for each sample
    >>> offsets = np.arange(3).reshape((3, 1))
    >>> # key values must be string because they will be used to create file names.
-   >>> samples = [mario.Sample(x, offset=o, key=str(i)) for i, (x, o) in enumerate(zip(X, offsets))]
+   >>> samples = [bob.pipelines.Sample(x, offset=o, key=str(i)) for i, (x, o) in enumerate(zip(X, offsets))]
    >>> samples[0]
    Sample(data=array([0., 0.]), offset=array([0]), key='0')
 
@@ -70,7 +69,7 @@ Then, we wrap it with :any:`CheckpointWrapper`:
    >>> import os
    >>> # create a temporary directory to save checkpoints
    >>> with tempfile.TemporaryDirectory() as dir_name:
-   ...    checkpointing_transformer = mario.CheckpointWrapper(
+   ...    checkpointing_transformer = bob.pipelines.CheckpointWrapper(
    ...        sample_transformer, features_dir=dir_name)
    ...
    ...    # transform samples
@@ -93,7 +92,7 @@ disk:
 
    >>> # create a temporary directory to save checkpoints
    >>> with tempfile.TemporaryDirectory() as dir_name:
-   ...    checkpointing_transformer = mario.CheckpointWrapper(
+   ...    checkpointing_transformer = bob.pipelines.CheckpointWrapper(
    ...        sample_transformer, features_dir=dir_name)
    ...
    ...    # transform samples for the first time, it should print transforming 3 samples
@@ -126,7 +125,7 @@ checkpoint exists.
    >>> # create a temporary directory to save checkpoints
    >>> with tempfile.NamedTemporaryFile(prefix="model", suffix=".pkl") as f:
    ...    f.close()
-   ...    checkpointing_transformer = mario.CheckpointWrapper(
+   ...    checkpointing_transformer = bob.pipelines.CheckpointWrapper(
    ...        sample_transformer, model_path=f.name)
    ...
    ...    # call .fit for the first time, it should print Fit was called!
@@ -153,25 +152,25 @@ Instead of:
    >>> transformer = MyTransformer()
 
    >>> transform_extra_arguments=[("sample_specific_offsets", "offset")]
-   >>> transformer = mario.SampleWrapper(transformer, transform_extra_arguments)
+   >>> transformer = bob.pipelines.SampleWrapper(transformer, transform_extra_arguments)
 
-   >>> transformer = mario.CheckpointWrapper(
+   >>> transformer = bob.pipelines.CheckpointWrapper(
    ...     transformer, features_dir="features", model_path="model.pkl")
 
-   >>> transformer = mario.DaskWrapper(transformer)
+   >>> transformer = bob.pipelines.DaskWrapper(transformer)
 
 You can write:
 
 .. doctest::
 
-   >>> transformer = mario.wrap(
+   >>> transformer = bob.pipelines.wrap(
    ...     [MyTransformer, "sample", "checkpoint", "dask"],
    ...     transform_extra_arguments=transform_extra_arguments,
    ...     features_dir="features",
    ...     model_path="model.pkl",
    ... )
    >>> # or if your estimator is already created.
-   >>> transformer = mario.wrap(
+   >>> transformer = bob.pipelines.wrap(
    ...     ["sample", "checkpoint", "dask"],
    ...     MyTransformer(),
    ...     transform_extra_arguments=transform_extra_arguments,
@@ -196,11 +195,11 @@ passed, it wraps the steps inside them instead. For example, instead of:
 
 .. doctest::
 
-   >>> transformer1 = mario.wrap(
+   >>> transformer1 = bob.pipelines.wrap(
    ...     [MyTransformer, "sample"],
    ...     transform_extra_arguments=transform_extra_arguments,
    ... )
-   >>> transformer2 = mario.wrap(
+   >>> transformer2 = bob.pipelines.wrap(
    ...     [MyTransformer, "sample"],
    ...     transform_extra_arguments=transform_extra_arguments,
    ... )
@@ -212,7 +211,7 @@ you can write:
 .. doctest::
 
    >>> pipeline = make_pipeline(MyTransformer(), MyTransformer())
-   >>> pipeline = mario.wrap(["sample"], pipeline, transform_extra_arguments=transform_extra_arguments)
+   >>> pipeline = bob.pipelines.wrap(["sample"], pipeline, transform_extra_arguments=transform_extra_arguments)
 
 It will pass ``transform_extra_arguments`` to all steps when wrapping them with the
 :any:`SampleWrapper`. You cannot pass specific arguments to one of the steps. Wrapping

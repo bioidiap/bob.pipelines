@@ -36,10 +36,10 @@ The code snippet below enables such feature for an arbitrary :any:`sklearn.pipel
 
 .. code:: python
 
-   >>> import bob.pipelines as mario
+   >>> import bob.pipelines
    >>> from sklearn.pipeline import make_pipeline
    >>> pipeline = make_pipeline(...)
-   >>> dask_pipeline = mario.wrap(["dask"], pipeline) # Create a dask graph
+   >>> dask_pipeline = bob.pipelines.wrap(["dask"], pipeline) # Create a dask graph
    >>> dask_pipeline.fit_transform(....).compute() # Run the task graph using the default client
 
 
