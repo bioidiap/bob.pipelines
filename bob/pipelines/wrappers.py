@@ -944,8 +944,8 @@ class ToDaskBag(TransformerMixin, BaseEstimator):
 
     Example
     -------
-    >>> import bob.pipelines as mario
-    >>> transformer = mario.ToDaskBag()
+    >>> import bob.pipelines
+    >>> transformer = bob.pipelines.ToDaskBag()
     >>> dask_bag = transformer.transform([1,2,3])
     >>> # dask_bag.map_partitions(...)
 

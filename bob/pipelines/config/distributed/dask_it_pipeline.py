@@ -1,3 +1,3 @@
-import bob.pipelines as mario
+import bob.pipelines
 
-pipeline = mario.wrap(["dask"], pipeline)  # noqa
+pipeline = bob.pipelines.wrap(["dask"], pipeline)  # noqa

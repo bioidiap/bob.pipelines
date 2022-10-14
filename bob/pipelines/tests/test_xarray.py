@@ -17,7 +17,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import StandardScaler
 
 import bob.io.base
-import bob.pipelines as mario
+import bob.pipelines
 
 
 def _build_toy_samples(delayed=False):
@@ -31,20 +31,22 @@ def _build_toy_samples(delayed=False):
                 return str(index)
 
         samples = [
-            mario.DelayedSample(
+            bob.pipelines.DelayedSample(
                 partial(_load, i, "data"),
                 delayed_attributes=dict(key=partial(_load, i, "key")),
             )
             for i in range(len(X))
         ]
     else:
-        samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples = [
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
     return X, samples
 
 
 def test_samples_to_dataset():
     X, samples = _build_toy_samples()
-    dataset = mario.xr.samples_to_dataset(samples)
+    dataset = bob.pipelines.xr.samples_to_dataset(samples)
     assert dataset.dims == {
         "sample": X.shape[0],
         "dim_0": X.shape[1],
@@ -55,7 +57,7 @@ def test_samples_to_dataset():
 
 def test_delayed_samples_to_dataset():
     X, samples = _build_toy_samples(delayed=True)
-    dataset = mario.xr.samples_to_dataset(samples)
+    dataset = bob.pipelines.xr.samples_to_dataset(samples)
     assert dataset.dims == {
         "sample": X.shape[0],
         "dim_0": X.shape[1],
@@ -82,7 +84,7 @@ def _build_iris_dataset(shuffle=False, delayed=False):
                 return iris.target[index]
 
         samples = [
-            mario.DelayedSample(
+            bob.pipelines.DelayedSample(
                 partial(_load, i, "data"),
                 delayed_attributes=dict(
                     key=partial(_load, i, "key"),
@@ -93,11 +95,11 @@ def _build_iris_dataset(shuffle=False, delayed=False):
         ]
     else:
         samples = [
-            mario.Sample(x, target=y, key=k)
+            bob.pipelines.Sample(x, target=y, key=k)
             for x, y, k in zip(iris.data, iris.target, keys)
         ]
     meta = xr.DataArray(X[0], dims=("feature",))
-    dataset = mario.xr.samples_to_dataset(
+    dataset = bob.pipelines.xr.samples_to_dataset(
         samples, meta=meta, npartitions=3, shuffle=shuffle
     )
     return dataset
@@ -106,7 +108,7 @@ def _build_iris_dataset(shuffle=False, delayed=False):
 def test_dataset_pipeline():
     for delayed in (True, False):
         ds = _build_iris_dataset(delayed=delayed)
-        estimator = mario.xr.DatasetPipeline(
+        estimator = bob.pipelines.xr.DatasetPipeline(
             [
                 PCA(n_components=0.99),
                 {
@@ -123,7 +125,7 @@ def test_dataset_pipeline():
 
 def test_dataset_pipeline_with_shapes():
     ds = _build_iris_dataset()
-    estimator = mario.xr.DatasetPipeline(
+    estimator = bob.pipelines.xr.DatasetPipeline(
         [
             {"estimator": PCA(n_components=3), "output_dims": [("feature", 3)]},
             {
@@ -147,7 +149,7 @@ def test_dataset_pipeline_with_checkpoints():
         pca_model = os.path.join(d, "pca.pkl")
         pca_features = os.path.join(d, "pca_features")
         lda_model = os.path.join(d, "lda.pkl")
-        estimator = mario.xr.DatasetPipeline(
+        estimator = bob.pipelines.xr.DatasetPipeline(
             [
                 {
                     "estimator": StandardScaler(),
@@ -205,7 +207,7 @@ class FailingPCA(PCA):
 
 def test_dataset_pipeline_with_failures():
     iris_ds = _build_iris_dataset()
-    estimator = mario.xr.DatasetPipeline(
+    estimator = bob.pipelines.xr.DatasetPipeline(
         [
             dict(
                 estimator=FailingPCA(n_components=3),
@@ -234,7 +236,7 @@ def test_dataset_pipeline_with_dask_ml():
 
     iris_ds = _build_iris_dataset(shuffle=True)
 
-    estimator = mario.xr.DatasetPipeline(
+    estimator = bob.pipelines.xr.DatasetPipeline(
         [
             dict(
                 estimator=scaler,

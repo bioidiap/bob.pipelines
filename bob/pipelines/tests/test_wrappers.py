@@ -14,7 +14,7 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_array, check_is_fitted
 
-import bob.pipelines as mario
+import bob.pipelines
 
 from bob.pipelines import hash_string
 from bob.pipelines.wrappers import getattr_nested
@@ -183,9 +183,9 @@ def test_sklearn_compatible_estimator():
 def test_function_sample_transfomer():
 
     X = np.zeros(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data) for data in X]
+    samples = [bob.pipelines.Sample(data) for data in X]
 
-    transformer = mario.wrap(
+    transformer = bob.pipelines.wrap(
         [FunctionTransformer, "sample"],
         func=_offset_add_func,
         kw_args=dict(offset=3),
@@ -202,10 +202,10 @@ def test_function_sample_transfomer():
 def test_fittable_sample_transformer():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data) for data in X]
+    samples = [bob.pipelines.Sample(data) for data in X]
 
     # Mixing up with an object
-    transformer = mario.wrap([DummyWithFit, "sample"])
+    transformer = bob.pipelines.wrap([DummyWithFit, "sample"])
     features = transformer.fit(samples).transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.data for s in features])
 
@@ -216,10 +216,10 @@ def test_fittable_sample_transformer():
 def test_tagged_sample_transformer():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data) for data in X]
+    samples = [bob.pipelines.Sample(data) for data in X]
 
     # Mixing up with an object
-    transformer = mario.wrap([DummyWithTags, "sample"])
+    transformer = bob.pipelines.wrap([DummyWithTags, "sample"])
     features = transformer.transform(samples)
     _assert_all_close_numpy_array(X + 1, [s.annotations for s in features])
     _assert_all_close_numpy_array(X, [s.data for s in features])
@@ -229,12 +229,12 @@ def test_tagged_sample_transformer():
 def test_tagged_input_sample_transformer():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data) for data in X]
+    samples = [bob.pipelines.Sample(data) for data in X]
 
     # Mixing up with an object
-    annotator = mario.wrap([DummyWithTags, "sample"])
+    annotator = bob.pipelines.wrap([DummyWithTags, "sample"])
     features = annotator.transform(samples)
-    transformer = mario.wrap([DummyWithTagsNotData, "sample"])
+    transformer = bob.pipelines.wrap([DummyWithTagsNotData, "sample"])
     features = transformer.transform(samples)
     _assert_all_close_numpy_array(X + 2, [s.annotations_2 for s in features])
     _assert_all_close_numpy_array(X, [s.data for s in features])
@@ -244,10 +244,10 @@ def test_tagged_input_sample_transformer():
 def test_dask_tag_transformer():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data) for data in X]
-    sample_bags = mario.ToDaskBag().transform(samples)
+    samples = [bob.pipelines.Sample(data) for data in X]
+    sample_bags = bob.pipelines.ToDaskBag().transform(samples)
 
-    transformer = mario.wrap([DummyWithDask, "sample", "dask"])
+    transformer = bob.pipelines.wrap([DummyWithDask, "sample", "dask"])
 
     transformer.fit(sample_bags)
     model_ = getattr_nested(transformer, "model_")
@@ -257,11 +257,11 @@ def test_dask_tag_transformer():
 def test_dask_tag_checkpoint_transformer():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data) for data in X]
-    sample_bags = mario.ToDaskBag().transform(samples)
+    samples = [bob.pipelines.Sample(data) for data in X]
+    sample_bags = bob.pipelines.ToDaskBag().transform(samples)
 
     with tempfile.TemporaryDirectory() as d:
-        transformer = mario.wrap(
+        transformer = bob.pipelines.wrap(
             [DummyWithDask, "sample", "checkpoint", "dask"],
             model_path=d + "/ckpt.h5",
         )
@@ -269,7 +269,7 @@ def test_dask_tag_checkpoint_transformer():
         model_ = getattr_nested(transformer, "model_")
         np.testing.assert_equal(model_, X.sum(axis=0))
         # Fit with no data to verify loading from checkpoint
-        transformer_2 = mario.wrap(
+        transformer_2 = bob.pipelines.wrap(
             [DummyWithDask, "sample", "checkpoint", "dask"],
             model_path=d + "/ckpt.h5",
         )
@@ -287,15 +287,15 @@ def test_dask_tag_daskml_estimator():
         centers=[[-1, -1], [1, 1]],
         cluster_std=0.1,  # Makes it easy to split
     )
-    samples = [mario.Sample(data) for data in X]
-    sample_bags = mario.ToDaskBag(partition_size=300).transform(samples)
+    samples = [bob.pipelines.Sample(data) for data in X]
+    sample_bags = bob.pipelines.ToDaskBag(partition_size=300).transform(samples)
 
     estimator = dask_ml.cluster.KMeans(
         n_clusters=2, init_max_iter=2, random_state=0
     )
 
     for fit_supports_dask_array in [True, False]:
-        transformer = mario.wrap(
+        transformer = bob.pipelines.wrap(
             ["sample", "dask"],
             estimator=estimator,
             fit_supports_dask_array=fit_supports_dask_array,
@@ -309,7 +309,7 @@ def test_dask_tag_daskml_estimator():
 
     for fit_supports_dask_array in [True, False]:
         with tempfile.TemporaryDirectory() as d:
-            transformer = mario.wrap(
+            transformer = bob.pipelines.wrap(
                 ["sample", "checkpoint", "dask"],
                 estimator=estimator,
                 fit_supports_dask_array=fit_supports_dask_array,
@@ -330,15 +330,15 @@ def test_dask_tag_daskml_estimator():
 def test_failing_sample_transformer():
 
     X = np.zeros(shape=(10, 2))
-    samples = [mario.Sample(data) for i, data in enumerate(X)]
+    samples = [bob.pipelines.Sample(data) for i, data in enumerate(X)]
     expected = np.full_like(X, 2, dtype=object)
     expected[::2] = None
     expected[1::4] = None
 
     transformer = Pipeline(
         [
-            ("1", mario.wrap([HalfFailingDummyTransformer, "sample"])),
-            ("2", mario.wrap([HalfFailingDummyTransformer, "sample"])),
+            ("1", bob.pipelines.wrap([HalfFailingDummyTransformer, "sample"])),
+            ("2", bob.pipelines.wrap([HalfFailingDummyTransformer, "sample"])),
         ]
     )
     features = transformer.transform(samples)
@@ -351,12 +351,12 @@ def test_failing_sample_transformer():
         (e == f).all() for e, f in zip(expected, features)
     ), f"Expected: {expected} but got: {features}"
 
-    samples = [mario.Sample(data) for data in X]
+    samples = [bob.pipelines.Sample(data) for data in X]
     expected = [None] * X.shape[0]
     transformer = Pipeline(
         [
-            ("1", mario.wrap([FullFailingDummyTransformer, "sample"])),
-            ("2", mario.wrap([FullFailingDummyTransformer, "sample"])),
+            ("1", bob.pipelines.wrap([FullFailingDummyTransformer, "sample"])),
+            ("2", bob.pipelines.wrap([FullFailingDummyTransformer, "sample"])),
         ]
     )
     features = transformer.transform(samples)
@@ -373,7 +373,7 @@ def test_failing_sample_transformer():
 def test_failing_checkpoint_transformer():
 
     X = np.zeros(shape=(10, 2))
-    samples = [mario.Sample(data, key=i) for i, data in enumerate(X)]
+    samples = [bob.pipelines.Sample(data, key=i) for i, data in enumerate(X)]
     expected = np.full_like(X, 2)
     expected[::2] = None
     expected[1::4] = None
@@ -386,14 +386,14 @@ def test_failing_checkpoint_transformer():
             [
                 (
                     "1",
-                    mario.wrap(
+                    bob.pipelines.wrap(
                         [HalfFailingDummyTransformer, "sample", "checkpoint"],
                         features_dir=features_dir_1,
                     ),
                 ),
                 (
                     "2",
-                    mario.wrap(
+                    bob.pipelines.wrap(
                         [HalfFailingDummyTransformer, "sample", "checkpoint"],
                         features_dir=features_dir_2,
                     ),
@@ -415,7 +415,7 @@ def test_failing_checkpoint_transformer():
             expected, np_features, equal_nan=True
         ), f"Expected: {expected} but got: {np_features}"
 
-    samples = [mario.Sample(data, key=i) for i, data in enumerate(X)]
+    samples = [bob.pipelines.Sample(data, key=i) for i, data in enumerate(X)]
     expected = [None] * X.shape[0]
 
     with tempfile.TemporaryDirectory() as d:
@@ -425,14 +425,14 @@ def test_failing_checkpoint_transformer():
             [
                 (
                     "1",
-                    mario.wrap(
+                    bob.pipelines.wrap(
                         [FullFailingDummyTransformer, "sample", "checkpoint"],
                         features_dir=features_dir_1,
                     ),
                 ),
                 (
                     "2",
-                    mario.wrap(
+                    bob.pipelines.wrap(
                         [FullFailingDummyTransformer, "sample", "checkpoint"],
                         features_dir=features_dir_2,
                     ),
@@ -466,13 +466,15 @@ def _assert_checkpoints(
 
 def _assert_delayed_samples(samples):
     for s in samples:
-        assert isinstance(s, mario.DelayedSample)
+        assert isinstance(s, bob.pipelines.DelayedSample)
 
 
 def test_checkpoint_function_sample_transfomer():
 
     X = np.arange(20, dtype=int).reshape(10, 2)
-    samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     offset = 3
     oracle = X + offset
 
@@ -480,7 +482,7 @@ def test_checkpoint_function_sample_transfomer():
         model_path = os.path.join(d, "model.pkl")
         features_dir = os.path.join(d, "features")
 
-        transformer = mario.wrap(
+        transformer = bob.pipelines.wrap(
             [FunctionTransformer, "sample", "checkpoint"],
             func=_offset_add_func,
             kw_args=dict(offset=offset),
@@ -502,7 +504,7 @@ def test_checkpoint_function_sample_transfomer():
         _assert_checkpoints(features, oracle, model_path, features_dir, True)
 
     # test when both model_path and features_dir is None
-    transformer = mario.wrap(
+    transformer = bob.pipelines.wrap(
         [FunctionTransformer, "sample", "checkpoint"],
         func=_offset_add_func,
         kw_args=dict(offset=offset),
@@ -513,7 +515,7 @@ def test_checkpoint_function_sample_transfomer():
 
     # test when both model_path and features_dir is None
     with tempfile.TemporaryDirectory() as dir_name:
-        transformer = mario.wrap(
+        transformer = bob.pipelines.wrap(
             [FunctionTransformer, "sample", "checkpoint"],
             func=_offset_add_func,
             kw_args=dict(offset=offset),
@@ -531,19 +533,21 @@ def test_checkpoint_function_sample_transfomer():
 
 def test_checkpoint_fittable_sample_transformer():
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     oracle = X + 1
 
     with tempfile.TemporaryDirectory() as d:
         model_path = os.path.join(d, "model.pkl")
         features_dir = os.path.join(d, "features")
 
-        transformer = mario.wrap(
+        transformer = bob.pipelines.wrap(
             [DummyWithFit, "sample", "checkpoint"],
             model_path=model_path,
             features_dir=features_dir,
         )
-        assert mario.estimator_requires_fit(transformer)
+        assert bob.pipelines.estimator_requires_fit(transformer)
         features = transformer.fit(samples).transform(samples)
         _assert_checkpoints(features, oracle, model_path, features_dir, False)
 
@@ -563,7 +567,7 @@ def _build_estimator(path, i):
     model_path = os.path.join(base_dir, "model.pkl")
     features_dir = os.path.join(base_dir, "features")
 
-    transformer = mario.wrap(
+    transformer = bob.pipelines.wrap(
         [DummyWithFit, "sample", "checkpoint"],
         model_path=model_path,
         features_dir=features_dir,
@@ -574,7 +578,7 @@ def _build_estimator(path, i):
 def _build_transformer(path, i, force=False):
 
     features_dir = os.path.join(path, f"transformer{i}")
-    estimator = mario.wrap(
+    estimator = bob.pipelines.wrap(
         [DummyTransformer, "sample", "checkpoint"],
         i=i,
         features_dir=features_dir,
@@ -586,9 +590,11 @@ def _build_transformer(path, i, force=False):
 def test_checkpoint_fittable_pipeline():
 
     X = np.ones(shape=(10, 2), dtype=int)
-    samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+    samples = [
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+    ]
     samples_transform = [
-        mario.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+        bob.pipelines.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
     ]
     oracle = X + 3
 
@@ -610,7 +616,7 @@ def test_checkpoint_transform_pipeline():
 
         X = np.ones(shape=(10, 2), dtype=int)
         samples_transform = [
-            mario.Sample(data, key=str(i)) for i, data in enumerate(X)
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
         ]
         offset = 2
         oracle = X + offset
@@ -620,7 +626,7 @@ def test_checkpoint_transform_pipeline():
                 [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
             )
             if dask_enabled:
-                pipeline = mario.wrap(["dask"], pipeline)
+                pipeline = bob.pipelines.wrap(["dask"], pipeline)
                 transformed_samples = pipeline.transform(
                     samples_transform
                 ).compute(scheduler="single-threaded")
@@ -643,7 +649,8 @@ def test_checkpoint_transform_pipeline_force():
 
             X = np.ones(shape=(10, 2), dtype=int)
             samples_transform = [
-                mario.Sample(data, key=str(i)) for i, data in enumerate(X)
+                bob.pipelines.Sample(data, key=str(i))
+                for i, data in enumerate(X)
             ]
             offset = 2
             oracle = X + offset
@@ -655,7 +662,7 @@ def test_checkpoint_transform_pipeline_force():
                 ]
             )
 
-            pipeline = mario.wrap(["dask"], pipeline)
+            pipeline = bob.pipelines.wrap(["dask"], pipeline)
             transformed_samples = pipeline.transform(samples_transform).compute(
                 scheduler="single-threaded"
             )
@@ -671,9 +678,12 @@ def test_checkpoint_transform_pipeline_force():
 def test_checkpoint_fit_transform_pipeline():
     def _run(dask_enabled):
         X = np.ones(shape=(10, 2), dtype=int)
-        samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples = [
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
         samples_transform = [
-            mario.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+            bob.pipelines.Sample(data, key=str(i + 10))
+            for i, data in enumerate(X)
         ]
         oracle = X + 2
 
@@ -682,11 +692,11 @@ def test_checkpoint_fit_transform_pipeline():
             transformer = ("1", _build_transformer(d, 1))
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
-                pipeline = mario.wrap(
+                pipeline = bob.pipelines.wrap(
                     ["dask"], pipeline, fit_tag="GPU", npartitions=1
                 )
                 pipeline = pipeline.fit(samples)
-                tags = mario.dask_tags(pipeline)
+                tags = bob.pipelines.dask_tags(pipeline)
 
                 assert len(tags) == 1, tags
                 transformed_samples = pipeline.transform(samples_transform)
@@ -719,9 +729,12 @@ def _get_local_client():
 def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
     def _run(dask_enabled):
         X = np.ones(shape=(10, 2), dtype=int)
-        samples = [mario.Sample(data, key=str(i)) for i, data in enumerate(X)]
+        samples = [
+            bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
+        ]
         samples_transform = [
-            mario.Sample(data, key=str(i + 10)) for i, data in enumerate(X)
+            bob.pipelines.Sample(data, key=str(i + 10))
+            for i, data in enumerate(X)
         ]
         oracle = X + 2
 
@@ -735,7 +748,7 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
             pipeline = Pipeline([fitter, transformer])
             if dask_enabled:
                 dask_client = _get_local_client()
-                pipeline = mario.wrap(["dask"], pipeline)
+                pipeline = bob.pipelines.wrap(["dask"], pipeline)
                 pipeline = pipeline.fit(samples)
                 transformed_samples = pipeline.transform(
                     samples_transform
@@ -755,15 +768,15 @@ def test_checkpoint_fit_transform_pipeline_with_dask_non_pickle():
 def test_dask_checkpoint_transform_pipeline():
     X = np.ones(shape=(10, 2), dtype=int)
     samples_transform = [
-        mario.Sample(data, key=str(i)) for i, data in enumerate(X)
+        bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
     ]
     with tempfile.TemporaryDirectory() as d:
-        bag_transformer = mario.ToDaskBag()
-        estimator = mario.wrap(
+        bag_transformer = bob.pipelines.ToDaskBag()
+        estimator = bob.pipelines.wrap(
             ["dask"], _build_transformer(d, 0), transform_tag="CPU"
         )
         X_tr = estimator.transform(bag_transformer.transform(samples_transform))
-        assert len(mario.dask_tags(estimator)) == 1
+        assert len(bob.pipelines.dask_tags(estimator)) == 1
         assert len(X_tr.compute(scheduler="single-threaded")) == 10
 
 
@@ -771,8 +784,11 @@ def test_checkpoint_transform_pipeline_with_sampleset():
     def _run(dask_enabled):
 
         X = np.ones(shape=(10, 2), dtype=int)
-        samples_transform = mario.SampleSet(
-            [mario.Sample(data, key=str(i)) for i, data in enumerate(X)],
+        samples_transform = bob.pipelines.SampleSet(
+            [
+                bob.pipelines.Sample(data, key=str(i))
+                for i, data in enumerate(X)
+            ],
             key="1",
         )
         offset = 2
@@ -783,7 +799,7 @@ def test_checkpoint_transform_pipeline_with_sampleset():
                 [(f"{i}", _build_transformer(d, i)) for i in range(offset)]
             )
             if dask_enabled:
-                pipeline = mario.wrap(["dask"], pipeline)
+                pipeline = bob.pipelines.wrap(["dask"], pipeline)
                 transformed_samples = pipeline.transform(
                     [samples_transform]
                 ).compute(scheduler="single-threaded")
@@ -820,20 +836,22 @@ def test_estimator_requires_fit():
         (DummyTransformer(), False),
         (DummyWithFit(), True),
     ]:
-        assert mario.estimator_requires_fit(estimator) is requires_fit
+        assert bob.pipelines.estimator_requires_fit(estimator) is requires_fit
 
         # test on a pipeline
         pipeline = Pipeline([(f"{i}", estimator) for i in range(2)])
-        assert mario.estimator_requires_fit(pipeline) is requires_fit
+        assert bob.pipelines.estimator_requires_fit(pipeline) is requires_fit
 
         # now test if wrapped, is also correct
         for wraps in all_wraps:
-            est = mario.wrap(wraps, estimator)
-            assert mario.estimator_requires_fit(est) is requires_fit
+            est = bob.pipelines.wrap(wraps, estimator)
+            assert bob.pipelines.estimator_requires_fit(est) is requires_fit
 
             # test on a pipeline
             pipeline = Pipeline([(f"{i}", est) for i in range(2)])
-            assert mario.estimator_requires_fit(pipeline) is requires_fit
+            assert (
+                bob.pipelines.estimator_requires_fit(pipeline) is requires_fit
+            )
 
     pipeline = Pipeline(
         [
@@ -841,14 +859,14 @@ def test_estimator_requires_fit():
             ("DummyWithFit", DummyWithFit()),
         ]
     )
-    assert mario.estimator_requires_fit(pipeline) is True
+    assert bob.pipelines.estimator_requires_fit(pipeline) is True
     for wrap in all_wraps:
-        est = mario.wrap(wrap, pipeline)
-        assert mario.estimator_requires_fit(est) is True
+        est = bob.pipelines.wrap(wrap, pipeline)
+        assert bob.pipelines.estimator_requires_fit(est) is True
 
     # test with a FunctionTransformer
     estimator = FunctionTransformer(lambda x: x)
-    assert mario.estimator_requires_fit(estimator) is False
+    assert bob.pipelines.estimator_requires_fit(estimator) is False
     for wrap in all_wraps:
-        est = mario.wrap(wrap, estimator)
-        assert mario.estimator_requires_fit(est) is False
+        est = bob.pipelines.wrap(wrap, estimator)
+        assert bob.pipelines.estimator_requires_fit(est) is False

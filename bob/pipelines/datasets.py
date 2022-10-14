@@ -14,6 +14,9 @@ import os
 import pathlib
 
 from collections.abc import Iterable
+from typing import Any, Optional, TextIO
+
+import sklearn.pipeline
 
 from bob.extension.download import list_dir, search_file
 
@@ -28,22 +31,46 @@ def _maybe_open_file(path, **kwargs):
 
 
 class FileListToSamples(Iterable):
-    """Converts a list of files to a list of samples."""
+    """Converts a list of paths and metadata to a list of samples.
 
-    def __init__(self, list_file, transformer=None, **kwargs):
+    This class reads a file containing paths and optionally metadata and returns a list
+    of :py:class:`bob.pipelines.Sample`\\ s when called.
+
+    A separator character can be set (defaults is space) to split the rows.
+    No escaping is done (no quotes).
+
+    A Transformer can be given to apply a transform on each sample. (Keep in mind this
+    will not be distributed on Dask; Prefer applying Transformer in a
+    ``bob.pipelines.Pipeline``.)
+    """
+
+    def __init__(
+        self,
+        list_file: str,
+        separator: str = " ",
+        transformer: Optional[sklearn.pipeline.Pipeline] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.list_file = list_file
         self.transformer = transformer
+        self.separator = separator
 
     def __iter__(self):
         for row_dict in self.rows:
             sample = Sample(None, **row_dict)
             if self.transformer is not None:
-                # the transofmer might convert one sample to several samples
+                # The transformer might convert one sample to several samples
                 for s in self.transformer.transform([sample]):
                     yield s
             else:
                 yield sample
+
+    @property
+    def rows(self) -> dict[str, Any]:
+        with open(self.list_file, "rt") as f:
+            for line in f:
+                yield dict(line.split(self.separator))
 
 
 class CSVToSamples(FileListToSamples):
@@ -51,13 +78,17 @@ class CSVToSamples(FileListToSamples):
 
     def __init__(
         self,
-        list_file,
-        transformer=None,
-        dict_reader_kwargs=None,
+        list_file: str,
+        transformer: Optional[sklearn.pipeline.Pipeline] = None,
+        dict_reader_kwargs: Optional[dict[str, Any]] = None,
         **kwargs,
     ):
         list_file = _maybe_open_file(list_file, newline="")
-        super().__init__(list_file=list_file, transformer=transformer, **kwargs)
+        super().__init__(
+            list_file=list_file,
+            transformer=transformer,
+            **kwargs,
+        )
         self.dict_reader_kwargs = dict_reader_kwargs
 
     @property
@@ -86,23 +117,23 @@ class FileListDatabase:
 
     def __init__(
         self,
-        dataset_protocols_path,
-        protocol,
-        reader_cls=CSVToSamples,
-        transformer=None,
+        dataset_protocols_path: str,
+        protocol: str,
+        reader_cls: Iterable = CSVToSamples,
+        transformer: Optional[sklearn.pipeline.Pipeline] = None,
         **kwargs,
     ):
         """
         Parameters
         ----------
-        dataset_protocols_path : str
+        dataset_protocols_path
             Path to a folder or a tarball where the csv protocol files are located.
-        protocol : str
+        protocol
             The name of the protocol to be used for samples. If None, the first
             protocol will be used.
-        reader_cls : object
-            A callable that will initialize the CSVToSamples reader, by default CSVToSamples
-        transformer : object
+        reader_cls
+            A callable that will initialize the CSVToSamples reader, by default CSVToSamples TODO update
+        transformer
             A scikit-learn transformer that further changes the samples
 
         Raises
@@ -110,7 +141,6 @@ class FileListDatabase:
         ValueError
             If the dataset_protocols_path does not exist.
         """
-        super().__init__(**kwargs)
         if not os.path.exists(dataset_protocols_path):
             raise ValueError(
                 f"The path `{dataset_protocols_path}` was not found"
@@ -121,46 +151,51 @@ class FileListDatabase:
         self.readers = dict()
         self._protocol = None
         self.protocol = protocol
+        super().__init__(**kwargs)
 
     @property
-    def protocol(self):
+    def protocol(self) -> str:
         return self._protocol
 
     @protocol.setter
-    def protocol(self, value):
+    def protocol(self, value: str):
         value = check_parameter_for_validity(
             value, "protocol", self.protocols(), self.protocols()[0]
         )
         self._protocol = value
 
     @property
-    def transformer(self):
+    def transformer(self) -> sklearn.pipeline.Pipeline:
         return self._transformer
 
     @transformer.setter
-    def transformer(self, value):
+    def transformer(self, value: sklearn.pipeline.Pipeline):
         self._transformer = value
         for reader in self.readers.values():
             reader.transformer = value
 
-    def groups(self):
+    def groups(self) -> list[str]:
+        """Returns all the available groups."""
         names = list_dir(
             self.dataset_protocols_path, self.protocol, folders=False
         )
         names = [os.path.splitext(n)[0] for n in names]
         return names
 
-    def protocols(self):
+    def protocols(self) -> list[str]:
+        """Returns all the available protocols."""
         return list_dir(self.dataset_protocols_path, files=False)
 
-    def list_file(self, group):
+    def list_file(self, group: str) -> TextIO:
+        """Returns the corresponding definition file of a group."""
         list_file = search_file(
             self.dataset_protocols_path,
             os.path.join(self.protocol, group + ".csv"),
         )
         return list_file
 
-    def get_reader(self, group):
+    def get_reader(self, group: str) -> Iterable:
+        """Returns an :any:`Iterable` of :any:`Sample` objects."""
         key = (self.protocol, group)
         if key not in self.readers:
             self.readers[key] = self.reader_cls(
@@ -183,6 +218,7 @@ class FileListDatabase:
         list
             A list containing the samples loaded from csv files.
         """
+
         groups = check_parameters_for_validity(
             groups, "groups", self.groups(), self.groups()
         )
@@ -195,7 +231,7 @@ class FileListDatabase:
         return all_samples
 
     @staticmethod
-    def sort(samples, unique=True):
+    def sort(samples: list[Sample], unique: bool = True):
         """Sorts samples and removes duplicates by default."""
 
         def key_func(x):
