@@ -67,7 +67,7 @@ As you can see there is only one protocol called ``default`` and two groups
     >>> import pkg_resources
     >>> import bob.pipelines
     >>> dataset_protocols_path = pkg_resources.resource_filename(
-    ...     'bob.pipelines', 'tests/data/iris_database')
+    ...     __name__, 'tests/data/iris_database')
     >>> database = bob.pipelines.FileListDatabase(
     ...     dataset_protocols_path,
     ...     protocol="default",
