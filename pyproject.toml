@@ -33,6 +33,7 @@
         "bob.io.base",
         "scikit-learn",
         "dask",
+        "dask-ml",
         "distributed",
         "dask-jobqueue",
         "xarray",
@@ -58,7 +59,6 @@
         "pytest",
         "pytest-cov",
         "coverage",
-        "dask-ml",
         ]
 
 [tool.setuptools]
