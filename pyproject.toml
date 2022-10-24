@@ -58,6 +58,7 @@
         "pytest",
         "pytest-cov",
         "coverage",
+        "dask-ml",
         ]
 
 [tool.setuptools]
@@ -98,7 +99,7 @@
     addopts = [
         "--import-mode=append",
         "--cov-report=term-missing",
-        "--cov=bob.learn.em",
+        "--cov=bob.pipelines",
     ]
     junit_logging = "all"
     junit_log_passing_tests = false
