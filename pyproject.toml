@@ -33,7 +33,6 @@
         "bob.io.base",
         "scikit-learn",
         "dask",
-        "dask-ml",
         "distributed",
         "dask-jobqueue",
         "xarray",
@@ -54,11 +53,13 @@
         "sphinx-autodoc-typehints",
         "sphinxcontrib-programoutput",
         "matplotlib",
+        "dask-ml",
         ]
     test = [
         "pytest",
         "pytest-cov",
         "coverage",
+        "dask-ml",
         ]
 
 [tool.setuptools]
