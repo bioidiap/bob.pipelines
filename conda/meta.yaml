@@ -37,6 +37,8 @@ requirements:
   run:
     - python
     - setuptools
+    - bob.extension
+    - bob.io.base
     - {{ pin_compatible('numpy') }}
     - {{ pin_compatible('dask') }}
     - {{ pin_compatible('dask-jobqueue') }}
