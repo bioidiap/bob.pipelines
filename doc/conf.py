@@ -7,9 +7,6 @@ import time
 import pkg_resources
 import sphinx_rtd_theme
 
-# For inter-documentation mapping:
-from bob.extension.utils import link_documentation, load_requirements
-
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -29,7 +26,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
-    # 'matplotlib.sphinxext.plot_directive',
+    "auto_intersphinx",
 ]
 
 # Be picky about warnings
@@ -229,14 +226,13 @@ autodoc_default_options = {
 }
 
 
-sphinx_requirements = "extra-intersphinx.txt"
-if os.path.exists(sphinx_requirements):
-    intersphinx_mapping = link_documentation(
-        additional_packages=["python", "numpy"]
-        + load_requirements(sphinx_requirements)
-    )
-else:
-    intersphinx_mapping = link_documentation()
+auto_intersphinx_packages = [
+    "scikit-learn",
+    "dask",
+    "dask-ml",
+    "bob.io.base",
+    "xarray",
+]
 
 
 def setup(app):
