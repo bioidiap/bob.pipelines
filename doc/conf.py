@@ -233,6 +233,7 @@ auto_intersphinx_packages = [
     "bob.io.base",
     "xarray",
 ]
+auto_intersphinx_catalog = "catalog.json"
 
 
 def setup(app):
