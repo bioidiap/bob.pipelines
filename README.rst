@@ -1,11 +1,11 @@
 .. -*- coding: utf-8 -*-
 
 .. image:: https://img.shields.io/badge/docs-latest-orange.svg
-   :target: https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/index.html
+   :target: https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/sphinx/index.html
 .. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/pipeline.svg
    :target: https://gitlab.idiap.ch/bob/bob.pipelines/commits/master
 .. image:: https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/coverage.svg
-   :target: https://gitlab.idiap.ch/bob/bob.pipelines/commits/master
+   :target: https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/coverage
 .. image:: https://img.shields.io/badge/gitlab-project-0000c0.svg
    :target: https://gitlab.idiap.ch/bob/bob.pipelines
 

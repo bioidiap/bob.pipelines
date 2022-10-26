@@ -1,0 +1,5 @@
+scikit-learn
+dask
+dask-ml
+bob.io.base
+xarray
