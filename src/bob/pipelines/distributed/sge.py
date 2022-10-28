@@ -10,8 +10,7 @@ import dask
 from dask_jobqueue.core import Job, JobQueueCluster
 from distributed.deploy import Adaptive
 from distributed.scheduler import Scheduler
-
-from bob.extension import rc
+from exposed import rc
 
 from .sge_queues import QUEUE_DEFAULT
 
