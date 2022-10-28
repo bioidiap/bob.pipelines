@@ -1,29 +1,25 @@
-{% set name = 'bob.pipelines' %}
-{% set project_dir = environ.get('RECIPE_DIR') + '/..' %}
+{% set data = load_file_data(RECIPE_DIR + '/../pyproject.toml') %}
+{% set name = data['project']['name'] %}
 
 package:
   name: {{ name }}
-  version: {{ environ.get('BOB_PACKAGE_VERSION', '0.0.1') }}
+  version: {{ data['project']['version'] }}
+
+source:
+  path: ..
 
 build:
+  noarch: python
   number: {{ environ.get('BOB_BUILD_NUMBER', 0) }}
   run_exports:
     - {{ pin_subpackage(name) }}
   script:
-    - cd {{ project_dir }}
-    {% if environ.get('BUILD_EGG') %}
-    - "{{ PYTHON }} setup.py sdist --formats=zip"
-    {% endif %}
-    - "{{ PYTHON }} -m pip install . -vv"
-    # installs the documentation source, readme to share/doc so it is available
-    # during test time
-    - install -d "${PREFIX}/share/doc/{{ name }}"
-    - cp -R README.rst requirements.txt doc "${PREFIX}/share/doc/{{ name }}/"
+    - "{{ PYTHON }} -m pip install {{ SRC_DIR }} -vv"
 
 requirements:
   host:
-    - python
-    - setuptools
+    - python {{ python }}
+    - setuptools {{ setuptools }}
     - pip {{ pip }}
     # bob dependencies
     - bob.extension
@@ -41,36 +37,27 @@ requirements:
   run:
     - python
     - setuptools
-    - {{ pin_compatible('numpy', max_pin='x.x') }}
-    - {{ pin_compatible('dask', max_pin='x.x') }}
-    - {{ pin_compatible('dask-jobqueue', max_pin='x.x') }}
-    - {{ pin_compatible('distributed', max_pin='x.x') }}
-    - {{ pin_compatible('scikit-learn', max_pin='x.x') }}
-    - {{ pin_compatible('xarray', max_pin='x.x') }}
+    - bob.extension
+    - bob.io.base
+    - {{ pin_compatible('numpy') }}
+    - {{ pin_compatible('dask') }}
+    - {{ pin_compatible('dask-jobqueue') }}
+    - {{ pin_compatible('distributed') }}
+    - {{ pin_compatible('scikit-learn') }}
+    - {{ pin_compatible('xarray') }}
     - {{ pin_compatible('h5py') }}
   run_constrained:
-    - {{ pin_compatible('dask-ml', max_pin='x.x') }}
+    - {{ pin_compatible('dask-ml') }}
 
 test:
   imports:
-    - {{ name }}
+    - {{ name.replace('-','_') }}
   commands:
-    - pytest --verbose --cov {{ name }} --cov-report term-missing --cov-report html:{{ project_dir }}/sphinx/coverage --cov-report xml:{{ project_dir }}/coverage.xml --junitxml={{ project_dir }}/test_results.xml --pyargs {{ name }}
-    - sphinx-build -aEW {{ project_dir }}/doc {{ project_dir }}/sphinx  # [linux]
-    - sphinx-build -aEb doctest {{ project_dir }}/doc sphinx  # [linux]
     - conda inspect linkages -p $PREFIX {{ name }}  # [not win]
     - conda inspect objects -p $PREFIX {{ name }}  # [osx]
-  requires:
-    - pytest {{ pytest }}
-    - pytest-cov {{ pytest_cov }}
-    - coverage {{ coverage }}
-    - sphinx {{ sphinx }}
-    - sphinx_rtd_theme {{ sphinx_rtd_theme }}
-    - dask-ml
 
 about:
-  summary: Tools to build robust and extensible pipelines
-  home: https://www.idiap.ch/software/bob/
-  license: BSD 3-Clause
+  home: {{ data['project']['urls']['homepage'] }}
+  summary: {{ data['project']['description'] }}
+  license: {{ data['project']['license']['text'] }}
   license_family: BSD
-  license_file: ../LICENSE

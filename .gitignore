@@ -7,7 +7,6 @@ parts
 .installed.cfg
 .mr.developer.cfg
 *.egg-info
-src
 develop-eggs
 sphinx
 dist
@@ -20,3 +19,5 @@ miniconda.sh
 miniconda/
 *.DS_Store
 dask-worker-space
+.gitlab-ci-local*
+html/
