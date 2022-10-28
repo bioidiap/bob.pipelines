@@ -30,6 +30,7 @@
         "setuptools",
         "numpy",
         "bob.extension",
+        "exposed",
         "bob.io.base",
         "scikit-learn",
         "dask",
