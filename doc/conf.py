@@ -227,6 +227,7 @@ autodoc_default_options = {
 
 
 auto_intersphinx_packages = [
+    ("python", "3"),
     "scikit-learn",
     "dask",
     "dask-ml",
