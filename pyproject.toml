@@ -42,8 +42,8 @@
 [project.urls]
     documentation = "https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/stable/"
     homepage = "https://pypi.org/project/bob.pipelines/"
-    repository = "https://gitlab.idiap.ch/bob/pipelines"
-    changelog = "https://gitlab.idiap.ch/bob/pipelines/-/releases"
+    repository = "https://gitlab.idiap.ch/bob/bob.pipelines"
+    changelog = "https://gitlab.idiap.ch/bob/bob.pipelines/-/releases"
 
 [project.optional-dependencies]
     qa = ["pre-commit"]
