@@ -21,7 +21,7 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - pip {{ pip }}
-    - exposed {{ exposed }}
+    - exposed
     # bob dependencies
     - bob.extension
     - bob.io.base
