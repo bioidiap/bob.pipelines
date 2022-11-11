@@ -152,9 +152,9 @@ class FileListDatabase:
         self._transformer = transformer
         self.readers = dict()
         self._protocol = None
-        self.protocol = protocol
         # Tricksy trick to make protocols non-classmethod when instantiated
         self.protocols = self._instance_protocols
+        self.protocol = protocol
         super().__init__(**kwargs)
 
     @property
