@@ -64,13 +64,11 @@ As you can see there is only one protocol called ``default`` and two groups
 
 .. doctest:: csv_iris_database
 
-    >>> import pkg_resources
     >>> import bob.pipelines
-    >>> dataset_protocols_path = pkg_resources.resource_filename(
-    ...     __name__, 'tests/data/iris_database')
+    >>> dataset_protocols_path = "tests/data/iris_database"
     >>> database = bob.pipelines.FileListDatabase(
-    ...     dataset_protocols_path,
     ...     protocol="default",
+    ...     dataset_protocols_path=dataset_protocols_path,
     ... )
     >>> database.samples(groups="train")
     [Sample(data=None, sepal_length='5.1', sepal_width='3.5', petal_length='1.4', petal_width='0.2', target='Iris-setosa'), Sample(...)]
@@ -102,8 +100,8 @@ to all samples:
     ...     return [bob.pipelines.Sample(prepare_data(sample), parent=sample) for sample in samples]
 
     >>> database = bob.pipelines.FileListDatabase(
-    ...     dataset_protocols_path,
     ...     protocol="default",
+    ...     dataset_protocols_path=dataset_protocols_path,
     ...     transformer=FunctionTransformer(prepare_iris_samples),
     ... )
     >>> database.samples(groups="train")
