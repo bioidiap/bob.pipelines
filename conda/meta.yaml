@@ -21,6 +21,7 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - pip {{ pip }}
+    - exposed
     # bob dependencies
     - bob.extension
     - bob.io.base
@@ -37,6 +38,7 @@ requirements:
   run:
     - python
     - setuptools
+    - exposed
     - bob.extension
     - bob.io.base
     - {{ pin_compatible('numpy') }}
