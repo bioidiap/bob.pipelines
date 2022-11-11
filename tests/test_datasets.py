@@ -30,7 +30,9 @@ def test_iris_list_database():
         __name__, os.path.join("data", "iris_database")
     )
 
-    database = FileListDatabase(dataset_protocols_path, None)
+    database = FileListDatabase(
+        protocol=None, dataset_protocols_path=dataset_protocols_path
+    )
     assert database.protocol == "default"
     assert database.protocols() == ["default"]
     assert database.groups() == ["test", "train"]
