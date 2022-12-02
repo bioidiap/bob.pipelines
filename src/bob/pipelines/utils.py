@@ -113,8 +113,8 @@ def check_parameters_for_validity(
 
     Returns
     -------
-    tuple
-            A list or tuple containing the valid parameters.
+    list
+            A list containing the valid parameters.
 
     Raises
     ------
@@ -145,7 +145,7 @@ def check_parameters_for_validity(
             )
 
     # check passed, now return the list/tuple of parameters
-    return parameters
+    return list(parameters)
 
 
 def check_parameter_for_validity(
