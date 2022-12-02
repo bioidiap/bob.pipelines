@@ -90,7 +90,7 @@ def check_parameters_for_validity(
     'None' or empty, the default_parameters will be returned (if
     default_parameters is omitted, all valid_parameters are returned).
 
-    This function will return a tuple or list of parameters, or raise a
+    This function will return a list of parameters, or raise a
     ValueError.
 
 
