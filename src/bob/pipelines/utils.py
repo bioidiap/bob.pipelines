@@ -144,7 +144,7 @@ def check_parameters_for_validity(
                 % (parameter_description, parameter, valid_parameters)
             )
 
-    # check passed, now return the list/tuple of parameters
+    # check passed, now return the list of parameters
     return list(parameters)
 
 
