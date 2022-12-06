@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+import pytest
 
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import FunctionTransformer
@@ -13,6 +14,8 @@ from bob.pipelines import (
     Sample,
     SampleSet,
     SampleWrapper,
+    check_parameter_for_validity,
+    check_parameters_for_validity,
     flatten_samplesets,
     is_pipeline_wrapped,
     wrap,
@@ -132,4 +135,114 @@ def test_break_sample_set():
     assert len(new_samplesets) == n_samples * n_samples
     assert np.allclose(
         [len(s) for s in new_samplesets], np.ones(n_samples * n_samples)
+    )
+
+
+def test_check_parameter_validity():
+    valid_values = ["accept", "true"]
+    desc_str = "desc_str"
+
+    # Valid parameter
+    param = "true"
+    retval = check_parameter_for_validity(param, "desc_str", valid_values)
+    assert retval == param
+
+    # Default value
+    param = None
+    default = "accept"
+    retval = check_parameter_for_validity(
+        param, desc_str, valid_values, default
+    )
+    assert retval == default
+
+    # Invalid parameter
+    param = "false"
+    with pytest.raises(ValueError) as except_info:
+        retval = check_parameter_for_validity(param, desc_str, valid_values)
+    assert (
+        str(except_info.value)
+        == f"The given {desc_str} '{param}' is not allowed. Please choose one of {valid_values}."
+    )
+
+    # Invalid default parameter
+    param = None
+    default = "false"
+    with pytest.raises(ValueError) as except_info:
+        retval = check_parameter_for_validity(
+            param, desc_str, valid_values, default
+        )
+    assert (
+        str(except_info.value)
+        == f"The given {desc_str} '{default}' is not allowed. Please choose one of {valid_values}."
+    )
+
+    # Too many parameters
+    param = ["accept", "accept"]
+    with pytest.raises(ValueError) as except_info:
+        retval = check_parameter_for_validity(param, desc_str, valid_values)
+    assert (
+        str(except_info.value)
+        == f"The {desc_str} has to be one of {valid_values}, it might not be more than one ({param} was given)."
+    )
+
+
+def test_check_parameters_validity():
+    valid_values = ["accept", "true"]
+    desc_str = "desc_str"
+
+    # Valid single parameter
+    param = "true"
+    retval = check_parameters_for_validity(param, "desc_str", valid_values)
+    assert type(retval) is list
+    assert retval == [param]
+
+    # Valid multi parameter
+    param = ["true", "accept"]
+    retval = check_parameters_for_validity(param, "desc_str", valid_values)
+    assert type(retval) is list
+    assert retval == param
+
+    # Tuple parameter
+    param = ("true", "accept")
+    retval = check_parameters_for_validity(param, "desc_str", valid_values)
+    assert type(retval) is list
+    assert retval == list(param)
+
+    # Default value
+    param = None
+    default = "accept"
+    retval = check_parameters_for_validity(
+        param, desc_str, valid_values, default
+    )
+    assert type(retval) is list
+    assert retval == [default]
+
+    # Invalid parameter
+    param = "false"
+    with pytest.raises(ValueError) as except_info:
+        retval = check_parameters_for_validity(param, desc_str, valid_values)
+    assert (
+        str(except_info.value)
+        == f"Invalid {desc_str} '{param}'. Valid values are {valid_values}, or lists/tuples of those"
+    )
+
+    # Invalid multi parameter
+    param = ["accept", "false"]
+    with pytest.raises(ValueError) as except_info:
+        retval = check_parameters_for_validity(param, desc_str, valid_values)
+    assert (
+        str(except_info.value)
+        == f"Invalid {desc_str} '{param[1]}'. Valid values are {valid_values}, or lists/tuples of those"
+    )
+
+    # Invalid default parameter
+    param = None
+    default = "false"
+    with pytest.raises(ValueError) as except_info:
+        retval = check_parameters_for_validity(
+            param, desc_str, valid_values, default
+        )
+    assert (
+        str(except_info.value)
+        == f"Invalid {desc_str} '{default}'. Valid values are {valid_values}, or lists/tuples of those"
     )
