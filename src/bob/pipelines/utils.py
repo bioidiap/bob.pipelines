@@ -86,11 +86,11 @@ def check_parameters_for_validity(
     """Checks the given parameters for validity.
 
     Checks a given parameter is in the set of valid parameters. It also
-    assures that the parameters form a tuple or a list.  If parameters is
+    assures that the returned parameters form a list.  If parameters is
     'None' or empty, the default_parameters will be returned (if
     default_parameters is omitted, all valid_parameters are returned).
 
-    This function will return a tuple or list of parameters, or raise a
+    This function will return a list of parameters, or raise a
     ValueError.
 
 
@@ -113,8 +113,8 @@ def check_parameters_for_validity(
 
     Returns
     -------
-    tuple
-            A list or tuple containing the valid parameters.
+    list
+            A list containing the valid parameters.
 
     Raises
     ------
@@ -144,8 +144,8 @@ def check_parameters_for_validity(
                 % (parameter_description, parameter, valid_parameters)
             )
 
-    # check passed, now return the list/tuple of parameters
-    return parameters
+    # check passed, now return the list of parameters
+    return list(parameters)
 
 
 def check_parameter_for_validity(
