@@ -235,6 +235,15 @@ def test_check_parameters_validity():
         == f"Invalid {desc_str} '{param[1]}'. Valid values are {valid_values}, or lists/tuples of those"
     )
 
+    # Empty default parameter
+    param = None
+    default = None
+    retval = check_parameters_for_validity(
+        param, desc_str, valid_values, default
+    )
+    assert type(retval) is list
+    assert retval == valid_values
+
     # Invalid default parameter
     param = None
     default = "false"
