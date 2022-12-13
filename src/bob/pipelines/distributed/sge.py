@@ -52,7 +52,9 @@ class SGEIdiapJob(Job):
                 "jobqueue.%s.resource-spec" % config_name
             )
         if job_extra_directives is None:
-            job_extra_directives = dask.config.get("jobqueue.%s.job-extra-directives" % config_name)
+            job_extra_directives = dask.config.get(
+                "jobqueue.%s.job-extra-directives" % config_name
+            )
 
         # Resources
         resources = kwargs.pop("resources", None)
@@ -260,7 +262,9 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
             job_script_prologue = []
         elif not isinstance(job_script_prologue, list):
             job_script_prologue = [job_script_prologue]
-        self.job_script_prologue = job_script_prologue + ["export PYTHONPATH=" + ":".join(sys.path)]
+        self.job_script_prologue = job_script_prologue + [
+            "export PYTHONPATH=" + ":".join(sys.path)
+        ]
 
         scheduler = {
             "cls": SchedulerResourceRestriction,  # Use local scheduler for now
