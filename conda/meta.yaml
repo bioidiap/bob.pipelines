@@ -23,8 +23,8 @@ requirements:
     - pip {{ pip }}
     - exposed
     # bob dependencies
-    - bob.extension
     - bob.io.base
+    - wdr
     # other libraries
     - numpy {{ numpy }}
     - dask {{ dask }}
@@ -39,8 +39,8 @@ requirements:
     - python
     - setuptools
     - exposed
-    - bob.extension
     - bob.io.base
+    - wdr
     - {{ pin_compatible('numpy') }}
     - {{ pin_compatible('dask') }}
     - {{ pin_compatible('dask-jobqueue') }}

@@ -18,7 +18,8 @@ from typing import Any, Optional, TextIO
 
 import sklearn.pipeline
 
-from bob.extension.download import get_file, list_dir, search_file
+from wdr.download import download_file
+from wdr.local import list_dir, search_and_open
 
 from .sample import Sample
 from .utils import check_parameter_for_validity, check_parameters_for_validity
@@ -181,14 +182,14 @@ class FileListDatabase:
     def groups(self) -> list[str]:
         """Returns all the available groups."""
         names = list_dir(
-            self.dataset_protocols_path, self.protocol, folders=False
+            self.dataset_protocols_path, self.protocol, show_dirs=False
         )
         names = [os.path.splitext(n)[0] for n in names]
         return names
 
     def _instance_protocols(self) -> list[str]:
         """Returns all the available protocols."""
-        return list_dir(self.dataset_protocols_path, files=False)
+        return list_dir(self.dataset_protocols_path, show_files=False)
 
     @classmethod
     def protocols(cls) -> list[str]:
@@ -237,18 +238,18 @@ class FileListDatabase:
             # put an os.makedirs(exist_ok=True) here if needed (needs bob_data path)
 
         # Retrieve the file from the server (or use the local version).
-        return get_file(
-            filename=name or cls.dataset_protocols_name,
+        return download_file(
             urls=urls or cls.dataset_protocols_urls,
+            desired_filename=name or cls.dataset_protocols_name,
             cache_subdir=subdir,
-            file_hash=hash or getattr(cls, "dataset_protocols_hash", None),
+            checksum=hash or getattr(cls, "dataset_protocols_hash", None),
         )
 
     def list_file(self, group: str) -> TextIO:
         """Returns the corresponding definition file of a group."""
-        list_file = search_file(
-            self.dataset_protocols_path,
-            os.path.join(self.protocol, group + ".csv"),
+        list_file = search_and_open(
+            search_pattern=os.path.join(self.protocol, group + ".csv"),
+            base_dir=self.dataset_protocols_path,
         )
         return list_file
 
