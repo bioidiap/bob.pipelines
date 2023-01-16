@@ -10,8 +10,7 @@
     dynamic = ["readme"]
     license = {text = "BSD 3-Clause License"}
     authors = [
-    {name = "Tiago de Freitas Pereira"},
-    {email = "tiago.pereira@idiap.ch"},
+    {name = "Tiago de Freitas Pereira", email = "tiago.pereira@idiap.ch"},
     ]
     keywords = ["bob", "pipelines"]
 
