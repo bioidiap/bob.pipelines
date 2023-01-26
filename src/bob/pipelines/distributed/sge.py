@@ -15,7 +15,7 @@ from exposed.rc import UserDefaults
 from .sge_queues import QUEUE_DEFAULT
 
 logger = logging.getLogger(__name__)
-rc = UserDefaults("~/.bobrc", "BOBRC")
+rc = UserDefaults("~/.bobrc")
 
 
 class SGEIdiapJob(Job):
