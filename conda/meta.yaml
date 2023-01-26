@@ -30,7 +30,7 @@ requirements:
     - dask {{ dask }}
     - dask-jobqueue {{ dask_jobqueue }}
     - distributed {{ distributed }}
-    - scikit-learn < 1.2
+    - scikit-learn {{ scikit_learn }}
     - xarray {{ xarray }}
     - h5py {{h5py}}
     # optional dependencies

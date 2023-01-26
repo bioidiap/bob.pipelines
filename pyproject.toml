@@ -31,7 +31,7 @@
         "bob.extension",
         "exposed",
         "bob.io.base",
-        "scikit-learn < 1.2",
+        "scikit-learn",
         "dask",
         "distributed",
         "dask-jobqueue",
