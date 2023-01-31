@@ -28,9 +28,9 @@
     dependencies = [
         "setuptools",
         "numpy",
-        "bob.extension",
         "exposed",
         "bob.io.base",
+        "wdr",
         "scikit-learn",
         "dask",
         "distributed",

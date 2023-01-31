@@ -10,22 +10,22 @@ The principles of this module are:
 """
 import csv
 import itertools
-import os
-import pathlib
 
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, Optional, TextIO
 
 import sklearn.pipeline
 
-from bob.extension.download import get_file, list_dir, search_file
+from wdr.download import download_file
+from wdr.local import list_dir, search_and_open
 
 from .sample import Sample
 from .utils import check_parameter_for_validity, check_parameters_for_validity
 
 
 def _maybe_open_file(path, **kwargs):
-    if isinstance(path, (str, bytes, pathlib.Path)):
+    if isinstance(path, (str, bytes, Path)):
         path = open(path, **kwargs)
     return path
 
@@ -141,19 +141,23 @@ class FileListDatabase:
         ValueError
             If the dataset_protocols_path does not exist.
         """
-        if dataset_protocols_path is None:
-            dataset_protocols_path = self.retrieve_dataset_protocols()
-        if not os.path.exists(dataset_protocols_path):
-            raise ValueError(
-                f"The path `{dataset_protocols_path}` was not found"
-            )
-        self.dataset_protocols_path = dataset_protocols_path
-        self.reader_cls = reader_cls
-        self._transformer = transformer
-        self.readers = dict()
-        self._protocol = None
+
         # Tricksy trick to make protocols non-classmethod when instantiated
         self.protocols = self._instance_protocols
+
+        if dataset_protocols_path is None:
+            dataset_protocols_path = self.retrieve_dataset_protocols()
+
+        self.dataset_protocols_path = dataset_protocols_path
+
+        if len(self.protocols()) < 1:
+            raise ValueError(
+                f"No protocols found at `{dataset_protocols_path}`!"
+            )
+        self.reader_cls = reader_cls
+        self._transformer = transformer
+        self.readers = {}
+        self._protocol = None
         self.protocol = protocol
         super().__init__(**kwargs)
 
@@ -180,19 +184,24 @@ class FileListDatabase:
 
     def groups(self) -> list[str]:
         """Returns all the available groups."""
-        names = list_dir(
-            self.dataset_protocols_path, self.protocol, folders=False
+        paths = list_dir(
+            self.dataset_protocols_path, self.protocol, show_dirs=False
         )
-        names = [os.path.splitext(n)[0] for n in names]
+        names = [p.stem for p in paths]
         return names
 
     def _instance_protocols(self) -> list[str]:
         """Returns all the available protocols."""
-        return list_dir(self.dataset_protocols_path, files=False)
+        protocol_dirs = list_dir(self.dataset_protocols_path, show_files=False)
+        return [d.stem for d in protocol_dirs]
 
     @classmethod
-    def protocols(cls) -> list[str]:
-        return list_dir(cls.retrieve_dataset_protocols())
+    def protocols(cls) -> list[str]:  # pylint: disable=method-hidden
+        """Returns all the available protocols."""
+        protocol_dirs = list_dir(
+            cls.retrieve_dataset_protocols(), show_files=False
+        )
+        return [d.stem for d in protocol_dirs]
 
     @classmethod
     def retrieve_dataset_protocols(
@@ -204,7 +213,7 @@ class FileListDatabase:
     ) -> str:
         """Return a path to the protocols definition files.
 
-        If the files are not present locally in ``bob_data/datasets``, they will be
+        If the files are not present locally in ``bob_data/<category>``, they will be
         downloaded.
 
         The class inheriting from CSVDatabase must have a ``name`` and an
@@ -231,24 +240,25 @@ class FileListDatabase:
         """
 
         # Save to bob_data/datasets, or if present, in a category sub directory.
-        subdir = "datasets"
+        subdir = Path("protocols")
         if category or hasattr(cls, "category"):
-            subdir = os.path.join(subdir, category or getattr(cls, "category"))
-            # put an os.makedirs(exist_ok=True) here if needed (needs bob_data path)
+            subdir = subdir / (category or getattr(cls, "category"))
+            # put a makedirs(parent=True, exist_ok=True) here if needed (needs bob_data path)
 
         # Retrieve the file from the server (or use the local version).
-        return get_file(
-            filename=name or cls.dataset_protocols_name,
+        protocols_path = download_file(
             urls=urls or cls.dataset_protocols_urls,
-            cache_subdir=subdir,
-            file_hash=hash or getattr(cls, "dataset_protocols_hash", None),
+            destination_sub_directory=subdir,
+            destination_filename=name or cls.dataset_protocols_name,
+            checksum=hash or getattr(cls, "dataset_protocols_hash", None),
         )
+        return protocols_path
 
     def list_file(self, group: str) -> TextIO:
         """Returns the corresponding definition file of a group."""
-        list_file = search_file(
-            self.dataset_protocols_path,
-            os.path.join(self.protocol, group + ".csv"),
+        list_file = search_and_open(
+            search_pattern=Path(self.protocol) / (group + ".csv"),
+            base_dir=self.dataset_protocols_path,
         )
         return list_file
 
