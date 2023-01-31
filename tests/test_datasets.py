@@ -3,10 +3,9 @@
 
 """Test code for datasets"""
 
-import os
+from pathlib import Path
 
 import numpy as np
-import pkg_resources
 import pytest
 
 from sklearn.pipeline import make_pipeline
@@ -14,6 +13,8 @@ from sklearn.preprocessing import FunctionTransformer
 
 from bob.pipelines.datasets import FileListDatabase
 from bob.pipelines.transformers import Str_To_Types
+
+DATA_PATH = Path(__file__).parent / "data"
 
 
 def iris_data_transform(samples):
@@ -26,9 +27,7 @@ def iris_data_transform(samples):
 
 
 def test_iris_list_database():
-    dataset_protocols_path = pkg_resources.resource_filename(
-        __name__, os.path.join("data", "iris_database")
-    )
+    dataset_protocols_path = DATA_PATH / "iris_database"
 
     database = FileListDatabase(
         protocol=None, dataset_protocols_path=dataset_protocols_path
