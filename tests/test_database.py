@@ -101,7 +101,7 @@ def test_filelist_class(monkeypatch):
         monkeypatch.setenv("HOME", tmp_home.as_posix())
         desired_name = "atnt_filename.tar.gz"
 
-        class DBDownloadCustomFileName(FileListDatabase):
+        class DBDownloadCustomFilename(FileListDatabase):
             name = "atnt"
             dataset_protocols_checksum = "f529acef"
             dataset_protocols_urls = [
@@ -109,8 +109,31 @@ def test_filelist_class(monkeypatch):
             ]
             dataset_protocols_name = desired_name
 
-        assert DBDownloadCustomFileName.protocols() == ["idiap_protocol"]
+        assert DBDownloadCustomFilename.protocols() == ["idiap_protocol"]
         assert (
-            DBDownloadCustomFileName.retrieve_dataset_protocols()
+            DBDownloadCustomFilename.retrieve_dataset_protocols()
             == tmp_home / "bob_data" / "protocols" / desired_name
+        )
+
+    with TemporaryDirectory(prefix="bobtest_") as tmpdir:
+        tmp_home = Path(tmpdir)
+        monkeypatch.setenv("HOME", tmp_home.as_posix())
+        desired_category = "custom_category"
+
+        class DBDownloadCustomCategory(FileListDatabase):
+            name = "atnt"
+            dataset_protocols_checksum = "f529acef"
+            dataset_protocols_urls = [
+                "https://www.idiap.ch/software/bob/databases/latest/base/atnt-f529acef.tar.gz"
+            ]
+            dataset_protocols_category = desired_category
+
+        assert DBDownloadCustomCategory.protocols() == ["idiap_protocol"]
+        assert (
+            DBDownloadCustomCategory.retrieve_dataset_protocols()
+            == tmp_home
+            / "bob_data"
+            / "protocols"
+            / desired_category
+            / "atnt-f529acef.tar.gz"
         )

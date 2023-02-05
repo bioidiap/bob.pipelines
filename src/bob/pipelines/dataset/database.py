@@ -245,8 +245,8 @@ class FileListDatabase:
 
         # Save to bob_data/protocols, or if present, in a category sub directory.
         subdir = Path("protocols")
-        if hasattr(cls, "category"):
-            subdir = subdir / getattr(cls, "category")
+        if hasattr(cls, "dataset_protocols_category"):
+            subdir = subdir / getattr(cls, "dataset_protocols_category")
 
         # Retrieve the file from the server (or use the local version).
         return retrieve_protocols(
