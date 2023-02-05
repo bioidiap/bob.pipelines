@@ -113,27 +113,32 @@ def list_protocol_paths(
     database_name: str,
     base_dir: Union[PathLike[str], str, None] = None,
     subdir: Union[PathLike[str], str] = "protocol",
-    database_filename: Optional[str] = None,
+    database_filename: Union[str, None] = None,
 ) -> list[Path]:
     """Returns the paths of each protocol in a database definition file."""
     if base_dir is None:
         base_dir = _get_local_data_directory()
     final_dir = Path(base_dir) / subdir
-    if database_filename is None:
-        final_dir /= database_name
-    else:
-        final_dir /= database_filename
+    final_dir /= (
+        database_name if database_filename is None else database_filename
+    )
 
     if archive.is_archive(final_dir):
         protocols = archive.list_dirs(final_dir, show_files=False)
-        archive_path, inner_dir = archive.path_and_subdir(final_dir)
-        if len(protocols) == 1 and protocols[0] == database_name:
+        if len(protocols) == 1 and protocols[0].name == database_name:
             protocols = archive.list_dirs(
                 final_dir, database_name, show_files=False
             )
-            inner_dir /= database_name
+
+        archive_path, inner_dir = archive.path_and_subdir(final_dir)
+        if inner_dir is None:
+            return [
+                Path(f"{archive_path.as_posix()}:{p.as_posix().lstrip('/')}")
+                for p in protocols
+            ]
+
         return [
-            Path(f"{archive_path.as_posix()}:{inner_dir.as_posix}/{p}")
+            Path(f"{archive_path.as_posix()}:{inner_dir.as_posix()}/{p.name}")
             for p in protocols
         ]
 
