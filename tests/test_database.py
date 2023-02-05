@@ -122,11 +122,11 @@ def test_filelist_class(monkeypatch):
 
         class DBDownloadCustomCategory(FileListDatabase):
             name = "atnt"
+            category = desired_category
             dataset_protocols_checksum = "f529acef"
             dataset_protocols_urls = [
                 "https://www.idiap.ch/software/bob/databases/latest/base/atnt-f529acef.tar.gz"
             ]
-            dataset_protocols_category = desired_category
 
         assert DBDownloadCustomCategory.protocols() == ["idiap_protocol"]
         assert (
