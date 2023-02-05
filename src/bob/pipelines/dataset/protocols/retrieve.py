@@ -37,7 +37,7 @@ import requests
 
 from exposed.rc import UserDefaults
 
-from bob.pipelines.protocols import archive, hash
+from bob.pipelines.dataset.protocols import archive, hashing
 
 logger = getLogger(__name__)
 
@@ -84,18 +84,27 @@ def retrieve_protocols(
     destination_filename: Optional[str] = None,
     base_dir: Union[PathLike[str], str, None] = None,
     subdir: Union[PathLike[str], str] = "protocol",
+    checksum: Union[str, None] = None,
 ) -> Path:
     """Automatically downloads the necessary protocol definition files."""
-    if not base_dir:
+    if base_dir is None:
         base_dir = _get_local_data_directory()
-    if not destination_filename:
-        destination_filename = _infer_filename_from_urls(urls)
 
-    return download_file(
+    remote_filename = _infer_filename_from_urls(urls)
+    if destination_filename is None:
+        destination_filename = remote_filename
+    elif Path(remote_filename).suffixes != Path(destination_filename).suffixes:
+        raise ValueError(
+            "Local dataset protocol definition files must have the same "
+            f"extension as the remote ones ({remote_filename=})"
+        )
+
+    return download_protocol_definition(
         urls=urls,
-        destination_directory=base_dir,
-        destination_sub_directory=subdir,
+        destination_base_dir=base_dir,
+        destination_subdir=subdir,
         destination_filename=destination_filename,
+        checksum=checksum,
         force=False,
     )
 
@@ -145,7 +154,6 @@ def get_protocol_path(
 
     Returns
     -------
-
     Path
         The required protocol's path for the database.
     """
@@ -169,8 +177,8 @@ def get_protocol_path(
 def list_protocol_names(
     database_name: str,
     base_dir: Union[PathLike[str], str, None] = None,
-    subdir: Union[PathLike[str], str] = "protocols",
-    database_filename: Optional[str] = None,
+    subdir: Union[PathLike[str], str, None] = "protocols",
+    database_filename: Union[str, None] = None,
 ) -> list[str]:
     """Returns the paths of the protocol directories for a given database.
 
@@ -183,7 +191,6 @@ def list_protocol_names(
 
     Parameters
     ----------
-
     database_name
         The database name used to infer ``database_filename`` if not specified.
     base_dir
@@ -197,7 +204,6 @@ def list_protocol_names(
 
     Returns
     -------
-
     A list of protocol names
         The different protocols available for that database.
     """
@@ -205,17 +211,21 @@ def list_protocol_names(
     if base_dir is None:
         base_dir = _get_local_data_directory()
 
+    if subdir is None:
+        subdir = "."
+
     if database_filename is None:
         database_filename = database_name
         final_path: Path = Path(base_dir) / subdir / database_filename
         if not final_path.is_dir():
             database_filename = database_name + ".tar.gz"
+
     final_path: Path = Path(base_dir) / subdir / database_filename
 
     if archive.is_archive(final_path):
         top_level_dirs = archive.list_dirs(final_path, show_files=False)
         # Handle a database archive having database_name as top-level directory
-        if len(top_level_dirs) == 1 and top_level_dirs[0] == database_name:
+        if len(top_level_dirs) == 1 and top_level_dirs[0].name == database_name:
             return [
                 p.stem
                 for p in archive.list_dirs(
@@ -223,20 +233,25 @@ def list_protocol_names(
                 )
             ]
         return [p.stem for p in top_level_dirs]
+    # Not an archive: list the dirs
     return [p.stem for p in final_path.iterdir() if p.is_dir()]
 
 
 def open_definition_file(
-    search_pattern,
-    database_name,
-    protocol,
+    search_pattern: Union[PathLike[str], str],
+    database_name: str,
+    protocol: str,
+    base_dir: Union[PathLike[str], str, None] = None,
+    subdir: Union[PathLike[str], str, None] = "protocols",
     database_filename: Optional[str] = None,
 ) -> Union[TextIO, None]:
     """Opens a protocol definition file inside a protocol directory.
 
     Also handles protocols inside an archive.
     """
-    search_path = get_protocol_path(database_name, protocol, database_filename)
+    search_path = get_protocol_path(
+        database_name, protocol, base_dir, subdir, database_filename
+    )
 
     if archive.is_archive(search_path):
         return archive.search_and_open(
@@ -244,8 +259,10 @@ def open_definition_file(
             archive_path=search_path,
         )
 
+    search_pattern = Path(search_pattern)
+
     # we prepend './' to search_pattern because it might start with '/'
-    pattern = search_path / "**" / f"./{search_pattern}"
+    pattern = search_path / "**" / f"./{search_pattern.as_posix()}"
     for path in glob.iglob(pattern.as_posix(), recursive=True):
         if not Path(path).is_file():
             continue
@@ -261,6 +278,7 @@ def list_group_paths(
     subdir: Union[PathLike[str], str] = "protocols",
     database_filename: Optional[str] = None,
 ) -> list[Path]:
+    """Returns the file paths of the groups in protocol"""
     protocol_path = get_protocol_path(
         database_name=database_name,
         protocol=protocol,
@@ -278,19 +296,35 @@ def list_group_paths(
     return protocol_path.iterdir()
 
 
+def list_group_names(
+    database_name: str,
+    protocol: str,
+    base_dir: Union[PathLike[str], str, None] = None,
+    subdir: Union[PathLike[str], str] = "protocols",
+    database_filename: Optional[str] = None,
+) -> list[str]:
+    """Returns the group names of a protocol."""
+    paths = list_group_paths(
+        database_name=database_name,
+        protocol=protocol,
+        base_dir=base_dir,
+        subdir=subdir,
+        database_filename=database_filename,
+    )
+    return [p.stem for p in paths]
+
+
 def download_protocol_definition(
     urls: Union[list[str], str],
     destination_base_dir: Union[PathLike, None] = None,
     destination_subdir: Union[str, None] = None,
     destination_filename: Union[str, None] = None,
     checksum: Union[str, None] = None,
-    checksum_fct: Callable[[Any, int], str] = hash.sha256_hash,
+    checksum_fct: Callable[[Any, int], str] = hashing.sha256_hash,
     force: bool = False,
     makedirs: bool = True,
 ) -> Path:
     """Downloads a remote file locally.
-
-    This will overwrite any existing file with the same name.
 
     Parameters
     ----------
@@ -350,7 +384,7 @@ def download_protocol_definition(
                 f"File {local_file} already exists, skipping download ({force=})."
             )
             needs_download = False
-        elif hash.verify_file(local_file, checksum, checksum_fct):
+        elif hashing.verify_file(local_file, checksum, checksum_fct):
             logger.info(
                 f"File {local_file} already exists and checksum is valid."
             )
@@ -396,7 +430,7 @@ def download_protocol_definition(
             f.write(response.content)
 
     if checksum is not None:
-        if not hash.verify_file(local_file, checksum, hash_fct=checksum_fct):
+        if not hashing.verify_file(local_file, checksum, hash_fct=checksum_fct):
             if not needs_download:
                 raise ValueError(
                     f"The local file hash does not correspond to '{checksum}' "
@@ -404,7 +438,7 @@ def download_protocol_definition(
                 )
             raise ValueError(
                 "The downloaded file hash ('"
-                f"{hash.compute_crc(local_file, hash_fct=checksum_fct)}') does "
+                f"{hashing.compute_crc(local_file, hash_fct=checksum_fct)}') does "
                 f"not correspond to '{checksum}'."
             )
 

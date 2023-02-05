@@ -14,17 +14,19 @@ import os
 
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, TextIO
+from typing import Any, Optional, TextIO, Union
 
 import sklearn.pipeline
 
-from bob.pipelines.protocols.retrieve import (  # open_definition_file,
-    download_protocol_definition,
+from bob.pipelines.dataset.protocols.retrieve import (
+    list_group_names,
     list_protocol_names,
+    open_definition_file,
+    retrieve_protocols,
 )
 
-from .sample import Sample
-from .utils import check_parameter_for_validity, check_parameters_for_validity
+from ..sample import Sample
+from ..utils import check_parameter_for_validity, check_parameters_for_validity
 
 
 def _maybe_open_file(path, **kwargs):
@@ -120,8 +122,10 @@ class FileListDatabase:
 
     def __init__(
         self,
+        *,
+        name: str,
         protocol: str,
-        dataset_protocols_path: Optional[str] = None,
+        dataset_protocols_path: Union[os.PathLike[str], str, None] = None,
         reader_cls: Iterable = CSVToSamples,
         transformer: Optional[sklearn.pipeline.Pipeline] = None,
         **kwargs,
@@ -133,11 +137,11 @@ class FileListDatabase:
             Path to a folder or a tarball where the csv protocol files are located.
         protocol
             The name of the protocol to be used for samples. If None, the first
-            protocol will be used.
+            protocol found will be used.
         reader_cls
-            A callable that will initialize the CSVToSamples reader, by default CSVToSamples TODO update
+            An iterable that returns created Sample objects from a list file.
         transformer
-            A scikit-learn transformer that further changes the samples
+            A scikit-learn transformer that further changes the samples.
 
         Raises
         ------
@@ -148,10 +152,13 @@ class FileListDatabase:
         # Tricksy trick to make protocols non-classmethod when instantiated
         self.protocols = self._instance_protocols
 
+        if getattr(self, "name", None) is None:
+            self.name = name
+
         if dataset_protocols_path is None:
             dataset_protocols_path = self.retrieve_dataset_protocols()
 
-        self.dataset_protocols_pathu = dataset_protocols_path
+        self.dataset_protocols_path = Path(dataset_protocols_path)
 
         if len(self.protocols()) < 1:
             raise ValueError(
@@ -159,7 +166,7 @@ class FileListDatabase:
             )
         self.reader_cls = reader_cls
         self._transformer = transformer
-        self.readers = {}
+        self.readers: dict[str, Iterable] = {}
         self._protocol = None
         self.protocol = protocol
         super().__init__(**kwargs)
@@ -187,90 +194,78 @@ class FileListDatabase:
 
     def groups(self) -> list[str]:
         """Returns all the available groups."""
-        names = list_groups_names(
-            self.name,
-            self.dataset_protocols_path,
-            self.protocol,
+        return list_group_names(
+            database_name=self.name,
+            protocol=self.protocol,
+            database_filename=self.dataset_protocols_path.name,
+            base_dir=self.dataset_protocols_path.parent,
+            subdir=".",
         )
-        return names
 
     def _instance_protocols(self) -> list[str]:
         """Returns all the available protocols."""
         return list_protocol_names(
             database_name=self.name,
-            database_filename=getattr(self, dataset_protocols_),
+            database_filename=self.dataset_protocols_path.name,
+            base_dir=self.dataset_protocols_path.parent,
+            subdir=".",
         )
 
     @classmethod
     def protocols(cls) -> list[str]:  # pylint: disable=method-hidden
         """Returns all the available protocols."""
         # Ensure the definition file exists locally
-        cls.retrieve_dataset_protocols()
+        loc = cls.retrieve_dataset_protocols()
         if not hasattr(cls, "name"):
             raise ValueError(f"{cls} has no attribute 'name'.")
         return list_protocol_names(
             database_name=getattr(cls, "name"),
-            database_file="".join(
-                (getattr(cls, "name"), "-", getattr(cls, "hash"))
-            ),
+            database_filename=loc.name,
+            base_dir=loc.parent,
+            subdir=".",
         )
 
     @classmethod
-    def retrieve_dataset_protocols(
-        cls,
-        name: Optional[str] = None,
-        urls: Optional[list[str]] = None,
-        hash: Optional[str] = None,
-        category: Optional[str] = None,
-    ) -> str:
+    def retrieve_dataset_protocols(cls) -> Path:
         """Return a path to the protocols definition files.
 
-        If the files are not present locally in ``bob_data/<category>``, they will be
-        downloaded.
+        If the files are not present locally in ``bob_data/<subdir>/<category>``, they
+        will be downloaded.
 
         The class inheriting from CSVDatabase must have a ``name`` and an
-        ``dataset_protocols_urls`` attributes if those parameters are not provided.
+        ``dataset_protocols_urls`` attributes.
 
-        A ``hash`` attribute can be used to verify the file and ensure the correct
+        A ``checksum`` attribute can be used to verify the file and ensure the correct
         version is used.
-
-        Parameters
-        ----------
-        name
-            File name created locally. If not provided, will try to use
-            ``cls.dataset_protocols_name``.
-        urls
-            Possible addresses to retrieve the definition file from. If not provided,
-            will try to use ``cls.dataset_protocols_urls``.
-        hash
-            hash of the downloaded file. If not provided, will try to use
-            ``cls.dataset_protocol_hash``.
-        category
-            Used to specify a sub directory in ``{bob_data}/datasets/{category}``. If
-            not provided, will try to use ``cls.category``.
-
         """
 
-        # Save to bob_data/datasets, or if present, in a category sub directory.
+        # When the path is specified, just return it.
+        if getattr(cls, "dataset_protocols_path", None) is not None:
+            return getattr(cls, "dataset_protocols_path")
+
+        # Save to bob_data/protocols, or if present, in a category sub directory.
         subdir = Path("protocols")
-        if category or hasattr(cls, "category"):
-            subdir = subdir / (category or getattr(cls, "category"))
-            # put a makedirs(parent=True, exist_ok=True) here if needed (needs bob_data path)
+        if hasattr(cls, "category"):
+            subdir = subdir / getattr(cls, "category")
 
         # Retrieve the file from the server (or use the local version).
-        return download_protocol_definition(
-            urls=urls or cls.dataset_protocols_urls,
-            destination_filename=name
-            or getattr(cls, "dataset_protocols_name", None),
+        return retrieve_protocols(
+            urls=getattr(cls, "dataset_protocols_urls"),
+            destination_filename=getattr(cls, "dataset_protocols_name", None),
+            base_dir=None,
             subdir=subdir,
-            checksum=hash or getattr(cls, "dataset_protocols_hash", None),
+            checksum=getattr(cls, "dataset_protocols_checksum", None),
         )
 
     def list_file(self, group: str) -> TextIO:
         """Returns the corresponding definition file of a group."""
-        list_file = search_file(
-            self.dataset_protocols_path,
-            os.path.join(self.protocol, group + ".csv"),
+        list_file = open_definition_file(
+            search_pattern=group + ".csv",
+            database_name=self.name,
+            protocol=self.protocol,
+            database_filename=self.dataset_protocols_path.name,
+            base_dir=self.dataset_protocols_path.parent,
+            subdir=".",
         )
         return list_file
 

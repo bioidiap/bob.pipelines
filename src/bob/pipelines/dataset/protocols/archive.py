@@ -5,7 +5,6 @@ import io
 import logging
 import os
 import tarfile
-import warnings
 import zipfile
 
 from fnmatch import fnmatch
