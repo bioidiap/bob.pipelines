@@ -23,7 +23,6 @@ requirements:
     - pip {{ pip }}
     - exposed
     # bob dependencies
-    - bob.extension
     - bob.io.base
     # other libraries
     - numpy {{ numpy }}
@@ -39,7 +38,6 @@ requirements:
     - python
     - setuptools
     - exposed
-    - bob.extension
     - bob.io.base
     - {{ pin_compatible('numpy') }}
     - {{ pin_compatible('dask') }}
