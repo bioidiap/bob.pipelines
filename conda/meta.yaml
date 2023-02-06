@@ -21,7 +21,7 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - pip {{ pip }}
-    - exposed
+    - clapp
     # bob dependencies
     - bob.io.base
     # other libraries
@@ -37,7 +37,7 @@ requirements:
   run:
     - python
     - setuptools
-    - exposed
+    - clapp
     - bob.io.base
     - {{ pin_compatible('numpy') }}
     - {{ pin_compatible('dask') }}
