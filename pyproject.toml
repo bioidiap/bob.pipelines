@@ -36,6 +36,7 @@
         "dask-jobqueue",
         "xarray",
         "h5py",
+        "requests",
     ]
 
 [project.urls]
