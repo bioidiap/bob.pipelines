@@ -566,7 +566,6 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         return self.estimator.score(samples)
 
     def fit(self, samples, y=None, **kwargs):
-
         if not estimator_requires_fit(self.estimator):
             return self
 
@@ -582,7 +581,6 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         return self.save_model()
 
     def make_path(self, sample):
-
         if self.features_dir is None:
             return None
 
@@ -605,7 +603,6 @@ class CheckpointWrapper(BaseWrapper, TransformerMixin):
         to_save = getattr(sample, self.sample_attribute)
         for _ in range(self.attempts):
             try:
-
                 dirname = os.path.dirname(path)
                 os.makedirs(dirname, exist_ok=True)
 
@@ -697,7 +694,6 @@ def _shape_samples(samples):
 
 
 def _array_from_sample_bags(X: dask.bag.Bag, attribute: str, ndim: int = 2):
-
     if ndim not in (1, 2):
         raise NotImplementedError(f"ndim must be 1 or 2. Got: {ndim}")
 
@@ -1028,7 +1024,6 @@ def wrap(bases, estimator=None, **kwargs):
     if isinstance(estimator, Pipeline):
         # wrap inner steps
         for idx, name, trans in estimator._iter():
-
             # when checkpointing a pipeline, checkpoint each transformer in its own folder
             new_kwargs = dict(kwargs)
             features_dir, model_path = (

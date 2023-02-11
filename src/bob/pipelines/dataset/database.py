@@ -299,7 +299,6 @@ class FileListDatabase:
         )
         all_samples = []
         for grp in groups:
-
             for sample in self.get_reader(grp):
                 all_samples.append(sample)
 
