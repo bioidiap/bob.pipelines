@@ -34,7 +34,7 @@ from .wrappers import (  # noqa: F401
     is_instance_nested,
     is_pipeline_wrapped,
 )
-from .datasets import FileListToSamples, CSVToSamples, FileListDatabase
+from .dataset import FileListToSamples, CSVToSamples, FileListDatabase
 
 
 def __appropriate__(*args):
@@ -45,7 +45,7 @@ def __appropriate__(*args):
     Parameters
     ----------
     *args
-        The objects that you want sphinx to beleive that are defined here.
+        The objects that you want sphinx to believe that are defined here.
 
     Resolves `Sphinx referencing issues <https//github.com/sphinx-
     doc/sphinx/issues/3048>`

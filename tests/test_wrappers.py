@@ -65,7 +65,6 @@ class DummyTransformer(TransformerMixin, BaseEstimator):
         return self
 
     def transform(self, X):
-
         # Input validation
         X = check_array(X)
         # Check that the input is of the same shape as the one passed
@@ -181,7 +180,6 @@ def test_sklearn_compatible_estimator():
 
 
 def test_function_sample_transfomer():
-
     X = np.zeros(shape=(10, 2), dtype=int)
     samples = [bob.pipelines.Sample(data) for data in X]
 
@@ -200,7 +198,6 @@ def test_function_sample_transfomer():
 
 
 def test_fittable_sample_transformer():
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [bob.pipelines.Sample(data) for data in X]
 
@@ -214,7 +211,6 @@ def test_fittable_sample_transformer():
 
 
 def test_tagged_sample_transformer():
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [bob.pipelines.Sample(data) for data in X]
 
@@ -227,7 +223,6 @@ def test_tagged_sample_transformer():
 
 
 def test_tagged_input_sample_transformer():
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [bob.pipelines.Sample(data) for data in X]
 
@@ -242,7 +237,6 @@ def test_tagged_input_sample_transformer():
 
 
 def test_dask_tag_transformer():
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [bob.pipelines.Sample(data) for data in X]
     sample_bags = bob.pipelines.ToDaskBag().transform(samples)
@@ -255,7 +249,6 @@ def test_dask_tag_transformer():
 
 
 def test_dask_tag_checkpoint_transformer():
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [bob.pipelines.Sample(data) for data in X]
     sample_bags = bob.pipelines.ToDaskBag().transform(samples)
@@ -279,7 +272,6 @@ def test_dask_tag_checkpoint_transformer():
 
 
 def test_dask_tag_daskml_estimator():
-
     X, labels = make_blobs(
         n_samples=1000,
         n_features=2,
@@ -328,7 +320,6 @@ def test_dask_tag_daskml_estimator():
 
 
 def test_failing_sample_transformer():
-
     X = np.zeros(shape=(10, 2))
     samples = [bob.pipelines.Sample(data) for i, data in enumerate(X)]
     expected = np.full_like(X, 2, dtype=object)
@@ -371,7 +362,6 @@ def test_failing_sample_transformer():
 
 
 def test_failing_checkpoint_transformer():
-
     X = np.zeros(shape=(10, 2))
     samples = [bob.pipelines.Sample(data, key=i) for i, data in enumerate(X)]
     expected = np.full_like(X, 2)
@@ -470,7 +460,6 @@ def _assert_delayed_samples(samples):
 
 
 def test_checkpoint_function_sample_transfomer():
-
     X = np.arange(20, dtype=int).reshape(10, 2)
     samples = [
         bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
@@ -576,7 +565,6 @@ def _build_estimator(path, i):
 
 
 def _build_transformer(path, i, force=False):
-
     features_dir = os.path.join(path, f"transformer{i}")
     estimator = bob.pipelines.wrap(
         [DummyTransformer, "sample", "checkpoint"],
@@ -588,7 +576,6 @@ def _build_transformer(path, i, force=False):
 
 
 def test_checkpoint_fittable_pipeline():
-
     X = np.ones(shape=(10, 2), dtype=int)
     samples = [
         bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
@@ -613,7 +600,6 @@ def test_checkpoint_fittable_pipeline():
 
 def test_checkpoint_transform_pipeline():
     def _run(dask_enabled):
-
         X = np.ones(shape=(10, 2), dtype=int)
         samples_transform = [
             bob.pipelines.Sample(data, key=str(i)) for i, data in enumerate(X)
@@ -642,11 +628,9 @@ def test_checkpoint_transform_pipeline():
 
 
 def test_checkpoint_transform_pipeline_force():
-
     with tempfile.TemporaryDirectory() as d:
 
         def _run():
-
             X = np.ones(shape=(10, 2), dtype=int)
             samples_transform = [
                 bob.pipelines.Sample(data, key=str(i))
@@ -782,7 +766,6 @@ def test_dask_checkpoint_transform_pipeline():
 
 def test_checkpoint_transform_pipeline_with_sampleset():
     def _run(dask_enabled):
-
         X = np.ones(shape=(10, 2), dtype=int)
         samples_transform = bob.pipelines.SampleSet(
             [
@@ -821,7 +804,6 @@ def test_checkpoint_transform_pipeline_with_sampleset():
 
 
 def test_estimator_requires_fit():
-
     all_wraps = [
         ["sample"],
         ["sample", "checkpoint"],

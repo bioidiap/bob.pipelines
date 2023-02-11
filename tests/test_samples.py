@@ -17,7 +17,6 @@ from bob.pipelines import (
 
 
 def test_sampleset_collection():
-
     n_samples = 10
     X = np.ones(shape=(n_samples, 2), dtype=int)
     sampleset = SampleSet(
@@ -46,7 +45,6 @@ def test_sampleset_collection():
 
     # Testing delayed sampleset
     with tempfile.TemporaryDirectory() as dir_name:
-
         samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
         filename = os.path.join(dir_name, "samples.pkl")
         with open(filename, "wb") as f:
@@ -59,7 +57,6 @@ def test_sampleset_collection():
 
     # Testing delayed sampleset cached
     with tempfile.TemporaryDirectory() as dir_name:
-
         samples = [Sample(data, key=str(i)) for i, data in enumerate(X)]
         filename = os.path.join(dir_name, "samples.pkl")
         with open(filename, "wb") as f:

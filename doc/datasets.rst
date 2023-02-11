@@ -67,6 +67,7 @@ As you can see there is only one protocol called ``default`` and two groups
     >>> import bob.pipelines
     >>> dataset_protocols_path = "tests/data/iris_database"
     >>> database = bob.pipelines.FileListDatabase(
+    ...     name="iris",
     ...     protocol="default",
     ...     dataset_protocols_path=dataset_protocols_path,
     ... )
@@ -100,6 +101,7 @@ to all samples:
     ...     return [bob.pipelines.Sample(prepare_data(sample), parent=sample) for sample in samples]
 
     >>> database = bob.pipelines.FileListDatabase(
+    ...     name="iris",
     ...     protocol="default",
     ...     dataset_protocols_path=dataset_protocols_path,
     ...     transformer=FunctionTransformer(prepare_iris_samples),

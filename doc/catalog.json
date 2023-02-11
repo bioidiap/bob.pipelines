@@ -1,32 +1,10 @@
 {
-    "bob.io.base": {
-      "versions": {
-        "latest": "https://www.idiap.ch/software/bob/docs/bob/bob.io.base/master/sphinx"
-      },
-      "sources": {}
+  "bob.io.base": {
+    "versions": {
+      "5.0.3b1": "https://www.idiap.ch/software/bob/docs/bob/bob.io.base/master/sphinx/"
     },
-    "dask-ml": {
-      "versions": {
-        "latest": "https://ml.dask.org"
-      },
-      "sources": {
-        "readthedocs": "dask-ml"
-      }
-    },
-    "scikit-learn": {
-      "versions": {
-        "latest": "https://scikit-learn.org/stable/"
-      },
-      "sources": {
-        "readthedocs": "scikit-learn"
-      }
-    },
-    "xarray": {
-      "versions": {
-        "latest": "https://docs.xarray.dev/en/stable/"
-      },
-      "sources": {
-        "readthedocs": "xarray"
-      }
+    "sources": {
+      "environment": "bob.io.base"
     }
+  }
 }

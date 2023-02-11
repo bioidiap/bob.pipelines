@@ -28,8 +28,7 @@
     dependencies = [
         "setuptools",
         "numpy",
-        "bob.extension",
-        "exposed",
+        "clapp",
         "bob.io.base",
         "scikit-learn",
         "dask",
@@ -37,6 +36,7 @@
         "dask-jobqueue",
         "xarray",
         "h5py",
+        "requests",
     ]
 
 [project.urls]
