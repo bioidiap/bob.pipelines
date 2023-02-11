@@ -21,9 +21,8 @@ requirements:
     - python {{ python }}
     - setuptools {{ setuptools }}
     - pip {{ pip }}
-    - exposed
+    - clapp
     # bob dependencies
-    - bob.extension
     - bob.io.base
     # other libraries
     - numpy {{ numpy }}
@@ -32,14 +31,14 @@ requirements:
     - distributed {{ distributed }}
     - scikit-learn {{ scikit_learn }}
     - xarray {{ xarray }}
-    - h5py {{h5py}}
+    - h5py {{ h5py }}
+    - requests {{ requests }}
     # optional dependencies
     - dask-ml {{ dask_ml }}
   run:
     - python
     - setuptools
-    - exposed
-    - bob.extension
+    - clapp
     - bob.io.base
     - {{ pin_compatible('numpy') }}
     - {{ pin_compatible('dask') }}
@@ -48,6 +47,7 @@ requirements:
     - {{ pin_compatible('scikit-learn') }}
     - {{ pin_compatible('xarray') }}
     - {{ pin_compatible('h5py') }}
+    - requests
   run_constrained:
     - {{ pin_compatible('dask-ml') }}
 

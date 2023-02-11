@@ -101,7 +101,6 @@ def test_is_instance_nested():
 
 
 def test_break_sample_set():
-
     samplesets = []
     n_samples = 10
     X = np.ones(shape=(n_samples, 2), dtype=int)
@@ -109,7 +108,6 @@ def test_break_sample_set():
 
     # Creating a face list of samplesets
     for i in range(n_samples):
-
         samplesets.append(
             SampleSet(
                 [

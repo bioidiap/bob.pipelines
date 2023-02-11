@@ -313,7 +313,6 @@ def _get_dask_args_from_ds(ds, columns):
 
 
 def _blockwise_with_block_args(args, block, method_name=None):
-
     meta = []
     for _ in range(1, block.output_ndim):
         meta = [meta]

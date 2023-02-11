@@ -7,10 +7,10 @@ import sys
 
 import dask
 
+from clapp.rc import UserDefaults
 from dask_jobqueue.core import Job, JobQueueCluster
 from distributed.deploy import Adaptive
 from distributed.scheduler import Scheduler
-from exposed.rc import UserDefaults
 
 from .sge_queues import QUEUE_DEFAULT
 
@@ -42,7 +42,6 @@ class SGEIdiapJob(Job):
         config_name="sge",
         **kwargs,
     ):
-
         if queue is None:
             queue = dask.config.get("jobqueue.%s.queue" % config_name)
         if project is None:
@@ -244,7 +243,6 @@ class SGEMultipleQueuesCluster(JobQueueCluster):
         project=rc.get("sge.project"),
         **kwargs,
     ):
-
         # Defining the job launcher
         self.job_cls = SGEIdiapJob
         self.sge_job_spec = sge_job_spec
