@@ -44,7 +44,7 @@ logger = getLogger(__name__)
 
 def _get_local_data_directory() -> Path:
     """Returns the local directory for data (``bob_data_dir`` config)."""
-    user_config = UserDefaults("bob.toml")
+    user_config = UserDefaults("bobrc.toml")
     return Path(
         user_config.get("bob_data_dir", default=Path.home() / "bob_data")
     )

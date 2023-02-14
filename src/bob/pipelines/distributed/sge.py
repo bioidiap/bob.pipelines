@@ -15,7 +15,7 @@ from distributed.scheduler import Scheduler
 from .sge_queues import QUEUE_DEFAULT
 
 logger = logging.getLogger(__name__)
-rc = UserDefaults("~/.bobrc")
+rc = UserDefaults("bobrc.toml")
 
 
 class SGEIdiapJob(Job):
