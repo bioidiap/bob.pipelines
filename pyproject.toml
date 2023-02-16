@@ -40,7 +40,7 @@
     ]
 
 [project.urls]
-    documentation = "https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/stable/"
+    documentation = "https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/sphinx/"
     homepage = "https://pypi.org/project/bob.pipelines/"
     repository = "https://gitlab.idiap.ch/bob/bob.pipelines"
     changelog = "https://gitlab.idiap.ch/bob/bob.pipelines/-/releases"
