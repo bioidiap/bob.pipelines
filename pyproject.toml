@@ -28,7 +28,7 @@
     dependencies = [
         "setuptools",
         "numpy",
-        "clapp",
+        "clapper",
         "bob.io.base",
         "scikit-learn",
         "dask",

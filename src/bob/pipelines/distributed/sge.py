@@ -7,7 +7,7 @@ import sys
 
 import dask
 
-from clapp.rc import UserDefaults
+from clapper.rc import UserDefaults
 from dask_jobqueue.core import Job, JobQueueCluster
 from distributed.deploy import Adaptive
 from distributed.scheduler import Scheduler

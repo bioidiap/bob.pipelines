@@ -35,7 +35,7 @@ from typing import Any, Callable, Optional, TextIO, Union
 
 import requests
 
-from clapp.rc import UserDefaults
+from clapper.rc import UserDefaults
 
 from bob.pipelines.dataset.protocols import archive, hashing
 
