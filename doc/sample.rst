@@ -6,7 +6,7 @@ Samples, a way to enhance scikit pipelines with metadata
 Some tasks in pattern recognition demands the usage of metadata to support some processing (e.g. face cropping, audio segmentation).
 To support scikit-learn based estimators with such requirement task, this package provides two mechanisms that:
 
-    1. Wraps input data in a layer called :any:`Sample` that allows you to append some metadata to your original input data.
+    1. Wraps input data in a container called :any:`Sample` that allows you to append some metadata to your original input data.
 
     2. A wrapper class (:any:`SampleWrapper`) that interplay between :any:`Sample` and your estimator.
 
@@ -87,8 +87,8 @@ While this transformer works well by itself, it can't be used by
    TypeError: _transform() takes 2 positional arguments but 3 were given
 
 To approach this issue, :any:`SampleWrapper` can be used. This class wraps
-other estimators and accepts as input samples and passes the data with metadata inside
-samples to the wrapped estimator:
+other estimators and accepts as input :any:`Sample` objects and passes the data with
+metadata inside samples to the wrapped estimator:
 
 .. doctest::
 
@@ -215,3 +215,57 @@ transform each sample inside and returns the same SampleSets with new data.
    DelayedSample(offset=array([1]))
    >>> transformed_sample_sets[0].samples[1].data
    array([1., 1.])
+
+
+Using Tags
+----------
+
+If an estimator needs always the same elements from the :any:`Sample` objects, you can
+define which attribute it takes by setting tags at the class level, instead of requiring
+the user to define this when instantiating:
+
+.. testsetup::
+
+   from typing import Any
+
+.. doctest::
+
+   >>> class TaggedTransformer(BaseEstimator):
+   ...      """Transforms samples with minimal user configuration"""
+   ...      def transform(self, X: np.ndarray, offsets_kwarg: np.ndarray) -> np.ndarray:
+   ...          """Adds an offset to each sample."""
+   ...          return np.array(X) + np.array(offsets_kwarg)
+   ...
+   ...      def _more_tags(self) -> dict[str, Any]:
+   ...          return {
+   ...              "requires_fit": False,  # sklearn Estimator tag
+   ...              "bob_input": "data",  # Optional (data is the default)
+   ...              "bob_transform_extra_input": [("offsets_kwarg", "offset")],
+   ...              "bob_output": "data",  # Optional (data is the default)
+   ...          }
+
+With these tags defined, when wrapping the transformer with :any:`SampleWrapper` you
+don't need to specify any parameters (unless you want to override the tags):
+
+.. doctest::
+
+   >>> my_transformer = TaggedTransformer()
+   >>> my_wrapped_transformer = bob.pipelines.SampleWrapper(my_transformer)
+   >>> pipe = make_pipeline(my_wrapped_transformer)
+   >>> result_samples = pipe.transform(samples)
+   >>> np.array([s.data for s in result_samples])
+   array([[0., 0.],
+          [1., 1.],
+          [2., 2.]])
+
+The tags related to the :any:`SampleWrapper` are the following:
+
+- ``bob_input``: Name of an attribute in :any:`Sample` that will be passed as first
+    parameter of the ``transform`` or ``fit`` method.
+- ``bob_transform_extra_input``: The additional :any:`Sample` attributes to pass as
+    parameters to ``transform``. The format is a list of tuples, each containing the
+    parameter name in ``transform`` and the corresponding :any:`Sample` attribute to
+    load.
+- ``bob_fit_extra_input``: Additional :any:`Sample` attributes to pass to the fit method.
+- ``bob_output``: The :any:`Sample` attribute that will receive the result of
+    ``transform``.

@@ -31,6 +31,8 @@ User Guide
 .. toctree::
    :maxdepth: 2
 
+   estimator
+   pipeline
    sample
    checkpoint
    dask
