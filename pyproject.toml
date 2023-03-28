@@ -70,7 +70,7 @@
 [tool.setuptools.dynamic]
     readme = {file = "README.rst"}
 
-[project.entry-points."bob.pipelines.dask.client"]
+[project.entry-points."dask.client"]
     local-parallel  = "bob.pipelines.config.distributed.local_parallel:dask_client"
     local-p4        = "bob.pipelines.config.distributed.local_p4:dask_client"
     local-p8        = "bob.pipelines.config.distributed.local_p8:dask_client"
