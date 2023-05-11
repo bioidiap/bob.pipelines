@@ -68,7 +68,7 @@
     package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
-    readme = {file = "README.rst"}
+    readme = {file = "README.md", content-type = "text/markdown"}
 
 [project.entry-points."dask.client"]
     local-parallel  = "bob.pipelines.config.distributed.local_parallel:dask_client"
