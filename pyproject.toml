@@ -26,17 +26,17 @@
         "Topic :: Software Development :: Libraries :: Python Modules",
     ]
     dependencies = [
-        "setuptools",
-        "numpy",
-        "clapper",
+        "bob",
         "bob.io.base",
-        "scikit-learn",
+        "clapper",
         "dask",
-        "distributed",
         "dask-jobqueue",
-        "xarray",
+        "distributed",
         "h5py",
+        "numpy",
         "requests",
+        "scikit-learn",
+        "xarray",
     ]
 
 [project.urls]
