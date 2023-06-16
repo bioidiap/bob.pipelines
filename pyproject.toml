@@ -4,7 +4,7 @@
 
 [project]
     name = "bob.pipelines"
-    version = "4.0.0"
+    version = "4.0.1b0"
     requires-python = ">=3.9"
     description = "Tools to build robust and extensible pipelines"
     dynamic = ["readme"]
@@ -26,21 +26,21 @@
         "Topic :: Software Development :: Libraries :: Python Modules",
     ]
     dependencies = [
-        "bob==12.0.0",
-        "bob.io.base==5.1.0",
-        "clapper==1.0.1",
-        "dask==2023.1.0",
-        "dask-jobqueue==0.8.1",
-        "distributed==2023.1.0",
-        "h5py==3.7.0",
-        "numpy==1.23.5",
-        "requests==2.28.2",
-        "scikit-learn==1.1.2",
-        "xarray==2022.12.0",
+        "bob",
+        "bob.io.base",
+        "clapper",
+        "dask",
+        "dask-jobqueue",
+        "distributed",
+        "h5py",
+        "numpy",
+        "requests",
+        "scikit-learn",
+        "xarray",
     ]
 
 [project.urls]
-    documentation = "https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/v4.0.0/sphinx/"
+    documentation = "https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/sphinx/"
     homepage = "https://pypi.org/project/bob.pipelines/"
     repository = "https://gitlab.idiap.ch/bob/bob.pipelines"
     changelog = "https://gitlab.idiap.ch/bob/bob.pipelines/-/releases"
@@ -48,19 +48,19 @@
 [project.optional-dependencies]
     qa = ["pre-commit"]
     doc = [
-        "sphinx==5.3.0",
-        "sphinx-rtd-theme==1.1.1",
-        "sphinx-autodoc-typehints==1.21.8",
-        "auto-intersphinx==1.0.2",
-        "sphinxcontrib-programoutput==0.17",
-        "matplotlib==3.6.2",
-        "dask-ml==2022.5.27",
+        "sphinx",
+        "sphinx_rtd_theme",
+        "sphinx-autodoc-typehints",
+        "auto-intersphinx",
+        "sphinxcontrib-programoutput",
+        "matplotlib",
+        "dask-ml",
         ]
     test = [
-        "pytest==7.2.1",
-        "pytest-cov==4.0.0",
-        "coverage==7.0.5",
-        "dask-ml==2022.5.27",
+        "pytest",
+        "pytest-cov",
+        "coverage",
+        "dask-ml",
         ]
 
 [tool.setuptools]
@@ -105,7 +105,3 @@
     ]
     junit_logging = "all"
     junit_log_passing_tests = false
-
-[profile]
-    repository_url = "git@gitlab.idiap.ch:bob/dev-profile.git"
-    commit_hash = "ade723be1f11feddb7bece235de32cc98953dc07"

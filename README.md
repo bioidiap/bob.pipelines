@@ -1,6 +1,6 @@
-[![badge doc](https://img.shields.io/badge/docs-v4.0.0-orange.svg)](https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/v4.0.0/sphinx/index.html)
-[![badge pipeline](https://gitlab.idiap.ch/bob/bob.pipelines/badges/v4.0.0/pipeline.svg)](https://gitlab.idiap.ch/bob/bob.pipelines/commits/v4.0.0)
-[![badge coverage](https://gitlab.idiap.ch/bob/bob.pipelines/badges/v4.0.0/coverage.svg)](https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/v4.0.0/coverage)
+[![badge doc](https://img.shields.io/badge/docs-latest-orange.svg)](https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/sphinx/index.html)
+[![badge pipeline](https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/pipeline.svg)](https://gitlab.idiap.ch/bob/bob.pipelines/commits/master)
+[![badge coverage](https://gitlab.idiap.ch/bob/bob.pipelines/badges/master/coverage.svg)](https://www.idiap.ch/software/bob/docs/bob/bob.pipelines/master/coverage)
 [![badge gitlab](https://img.shields.io/badge/gitlab-project-0000c0.svg)](https://gitlab.idiap.ch/bob/bob.pipelines)
 
 # Tools to build robust and extensible pipelines
